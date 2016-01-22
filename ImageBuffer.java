@@ -16,76 +16,23 @@ import java.util.stream.Stream;
 /**
  * Created by ainozemtsev on 23.11.15.
  */
-public class PaintImage {
-    private byte pixbuf[][] = new byte[256][192];
-    private byte attrbuf[][] = new byte[32][24];
+public class ImageBuffer {
+    public static final int SIZE_X = 320;
+    public static final int SIZE_Y = 240;
+    //public static final Dimension SIZE = new Dimension(SIZE_X, SIZE_Y);
+    public static final int ATTR_SIZE_X = SIZE_X / 8;
+    public static final int ATTR_SIZE_Y = SIZE_Y / 8;
+
+    private byte pixbuf[][] = new byte[SIZE_X][SIZE_Y];
+    private byte attrbuf[][] = new byte[ATTR_SIZE_X][ATTR_SIZE_Y];
     private final UndoRedo undo = new UndoRedo();
 
-    private interface PaintPixel {
-        void doPaintPixel(Graphics g, int x, int y, int scale);
+    public byte getPixel(int x, int y) {
+        return (x >= 0 && x < SIZE_X && y >= 0 && y < SIZE_Y) ? pixbuf[x][y] : -1;
     }
 
-    public void paint(Graphics g, int scale, Palette palette) {
-        doPaint(g, scale, palette, this::doPaintPixel);
-    }
-
-    public void paintInterlaced(Graphics g, int scale, Palette palette) {
-        doPaint(g, scale, palette, this::doPaintPixelInterlaced);
-    }
-
-    private void doPaint(Graphics g, int scale, Palette palette, PaintPixel paintPixel) {
-        for (int ya = 0; ya < 24; ya++)
-            for (int xa = 0; xa < 32; xa++) {
-                int attr = attrbuf[xa][ya];
-                int index1 = attr & 7;
-                int index2 = (attr >> 3) & 7;
-                Color i1 = palette.getInkColor(index1, 0);
-                Color i2 = palette.getInkColor(index1, 1);
-                Color p1 = palette.getPaperColor(index2, 0);
-                Color p2 = palette.getPaperColor(index2, 1);
-                for (int yp = 0; yp < 8; yp++)
-                    for (int xp = 0; xp < 8; xp++) {
-                        int y = ya * 8 + yp;
-                        int x = xa * 8 + xp;
-                        switch (pixbuf[x][y]) {
-                            case 0:
-                                g.setColor(p1);
-                                break;
-                            case 1:
-                                g.setColor(p2);
-                                break;
-                            case 2:
-                                g.setColor(i1);
-                                break;
-                            default:
-                                g.setColor(i2);
-                                break;
-                        }
-                        paintPixel.doPaintPixel(g, x, y, scale);
-                    }
-            }
-    }
-
-    protected void doPaintPixelInterlaced(Graphics g, int x, int y, int scale) {
-        g.drawLine(x * 2, y * 2, x * 2 + 1, y * 2);
-        Color c = g.getColor();
-        g.setColor(c.darker());
-        g.drawLine(x * 2, y * 2 + 1, x * 2 + 1, y * 2 + 1);
-    }
-
-    protected void doPaintPixel(Graphics g, int x, int y, int scale) {
-        int xx = x * scale;
-        int yy = y * scale;
-        g.fillRect(xx, yy, scale, scale);
-        if (scale > 7) {
-            g.setColor(Color.PINK);
-            if (x % 8 == 0) g.drawLine(xx, yy, xx, yy + scale - 1);
-            if (y % 8 == 0) g.drawLine(xx, yy, xx + scale - 1, yy);
-        }
-    }
-
-    public int getPixel(int x, int y) {
-        return (x >= 0 && x < 256 && y >= 0 && y < 192) ? pixbuf[x][y] : -1;
+    public byte getAttr(int x, int y) {
+            return attrbuf[x / 8][y / 8];
     }
 
     private void putPixel(int x, int y, byte pixel, byte attr) {
@@ -94,9 +41,7 @@ public class PaintImage {
     }
 
     public void setPixel(int x, int y, Palette.Table table, int index, byte shift) {
-        int xx = x / 8;
-        int yy = y / 8;
-        byte a = attrbuf[xx][yy];
+        byte a = getAttr(x, y);
         byte s;
         if (table == Palette.Table.INK) {
             if (index>=0) a = (byte) ((a & 0x38) | index);
@@ -107,10 +52,8 @@ public class PaintImage {
         }
         s = (byte) (shift | s);
 
-        undo.add(x, y, pixbuf[x][y], attrbuf[xx][yy], s, a);
-        attrbuf[xx][yy] = a;
-
-        pixbuf[x][y] = s;
+        undo.add(x, y, getPixel(x,y), getAttr(x, y), s, a);
+        putPixel(x, y, s, a);
     }
 
     public void beginDraw() {
@@ -135,9 +78,7 @@ public class PaintImage {
     public void redoDraw() {
         Vector<UndoElement> elements = undo.redo();
         if (null != elements) {
-            ListIterator<UndoElement> i = elements.listIterator();
-            while (i.hasNext()) {
-                UndoElement e = i.next();
+            for (UndoElement e : elements) {
                 putPixel(e.x, e.y, e.newPixel, e.newAttr);
             }
         }
@@ -165,7 +106,7 @@ public class PaintImage {
         Stack<Point> stack = new Stack<>();
         stack.push(new Point(x, y));
         int pix = getPixel(x, y);
-        int attr = getAttr(x, y);
+        //int attr = getAttr(x, y);
         int npix = (table == Palette.Table.INK) ? (2 | shift) : shift;
         while (!stack.empty()) {
             Point p = stack.pop();
@@ -174,36 +115,46 @@ public class PaintImage {
             setPixel(p.x, p.y, table, index, shift);
             if (p.x > 0) stack.push(new Point(p.x - 1, p.y));
             if (p.y > 0) stack.push(new Point(p.x, p.y - 1));
-            if (p.x < 255) stack.push(new Point(p.x + 1, p.y));
-            if (p.y < 191) stack.push(new Point(p.x, p.y + 1));
+            if (p.x < SIZE_X-1) stack.push(new Point(p.x + 1, p.y));
+            if (p.y < SIZE_Y-1) stack.push(new Point(p.x, p.y + 1));
         }
-    }
-
-    public int getAttr(int x, int y) {
-        if (pixbuf[x][y] < 2)
-            return (attrbuf[x / 8][y / 8] >> 3) & 7;
-        else
-            return attrbuf[x / 8][y / 8] & 7;
     }
 
     public void save(OutputStream stream) throws IOException {
-        for (int i = 0; i < 256; i++)
+        for (int i = 0; i < SIZE_X; i++)
             stream.write(pixbuf[i]);
-        for (int i = 0; i < 32; i++)
+        for (int i = 0; i < ATTR_SIZE_X; i++)
             stream.write(attrbuf[i]);
     }
 
+    public void load(InputStream stream, int width, int height) throws IOException {
+        int ox = (SIZE_X-width) /2;
+        int oy = (SIZE_Y-height) /2;
+        byte[] b = new byte[height];
+
+        for (int i = ox; i < width+ox; i++) {
+            for (int v = 0; v<height; v += stream.read(b, v, height - v));
+            if (i>=0 && i<SIZE_X) {
+                for (int j= oy; j<height+oy; j++) {
+                    if (j>=0 && j<SIZE_Y) pixbuf[i][j] = b[j-oy];
+                }
+            }
+        }
+
+        byte[] a = new byte[height/8];
+        for (int i = ox/8; i < (ox+width)/8; i++) {
+            final int h = height / 8;
+            for (int v = 0; v<h; v += stream.read(a, v, h - v));
+            if (i>=0 && i<ATTR_SIZE_X) {
+                for (int j = oy / 8; j < (height + oy) / 8; j++) {
+                    if (j >= 0 && j < ATTR_SIZE_Y) attrbuf[i][j] = a[j - oy / 8];
+                }
+            }
+        }
+    }
+
     public void load(InputStream stream) throws IOException {
-        for (int i = 0; i < 256; i++) {
-            int v = stream.read(pixbuf[i]);
-            if (v != 192) stream.read(pixbuf[i], v, 192 - v);
-            //System.out.println(i+" line, read "+v);
-        }
-        ;
-        for (int i = 0; i < 32; i++) {
-            int v = stream.read(attrbuf[i]);
-            if (v != 24) stream.read(pixbuf[i], v, 24 - v);
-        }
+        load(stream,256,192);
     }
 
     public void importSCR(InputStream stream) throws IOException {
@@ -441,21 +392,19 @@ public class PaintImage {
         ColorConverter converter = Palette.createConverter();
 
         BufferedImage png = ImageIO.read(stream);
-        if (png.getWidth() < 256 || png.getHeight() < 192) throw new IOException("Wrong png size");
-        Integer c[][][] = new Integer[32][24][4];
-        for (int x = 0; x < 32; x++)
-            for (int y = 0; y < 24; y++) {
+        //if (png.getWidth() < 256 || png.getHeight() < 192) throw new IOException("Wrong png size");
+        Integer c[][][] = new Integer[ATTR_SIZE_X][ATTR_SIZE_Y][4];
+        for (int x = 0; x < ATTR_SIZE_X; x++)
+            for (int y = 0; y < ATTR_SIZE_Y; y++) {
                 Arrays.fill(c[x][y], -2);
                 Map<Integer,Integer> cnt = new HashMap<>();
                 for (int xx = 0; xx < 8; xx++)
                     for (int yy = 0; yy < 8; yy++) {
-                        int i = converter.fromRGB(new Color(png.getRGB(x * 8 + xx, y * 8 + yy)));
-                        cnt.merge(i, 1, (o,n) -> o+n);
-
-                        /*for (int j = 0; j < 4; j++) {
-                            if (c[x][y][j] == -2) c[x][y][j] = i;
-                            if (c[x][y][j] == i) break;
-                        }*/
+                        final int xi = x * 8 + xx, yi = y * 8 + yy;
+                        if (xi < png.getWidth() && yi < png.getHeight()) {
+                            int i = converter.fromRGB(new Color(png.getRGB(xi, yi)));
+                            cnt.merge(i, 1, (o, n) -> o + n);
+                        }
                     }
                 c[x][y] = Stream.concat(cnt.keySet().stream().sorted((f,g)-> cnt.get(g)-cnt.get(f)), Stream.of(-2,-2,-2,-2))
                         .limit(4).toArray(Integer[]::new);
@@ -463,8 +412,8 @@ public class PaintImage {
             }
 
         Deque<Integer[]> stat = new LinkedList<>();
-        for (int x = 0; x < 32; x++)
-            for (int y = 0; y < 24; y++) {
+        for (int x = 0; x < ATTR_SIZE_X; x++)
+            for (int y = 0; y < ATTR_SIZE_Y; y++) {
                 final Integer[] i = c[x][y];
                 if (!stat.stream().anyMatch(s -> Arrays.deepEquals(s, i)))
                     stat.add(Arrays.copyOf(i, 4));
@@ -487,8 +436,6 @@ public class PaintImage {
         }
         pairs.sort((Pair f, Pair s) -> s.count - f.count);
 
-        //if (pairs.size()>16) throw new IOException("Cannot import, " + pairs.size() + " pair of colors");
-
         Combinator comb = new Combinator(new ArrayList<>(8), new ArrayList<>(8))
                 .next(
                         stat.stream()
@@ -504,16 +451,20 @@ public class PaintImage {
                         pairs);
 
 
-        for (int x = 0; x < 32; x++)
-            for (int y = 0; y < 24; y++) {
+        for (int x = 0; x < ATTR_SIZE_X; x++)
+            for (int y = 0; y < ATTR_SIZE_Y; y++) {
                 final byte attr = comb.getAttr(c[x][y]);
                 attrbuf[x][y] = attr;
                 List<Integer> l = comb.attrToList(attr);
                 for (int xx = 0; xx < 8; xx++)
                     for (int yy = 0; yy < 8; yy++) {
-                        final int color = converter.fromRGB(new Color(png.getRGB(x * 8 + xx, y * 8 + yy)));
+                        final int xi = x * 8 + xx;
+                        final int yi = y * 8 + yy;
+                        final int color = (xi < png.getWidth() && yi<png.getHeight())
+                                ? converter.fromRGB(new Color(png.getRGB(xi, yi)))
+                                : converter.fromRGB(new Color(png.getRGB(0, 0)));
                         final byte b = (byte) (l.indexOf(color));
-                        pixbuf[x * 8 + xx][y * 8 + yy] = (b>=0) ? b : 0;
+                        pixbuf[(xi)][(yi)] = (b>=0) ? b : 0;
                     }
             }
         return comb.getInkPaper();

@@ -4,6 +4,8 @@ import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.awt.event.InputEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
 
@@ -29,10 +31,20 @@ public  class PainterApp {
 
         JPanel form = new JPanel(new BorderLayout());
 
-        this.paintArea = new PaintArea();
+        Screen screen = new Screen();
+        this.paintArea = new PaintArea(screen);
         form.add(new JScrollPane(this.paintArea), BorderLayout.CENTER);
 
-        form.add(this.paintArea.createInterlacedView(), BorderLayout.LINE_START);
+
+        InterlacedView view = new InterlacedView(screen);
+        view.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent mouseEvent) {
+                super.mousePressed(mouseEvent);
+                paintArea.ScrollInView(mouseEvent.getX() / 2, mouseEvent.getY() / 2);
+            }
+        });
+        form.add(view, BorderLayout.LINE_START);
 
 
         JToolBar toolbar = new JToolBar();
@@ -47,7 +59,7 @@ public  class PainterApp {
         spinner.setPaintTicks(true);
         spinner.setPaintLabels(true);
         spinner.setValue(paintArea.getScale());
-        spinner.addChangeListener(e -> this.paintArea.setScale((Integer) spinner.getValue()));
+        spinner.addChangeListener(e -> this.paintArea.setScale(spinner.getValue()));
         toolbar.add(spinner);
         toolbar.add(new JPanel());
 

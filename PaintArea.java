@@ -1,7 +1,6 @@
 package Painter;
 
 import Painter.Palette.Palette;
-import Painter.Palette.Palette2;
 import Painter.Palette.PaletteButton;
 
 import javax.swing.*;
@@ -10,26 +9,41 @@ import java.awt.event.*;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.*;
+import java.util.ArrayList;
+import java.util.Collection;
 
 /**
  * Created by ainozemtsev on 17.11.15.
  */
-public class PaintArea extends JComponent {
-    private PaintImage image = new PaintImage();
+public class PaintArea extends JComponent implements Scrollable {
+    private Screen screen;
     private int scale = 2;
-    private Palette palette = new Palette();
     private final JToolBar inkBar = new JToolBar();
     private final JToolBar paperBar = new JToolBar();
-    private JComponent interlacedView = null;
 
-
-    public PaintArea() {
+    public PaintArea(Screen screen) {
         super();
+        this.screen = screen;
         this.updatePreferredSize();
         Listener l = new Listener();
         this.addMouseListener(l);
         this.addMouseMotionListener(l);
-        palette.addChangeListener(this::repaint);
+        this.screen.addChangeListener(new ImageSupplier.ImageChangeListener() {
+            @Override
+            public void imageChanged(int x, int y, int w, int h) {
+                repaint(x*scale,y*scale,w*scale,h*scale);
+            }
+
+            @Override
+            public void imageChanged() {
+                repaint();
+            }
+
+            @Override
+            public void paletteChanged() {
+                repaint();
+            }
+        });
     }
 
     public JComponent createToolBar() {
@@ -51,44 +65,64 @@ public class PaintArea extends JComponent {
     ButtonGroup createButtonGroup(Palette.Table table, JToolBar toolBar) {
         ButtonGroup group = new ButtonGroup();
         for (int i = 0; i < 8; i++) {
-            AbstractButton b = new PaletteButton(palette, table, i);
+            AbstractButton b = new PaletteButton(screen.getPalette(), table, i);
             if (i == 0/*palette.getCurrentColorIndex(table)*/) b.setSelected(true);
             group.add(b);
             toolBar.add(b);
         }
-        toolBar.addSeparator();
         JToggleButton transparentButton = new JToggleButton("T");
         group.add(transparentButton);
         toolBar.add(transparentButton);
+        toolBar.addSeparator();
         return group;
     }
 
-    public JComponent createInterlacedView() {
-        this.interlacedView = new JComponent() {
-            @Override
-            public void paint(Graphics g) {
-                super.paint(g);
-                image.paintInterlaced(g, scale, PaintArea.this.palette);
-            }
-        };
-        this.interlacedView.setPreferredSize(new Dimension(512, 384));
-        palette.addChangeListener(this.interlacedView::repaint);
-        this.interlacedView.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                super.mouseClicked(e);
-                Rectangle r = new Rectangle((e.getX() / 2 - 24) * scale, (e.getY() / 2 - 24) * scale, 48 * scale, 48 * scale);
-                PaintArea.this.scrollRectToVisible(r);
-            }
-        });
-        return this.interlacedView;
+
+    @Override
+    public int getScrollableUnitIncrement(Rectangle rectangle, int i, int i1) {
+        return 2*scale;
+    }
+
+    @Override
+    public int getScrollableBlockIncrement(Rectangle rectangle, int i, int i1) {
+        return 16*scale;
+    }
+
+    @Override
+    public Dimension getPreferredScrollableViewportSize() {
+        return getPreferredSize();
+    }
+
+    @Override
+    public boolean getScrollableTracksViewportWidth() {
+        return false;
+    }
+
+    @Override
+    public boolean getScrollableTracksViewportHeight() {
+        return false;
+    }
+
+    public void ScrollInView(int x, int y) {
+        Rectangle r = new Rectangle((x - 24) * scale, (y - 24) * scale, 48 * scale, 48 * scale);
+        PaintArea.this.scrollRectToVisible(r);
     }
 
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        image.paint(g, scale, this.palette);
-        //g.drawImage(image,0,0,256*scale, 192*scale, null);
+        for (int x = 0; x < screen.getImageWidth(); x++)
+            for (int y = 0; y < screen.getImageHeight(); y++) {
+                g.setColor(screen.getPixelColor(x,y));
+                int xx = x * scale;
+                int yy = y * scale;
+                g.fillRect(xx, yy, scale, scale);
+                if (scale > 7) {
+                    g.setColor(Color.PINK);
+                    if (x % 8 == 0) g.drawLine(xx, yy, xx, yy + scale - 1);
+                    if (y % 8 == 0) g.drawLine(xx, yy, xx + scale - 1, yy);
+                }
+            }
     }
 
     public int getScale() {
@@ -102,16 +136,8 @@ public class PaintArea extends JComponent {
     }
 
     private void updatePreferredSize() {
-        this.setPreferredSize(new Dimension(256 * scale, 192 * scale));
+        this.setPreferredSize(new Dimension(ImageBuffer.SIZE_X * scale, ImageBuffer.SIZE_Y * scale));
         this.revalidate();
-    }
-
-    private boolean isInImage(Point p) {
-        return isInImage(p.x, p.y);
-    }
-
-    private boolean isInImage(int x, int y) {
-        return x >= 0 && x < 256 * scale && y >= 0 && y < 192 * scale;
     }
 
     private int findColorIndex(Palette.Table table) {
@@ -124,97 +150,63 @@ public class PaintArea extends JComponent {
         return -1;
     }
 
-    private void setPixel(int x, int y, Palette.Table table, byte shift) {
-        int xx = x / scale;
-        int yy = y / scale;
-        if (isInImage(xx, yy)) {
-            image.setPixel(xx,yy,table, findColorIndex(table), shift);
-            repaint(xx / 8 * 8 * scale, yy / 8 * 8 * scale, scale * 8, scale * 8);
-            if (interlacedView != null) interlacedView.repaint(xx / 8 * 16, yy / 8 * 16, 16, 16);
-        }
-    }
-
-    private void drawLine(int ox, int oy, int x, int y, Palette.Table table, byte shift) {
-        int xx = x / scale, yy = y / scale;
-        int oxx = ox / scale, oyy = oy / scale;
-        if (isInImage(xx, yy) && isInImage(ox, oy)) {
-            image.drawLine(oxx, oyy, xx, yy, table, findColorIndex(table), shift);
-            int dx, dy, w, h ;
-            if (ox < x) {
-                dx = oxx / 8 * 8;
-                w =  xx / 8 * 8 + 8 - dx;
-            } else {
-                dx = xx / 8 * 8;
-                w = oxx / 8 * 8 + 8 - dx;
-            }
-            if (oy < y) {
-                dy = oyy / 8 * 8;
-                h =  yy / 8 * 8 + 8 - dy;
-            } else {
-                dy = yy / 8 * 8;
-                h = oyy / 8 * 8 + 8 - dy;
-            }
-            repaint(dx * scale, dy * scale, scale * w, scale * h);
-            //System.out.println(ox+","+x+","+dx+","+w+" - "+oy+","+y+","+dy+","+h);
-            if (interlacedView != null) interlacedView.repaint(dx * 2, dy * 2, w*2, h*2);
-        }
-    }
-
-    private void fill(int x, int y, Palette.Table table, byte shift) {
-        int xx = x / scale;
-        int yy = y / scale;
-        if (isInImage(xx, yy)) {
-            image.beginDraw();
-            image.fill(xx, yy, table, findColorIndex(table), shift);
-            image.endDraw();
-            repaint();
-            if (interlacedView != null) interlacedView.repaint();
-        }
-    }
-
-
     public void undo() {
-        image.undoDraw();
+        screen.getImage().undoDraw();
         getRootPane().repaint();
     }
 
     public void redo() {
-        image.redoDraw();
+        screen.getImage().redoDraw();
         getRootPane().repaint();
     }
 
     public void importSCR(File file) throws IOException {
         final FileInputStream stream = new FileInputStream(file);
-        image.importSCR(stream);
-        int[] ink = {0x20, 0x24, 0x28, 0x2e, 0x2c, 0x2a, 0x26, 0x22};
-        for (int i = 0; i < 8; i++) ink[i] += (ink[i] + 0x10) << 6;
-        palette.setPalette(ink, ink);
+        screen.getImage().importSCR(stream);
+        int[] ink = {0x00, 0x14, 0x18, 0x1e, 0x1c, 0x1a, 0x16, 0x12};
+        for (int i = 1; i < 8; i++) ink[i] += (ink[i] + 0x10) << 6;
+        screen.getPalette().setPalette(ink, ink);
         stream.close();
         repaint();
     }
 
     public void importPNG(File file) throws IOException {
         final FileInputStream stream = new FileInputStream(file);
-        int[][] p = image.importPNG(stream);
+        int[][] p = screen.getImage().importPNG(stream);
         stream.close();
-        palette.setPalette(p[0],p[1]);
+        screen.getPalette().setPalette(p[0],p[1]);
         repaint();
     }
 
     public void save(File file) throws IOException {
         ObjectOutputStream stream = new ObjectOutputStream(new FileOutputStream(file));
-        image.save(stream);
-        stream.writeObject(palette.getPalette(Palette.Table.INK));
-        stream.writeObject(palette.getPalette(Palette.Table.PAPER));
+        stream.writeObject(screen.getPalette().getPalette(Palette.Table.INK));
+        stream.writeObject(screen.getPalette().getPalette(Palette.Table.PAPER));
+        stream.writeInt(ImageBuffer.SIZE_X);
+        stream.writeInt(ImageBuffer.SIZE_Y);
+        screen.getImage().save(stream);
         stream.close();
     }
 
     public void load(File file) throws IOException, ClassNotFoundException {
-        ObjectInputStream stream = new ObjectInputStream(new FileInputStream(file));
-        image.load(stream);
-        int[] ink = (int[]) stream.readObject();
-        int[] paper = (int[]) stream.readObject();
-        palette.setPalette(ink,paper);
+        final FileInputStream fs = new FileInputStream(file);
+        ObjectInputStream stream = new ObjectInputStream(fs);
+        int[] ink;
+        int[] paper;
+        if (fs.getChannel().size() == 50266) {
+            screen.getImage().load(stream);
+            ink = (int[]) stream.readObject();
+            paper = (int[]) stream.readObject();
+
+        } else {
+            //stream.reset();
+            ink = (int[]) stream.readObject();
+            paper = (int[]) stream.readObject();
+            int x = stream.readInt();
+            int y = stream.readInt();
+            screen.getImage().load(stream,x,y);
+        }
+        screen.getPalette().setPalette(ink, paper);
         stream.close();
     }
 
@@ -237,7 +229,7 @@ public class PaintArea extends JComponent {
                 byte p;
                 if ((button & MouseEvent.SHIFT_DOWN_MASK) == 0) p = 0; else p = 1;
                 Palette.Table t = (e.getButton() == MouseEvent.BUTTON1) ? Palette.Table.INK : Palette.Table.PAPER;
-                fill(e.getX(),e.getY(),t,p);
+                screen.fill(e.getX()/scale,e.getY()/scale,t,findColorIndex(t),p);
             }
         }
 
@@ -249,7 +241,7 @@ public class PaintArea extends JComponent {
                     & (MouseEvent.SHIFT_DOWN_MASK
                     | MouseEvent.BUTTON1_DOWN_MASK
                     | MouseEvent.BUTTON2_DOWN_MASK);
-            image.beginDraw();
+            screen.getImage().beginDraw();
             doSetPixel(e);
         }
 
@@ -257,14 +249,15 @@ public class PaintArea extends JComponent {
             byte p;
             if ((button & MouseEvent.SHIFT_DOWN_MASK) == 0) p = 0; else p = 1;
             Palette.Table t = (button & MouseEvent.BUTTON1_DOWN_MASK) != 0 ? Palette.Table.INK : Palette.Table.PAPER;
-            setPixel(e.getX(), e.getY(), t, p);
+            screen.setPixel(e.getX()/scale, e.getY()/scale, t, findColorIndex(t), p);
         }
 
         private void doDrawLine(MouseEvent e) {
             byte p;
             if ((button & MouseEvent.SHIFT_DOWN_MASK) == 0) p = 0; else p = 1;
             Palette.Table t = (button & MouseEvent.BUTTON1_DOWN_MASK) != 0 ? Palette.Table.INK : Palette.Table.PAPER;
-            drawLine(pos.x, pos.y, e.getX(), e.getY(), t, p);
+            screen.drawLine(pos.x/scale, pos.y/scale, e.getX()/scale, e.getY()/scale,
+                    t,findColorIndex(t), p);
         }
 
         @Override
@@ -277,7 +270,7 @@ public class PaintArea extends JComponent {
 
         @Override
         public void mouseReleased(MouseEvent e) {
-            image.endDraw();
+            screen.getImage().endDraw();
         }
 
         @Override
@@ -292,11 +285,10 @@ public class PaintArea extends JComponent {
 
         @Override
         public void mouseMoved(MouseEvent e) {
-            if (isInImage(e.getPoint())) {
-                int x = e.getX() / scale;
-                int y = e.getY() / scale;
-                int v = image.getPixel(x, y);
-                String s = ((v < 2) ? "Paper" : "Ink") + String.valueOf(v & 1) + "=" + String.valueOf(image.getAttr(x, y));
+            int x = e.getX() / scale;
+            int y = e.getY() / scale;
+            if (screen.isInImage(x,y)) {
+                String s = screen.getPixelDescription(x,y);
                 firePropertyChange("status", "", x + "x" + y + " : " + s);
             }
         }
