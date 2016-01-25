@@ -56,9 +56,6 @@ public class PaintArea extends JComponent implements Scrollable {
         paperBar.setFloatable(false);
         this.createButtonGroup(Palette.Table.PAPER, paperBar);
         panel.add(paperBar);
-        //JToggleButton transparentButton = new JToggleButton("T");
-        //transparentButton.setAction();
-        //panel.add(transparentButton);
         return panel;
     }
 
@@ -66,7 +63,7 @@ public class PaintArea extends JComponent implements Scrollable {
         ButtonGroup group = new ButtonGroup();
         for (int i = 0; i < 8; i++) {
             AbstractButton b = new PaletteButton(screen.getPalette(), table, i);
-            if (i == 0/*palette.getCurrentColorIndex(table)*/) b.setSelected(true);
+            if (i == 0) b.setSelected(true);
             group.add(b);
             toolBar.add(b);
         }
@@ -151,40 +148,34 @@ public class PaintArea extends JComponent implements Scrollable {
     }
 
     public void undo() {
-        screen.getImage().undoDraw();
+        screen.undoDraw();
         getRootPane().repaint();
     }
 
     public void redo() {
-        screen.getImage().redoDraw();
+        screen.redoDraw();
         getRootPane().repaint();
     }
 
     public void importSCR(File file) throws IOException {
         final FileInputStream stream = new FileInputStream(file);
-        screen.getImage().importSCR(stream);
-        int[] ink = {0x00, 0x14, 0x18, 0x1e, 0x1c, 0x1a, 0x16, 0x12};
-        for (int i = 1; i < 8; i++) ink[i] += (ink[i] + 0x10) << 6;
-        screen.getPalette().setPalette(ink, ink);
+        screen.importSCR(stream);
         stream.close();
         repaint();
     }
 
     public void importPNG(File file) throws IOException {
         final FileInputStream stream = new FileInputStream(file);
-        int[][] p = screen.getImage().importPNG(stream);
+        //int[][] p = screen.getImage().importPNG(stream);
+        screen.importPNG(stream);
         stream.close();
-        screen.getPalette().setPalette(p[0],p[1]);
+        //screen.getPalette().setPalette(p[0],p[1]);
         repaint();
     }
 
     public void save(File file) throws IOException {
         ObjectOutputStream stream = new ObjectOutputStream(new FileOutputStream(file));
-        stream.writeObject(screen.getPalette().getPalette(Palette.Table.INK));
-        stream.writeObject(screen.getPalette().getPalette(Palette.Table.PAPER));
-        stream.writeInt(ImageBuffer.SIZE_X);
-        stream.writeInt(ImageBuffer.SIZE_Y);
-        screen.getImage().save(stream);
+        screen.save(stream);
         stream.close();
     }
 
@@ -241,7 +232,7 @@ public class PaintArea extends JComponent implements Scrollable {
                     & (MouseEvent.SHIFT_DOWN_MASK
                     | MouseEvent.BUTTON1_DOWN_MASK
                     | MouseEvent.BUTTON2_DOWN_MASK);
-            screen.getImage().beginDraw();
+            screen.beginDraw();
             doSetPixel(e);
         }
 
@@ -270,7 +261,7 @@ public class PaintArea extends JComponent implements Scrollable {
 
         @Override
         public void mouseReleased(MouseEvent e) {
-            screen.getImage().endDraw();
+            screen.endDraw();
         }
 
         @Override

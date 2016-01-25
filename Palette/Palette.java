@@ -1,6 +1,7 @@
 package Painter.Palette;
 
 import java.awt.*;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.stream.Stream;
@@ -77,6 +78,16 @@ public class Palette {
         if (this.locked && !locked)
             listeners.stream().filter(i -> i.table == null).forEach(i -> i.listener.paletteChanged());
         this.locked = locked;
+    }
+
+    public void loadPalette(DataInputStream stream) throws IOException {
+        for (int i = 0; i < 8; i++) setColorIndex(stream.readInt(), Table.INK,i);
+        for (int i = 0; i < 8; i++) setColorIndex(stream.readInt(), Table.PAPER,i);
+    }
+
+    public void savePalette(DataOutputStream stream) throws IOException {
+        for (int i = 0; i < 8; i++) stream.writeInt(getColorIndex(Table.INK,i));
+        for (int i = 0; i < 8; i++) stream.writeInt(getColorIndex(Table.PAPER,i));
     }
 
     public void setPalette(int[] ink, int[] paper) {
@@ -235,7 +246,7 @@ public class Palette {
     }
 }
 
-class Converter implements ColorConverter{
+class Converter implements ColorConverting {
     HashMap<Color,Integer> cache = new HashMap<>(16);
     public int fromRGB(Color color) {
         return cache.computeIfAbsent(color, Palette::fromRGB);

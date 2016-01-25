@@ -1,7 +1,8 @@
 package Painter;
 
-import Painter.Palette.ColorConverter;
+import Painter.Palette.ColorConverting;
 import Painter.Palette.Palette;
+
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -25,127 +26,58 @@ public class ImageBuffer {
 
     private byte pixbuf[][] = new byte[SIZE_X][SIZE_Y];
     private byte attrbuf[][] = new byte[ATTR_SIZE_X][ATTR_SIZE_Y];
-    private final UndoRedo undo = new UndoRedo();
+
 
     public byte getPixel(int x, int y) {
         return (x >= 0 && x < SIZE_X && y >= 0 && y < SIZE_Y) ? pixbuf[x][y] : -1;
     }
 
     public byte getAttr(int x, int y) {
-            return attrbuf[x / 8][y / 8];
+        return attrbuf[x / 8][y / 8];
     }
 
-    private void putPixel(int x, int y, byte pixel, byte attr) {
+    void putPixel(int x, int y, byte pixel, byte attr) {
         this.pixbuf[x][y] = pixel;
         this.attrbuf[x / 8][y / 8] = attr;
     }
 
-    public void setPixel(int x, int y, Palette.Table table, int index, byte shift) {
-        byte a = getAttr(x, y);
-        byte s;
-        if (table == Palette.Table.INK) {
-            if (index>=0) a = (byte) ((a & 0x38) | index);
-            s = 2;
-        } else {
-            if (index>=0) a = (byte) ((a & 7) | (index << 3));
-            s = 0;
-        }
-        s = (byte) (shift | s);
-
-        undo.add(x, y, getPixel(x,y), getAttr(x, y), s, a);
-        putPixel(x, y, s, a);
+    void store(OutputStream stream) throws IOException {
+        store(stream, 0, 0, SIZE_X, SIZE_Y);
     }
 
-    public void beginDraw() {
-        undo.start();
+    void store(OutputStream stream, int x, int y, int width, int height) throws IOException {
+        for (int i = x; i < Integer.min(x + width, SIZE_X); i++)
+            stream.write(pixbuf[i], y, height);
+        for (int i = x / 8; i < Integer.min((x + width) / 8, ATTR_SIZE_X); i++)
+            stream.write(attrbuf[i], y / 8, height / 8);
     }
 
-    public void endDraw() {
-        undo.commit();
+    void load(InputStream stream) throws IOException {
+        load(stream, 256, 192);
     }
 
-    public void undoDraw() {
-        Vector<UndoElement> elements = undo.undo();
-        if (null != elements) {
-            ListIterator<UndoElement> i = elements.listIterator(elements.size());
-            while (i.hasPrevious()) {
-                UndoElement e = i.previous();
-                putPixel(e.x, e.y, e.pixel, e.attr);
-            }
-        }
+    void load(InputStream stream, int width, int height) throws IOException {
+        int ox = (SIZE_X - width) / 2;
+        int oy = (SIZE_Y - height) / 2;
+        load(stream, ox, oy, width, height);
     }
 
-    public void redoDraw() {
-        Vector<UndoElement> elements = undo.redo();
-        if (null != elements) {
-            for (UndoElement e : elements) {
-                putPixel(e.x, e.y, e.newPixel, e.newAttr);
-            }
-        }
-    }
-
-    public void drawLine(int ox, int oy, int nx, int ny, Palette.Table table, int index, byte shift) {
-        float dx = nx - ox, dy = ny - oy;
-        if (Math.abs(dx) < Math.abs(dy)) {
-            dx = dx / Math.abs(dy);
-            dy = Math.signum(dy);
-        } else {
-            dy = dy / Math.abs(dx);
-            dx = Math.signum(dx);
-        }
-        float x = ox, y = oy;
-        //drawPixel((int) x, (int) y, table, index, shift);
-        while (Math.round(x) != nx || Math.round(y) != ny) {
-            x += dx;
-            y += dy;
-            setPixel((int) x, (int) y, table, index, shift);
-        }
-    }
-
-    public void fill(int x, int y, Palette.Table table, int index, byte shift) {
-        Stack<Point> stack = new Stack<>();
-        stack.push(new Point(x, y));
-        int pix = getPixel(x, y);
-        //int attr = getAttr(x, y);
-        int npix = (table == Palette.Table.INK) ? (2 | shift) : shift;
-        while (!stack.empty()) {
-            Point p = stack.pop();
-            int pixel = getPixel(p.x, p.y);
-            if (pixel == npix || pixel != pix) continue;
-            setPixel(p.x, p.y, table, index, shift);
-            if (p.x > 0) stack.push(new Point(p.x - 1, p.y));
-            if (p.y > 0) stack.push(new Point(p.x, p.y - 1));
-            if (p.x < SIZE_X-1) stack.push(new Point(p.x + 1, p.y));
-            if (p.y < SIZE_Y-1) stack.push(new Point(p.x, p.y + 1));
-        }
-    }
-
-    public void save(OutputStream stream) throws IOException {
-        for (int i = 0; i < SIZE_X; i++)
-            stream.write(pixbuf[i]);
-        for (int i = 0; i < ATTR_SIZE_X; i++)
-            stream.write(attrbuf[i]);
-    }
-
-    public void load(InputStream stream, int width, int height) throws IOException {
-        int ox = (SIZE_X-width) /2;
-        int oy = (SIZE_Y-height) /2;
+    void load(InputStream stream, int ox, int oy, int width, int height) throws IOException {
         byte[] b = new byte[height];
-
-        for (int i = ox; i < width+ox; i++) {
-            for (int v = 0; v<height; v += stream.read(b, v, height - v));
-            if (i>=0 && i<SIZE_X) {
-                for (int j= oy; j<height+oy; j++) {
-                    if (j>=0 && j<SIZE_Y) pixbuf[i][j] = b[j-oy];
+        for (int i = ox; i < width + ox; i++) {
+            for (int v = 0; v < height; v += stream.read(b, v, height - v)) ;
+            if (i >= 0 && i < SIZE_X) {
+                for (int j = oy; j < height + oy; j++) {
+                    if (j >= 0 && j < SIZE_Y) pixbuf[i][j] = b[j - oy];
                 }
             }
         }
 
-        byte[] a = new byte[height/8];
-        for (int i = ox/8; i < (ox+width)/8; i++) {
+        byte[] a = new byte[height / 8];
+        for (int i = ox / 8; i < (ox + width) / 8; i++) {
             final int h = height / 8;
-            for (int v = 0; v<h; v += stream.read(a, v, h - v));
-            if (i>=0 && i<ATTR_SIZE_X) {
+            for (int v = 0; v < h; v += stream.read(a, v, h - v)) ;
+            if (i >= 0 && i < ATTR_SIZE_X) {
                 for (int j = oy / 8; j < (height + oy) / 8; j++) {
                     if (j >= 0 && j < ATTR_SIZE_Y) attrbuf[i][j] = a[j - oy / 8];
                 }
@@ -153,33 +85,20 @@ public class ImageBuffer {
         }
     }
 
-    public void load(InputStream stream) throws IOException {
-        load(stream,256,192);
-    }
+    void loadByTiles(InputStream stream, int sx, int sy, int width, int height) throws IOException {
+        for (int x = sx; x < sx + width; x++)
+            for (int y = sy; y < sy + height; y++) {
 
-    public void importSCR(InputStream stream) throws IOException {
-        byte[] pix = new byte[2048 * 3];
-        byte[] attr = new byte[768];
-        stream.read(pix);
-        stream.read(attr);
-        boolean bright = false;
-        for (int y = 0; y < 24; y++)
-            for (int r = 0; r < 8; r++)
-                for (int x = 0; x < 32; x++) {
-                    byte a = attr[x + 32 * y];
-                    if (r == 0) {
-                        attrbuf[x][y] = (byte) (a & 0x3f);
+                for (int yy = 0; yy < 8; yy++)
+                    for (int xx = 0; xx < 8; xx++) {
+                        final int xi = x * 8 + xx;
+                        final int yi = y * 8 + yy;
+                        if (xi < SIZE_X && yi < SIZE_Y)
+                            pixbuf[(xi)][(yi)] = (byte) stream.read();
                     }
-                    bright = (a & 0x40) != 0;
-                    byte b = pix[x + 32 * (y % 8) + 256 * r + 2048 * (y / 8)];
-                    for (int i = 7; i >= 0; i--) {
-                        byte p = (byte) ((b & 1) * 2 + (bright ? 0 : 1));
-                        if ((a & 7) == 0 && p == 3) p = 2;
-                        if ((a & 0x38) == 0 && p == 1) p = 0;
-                        pixbuf[x * 8 + i][y * 8 + r] = p;
-                        b >>= 1;
-                    }
-                }
+                if (x < ATTR_SIZE_X && y < ATTR_SIZE_Y)
+                    attrbuf[x][y] = (byte) stream.read();
+            }
     }
 
     public int[][] importPNG(InputStream stream) throws IOException {
@@ -192,7 +111,7 @@ public class ImageBuffer {
                 this.count = 0;
             }
 
-            Pair(int first, int second,List<Pair> pairs) {
+            Pair(int first, int second, List<Pair> pairs) {
                 this(first, second);
                 if (pairs == null) return;
                 this.count = pairs.stream().filter(this::equals).map(p -> p.count).findFirst().orElse(0);
@@ -287,7 +206,7 @@ public class ImageBuffer {
                 else return Stream.concat(
                         m.containsKey(1) ? m.get(1).stream() : Stream.empty(),
                         m.containsKey(2) ? m.get(2).stream().sorted((x, y) -> x.compareTo(y, s)) : Stream.empty()
-                    ).collect(Collectors.toList());
+                ).collect(Collectors.toList());
                 /*ps = Stream.concat(
                         Stream.concat(
                                 m.containsKey(0) ? m.get(0).stream() : Stream.empty(),
@@ -301,7 +220,7 @@ public class ImageBuffer {
                 if (p.isEmpty()) return;
                 if (!list.contains(p)) {
                     final Pair ordered = p.ordered();
-                    if (p.first == -2 || p. second == -2) {
+                    if (p.first == -2 || p.second == -2) {
                         Optional<Pair> s = list.stream().filter(x -> x.first == x.second).findAny();
                         if (s.isPresent()) {
                             s.get().second = ordered.first;
@@ -325,16 +244,16 @@ public class ImageBuffer {
                         Combinator r = n.next(stat, pairs);
                         if (r != null) return r;
                         tries = n.tries;
-                        if (n.bestCount<bestCount) {
+                        if (n.bestCount < bestCount) {
                             best = n.best;
                             bestCount = n.bestCount;
                         }
                     } else {
                         tries++;
-                        if (tries>=maxTries) return best;
+                        if (tries >= maxTries) return best;
                     }
                 }
-                if (stat.size()<bestCount) {
+                if (stat.size() < bestCount) {
                     bestCount = stat.size();
                     best = this;
                 }
@@ -345,18 +264,18 @@ public class ImageBuffer {
             byte getAttr(Integer[] s) {
                 int bestN = -1;
                 byte best = 0;
-                for (int i=0; i<ink.size(); i++) {
+                for (int i = 0; i < ink.size(); i++) {
                     final Pair ip = ink.get(i);
-                    for (int p=0; p<paper.size(); p++) {
+                    for (int p = 0; p < paper.size(); p++) {
                         final Pair pp = paper.get(p);
-                        int n =0;
+                        int n = 0;
                         for (int k : s) {
                             if (k == ip.first || k == ip.second || k == pp.first || k == pp.second || k == -2)
                                 n++;
                         }
                         final byte b = (byte) (i + (p << 3));
                         if (n == s.length) return b;
-                        if (n>bestN) {
+                        if (n > bestN) {
                             bestN = n;
                             best = b;
                         }
@@ -365,21 +284,21 @@ public class ImageBuffer {
                 return best;
             }
 
-            int[][] getInkPaper(){
+            int[][] getInkPaper() {
                 int[][] p = new int[2][8];
                 Pair j;
-                for (int i=0; i<8; i++) {
-                    j = (i<ink.size()) ? ink.get(i) : new Pair(0,0);
-                    p[0][i]=Palette.combine(j.first,j.second);
-                    j = (i<paper.size()) ? paper.get(i) : new Pair(0,0);
-                    p[1][i]=Palette.combine(j.first,j.second);
+                for (int i = 0; i < 8; i++) {
+                    j = (i < ink.size()) ? ink.get(i) : new Pair(0, 0);
+                    p[0][i] = Palette.combine(j.first, j.second);
+                    j = (i < paper.size()) ? paper.get(i) : new Pair(0, 0);
+                    p[1][i] = Palette.combine(j.first, j.second);
                 }
                 return p;
             }
 
             List<Integer> attrToList(byte attr) {
                 List<Integer> l = new ArrayList<>();
-                final Pair p = paper.get((attr>>3)&7);
+                final Pair p = paper.get((attr >> 3) & 7);
                 l.add(p.first);
                 l.add(p.second);
                 final Pair i = ink.get(attr & 7);
@@ -389,7 +308,7 @@ public class ImageBuffer {
             }
         }
 
-        ColorConverter converter = Palette.createConverter();
+        ColorConverting converter = Palette.createConverter();
 
         BufferedImage png = ImageIO.read(stream);
         //if (png.getWidth() < 256 || png.getHeight() < 192) throw new IOException("Wrong png size");
@@ -397,7 +316,7 @@ public class ImageBuffer {
         for (int x = 0; x < ATTR_SIZE_X; x++)
             for (int y = 0; y < ATTR_SIZE_Y; y++) {
                 Arrays.fill(c[x][y], -2);
-                Map<Integer,Integer> cnt = new HashMap<>();
+                Map<Integer, Integer> cnt = new HashMap<>();
                 for (int xx = 0; xx < 8; xx++)
                     for (int yy = 0; yy < 8; yy++) {
                         final int xi = x * 8 + xx, yi = y * 8 + yy;
@@ -406,7 +325,7 @@ public class ImageBuffer {
                             cnt.merge(i, 1, (o, n) -> o + n);
                         }
                     }
-                c[x][y] = Stream.concat(cnt.keySet().stream().sorted((f,g)-> cnt.get(g)-cnt.get(f)), Stream.of(-2,-2,-2,-2))
+                c[x][y] = Stream.concat(cnt.keySet().stream().sorted((f, g) -> cnt.get(g) - cnt.get(f)), Stream.of(-2, -2, -2, -2))
                         .limit(4).toArray(Integer[]::new);
                 Arrays.sort(c[x][y]); //,(a,b)-> b-a);
             }
@@ -460,11 +379,11 @@ public class ImageBuffer {
                     for (int yy = 0; yy < 8; yy++) {
                         final int xi = x * 8 + xx;
                         final int yi = y * 8 + yy;
-                        final int color = (xi < png.getWidth() && yi<png.getHeight())
+                        final int color = (xi < png.getWidth() && yi < png.getHeight())
                                 ? converter.fromRGB(new Color(png.getRGB(xi, yi)))
                                 : converter.fromRGB(new Color(png.getRGB(0, 0)));
                         final byte b = (byte) (l.indexOf(color));
-                        pixbuf[(xi)][(yi)] = (b>=0) ? b : 0;
+                        pixbuf[(xi)][(yi)] = (b >= 0) ? b : 0;
                     }
             }
         return comb.getInkPaper();
