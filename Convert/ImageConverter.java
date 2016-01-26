@@ -1,5 +1,6 @@
-package Painter;
+package Painter.Convert;
 
+import Painter.ImageSupplier;
 import Painter.Palette.ColorConverting;
 import Painter.Palette.Palette;
 
@@ -17,9 +18,15 @@ import java.util.stream.Stream;
 public class ImageConverter implements ImageSupplier {
     BufferedImage img = null;
     ColorConverter converter = new ColorConverter();
+    private final int sizeXCells;
+    private final int sizeYCells;
+    private final Integer[][][] colors4Tiles;
 
-    ImageConverter(BufferedImage img) {
+    public ImageConverter(BufferedImage img) {
         this.img = img;
+        sizeXCells = img.getWidth() / 8;
+        sizeYCells = img.getHeight() / 8;
+        colors4Tiles = getColors4Tiles();
     }
 
     @Override
@@ -42,18 +49,14 @@ public class ImageConverter implements ImageSupplier {
 
     }
 
-    public DataInputStream asTileStream() throws IOException {
+    Map<Color,Integer> getColorMap() {
+        return converter.getColorMap();
+    }
 
-        //ColorConverting converter = Palette.createConverter();
-
-        //BufferedImage png = ImageIO.read(stream);
-        //if (png.getWidth() < 256 || png.getHeight() < 192) throw new IOException("Wrong png size");
-        final int imgCellsX = img.getWidth() / 8;
-        final int imgCellsY = img.getHeight() / 8;
-
-        Integer c[][][] = new Integer[imgCellsX][imgCellsY][4];
-        for (int x = 0; x < imgCellsX; x++)
-            for (int y = 0; y < imgCellsY; y++) {
+    protected Integer[][][] getColors4Tiles() {
+        Integer c[][][] = new Integer[sizeXCells][sizeYCells][4];
+        for (int x = 0; x < sizeXCells; x++)
+            for (int y = 0; y < sizeYCells; y++) {
                 Arrays.fill(c[x][y], -2);
                 Map<Integer, Integer> cnt = new HashMap<>();
                 for (int xx = 0; xx < 8; xx++)
@@ -64,15 +67,20 @@ public class ImageConverter implements ImageSupplier {
                             cnt.merge(i, 1, (o, n) -> o + n);
                         }
                     }
-                c[x][y] = Stream.concat(cnt.keySet().stream().sorted((f, g) -> cnt.get(g) - cnt.get(f)), Stream.of(-2, -2, -2, -2))
+                c[x][y] = Stream.concat(
+                            cnt.keySet().stream().sorted((f, g) -> cnt.get(g) - cnt.get(f)),
+                            Stream.of(-2, -2, -2, -2))
                         .limit(4).sorted().toArray(Integer[]::new);
-                //Arrays.sort(c[x][y]); //,(a,b)-> b-a);
             }
+        return c;
+    }
+
+    public DataInputStream asTileStream() throws IOException {
 
         Deque<Integer[]> stat = new LinkedList<>();
-        for (int x = 0; x < imgCellsX; x++)
-            for (int y = 0; y < imgCellsY; y++) {
-                final Integer[] i = c[x][y];
+        for (int x = 0; x < sizeXCells; x++)
+            for (int y = 0; y < sizeYCells; y++) {
+                final Integer[] i = colors4Tiles[x][y];
                 if (!stat.stream().anyMatch(s -> Arrays.deepEquals(s, i)))
                     stat.add(Arrays.copyOf(i, 4));
             }
@@ -116,9 +124,9 @@ public class ImageConverter implements ImageSupplier {
         os.writeInt(img.getWidth());
         os.writeInt(img.getHeight());
 
-        for (int x = 0; x < imgCellsX; x++)
-            for (int y = 0; y < imgCellsY; y++) {
-                final byte attr = comb.getAttr(c[x][y]);
+        for (int x = 0; x < sizeXCells; x++)
+            for (int y = 0; y < sizeYCells; y++) {
+                final byte attr = comb.getAttr(colors4Tiles[x][y]);
 
                 List<Integer> l = comb.attrToList(attr);
                 for (int yy = 0; yy < 8; yy++)
@@ -135,6 +143,7 @@ public class ImageConverter implements ImageSupplier {
             }
         return new DataInputStream(new ByteArrayInputStream(bs.toByteArray()));
     }
+
 }
 
 class Pair {
@@ -355,5 +364,9 @@ class ColorConverter implements ColorConverting {
 
     void replace (Color color, int index) {
         cache.replace(color,index);
+    }
+
+    Map<Color,Integer> getColorMap() {
+        return cache;
     }
 }

@@ -1,5 +1,7 @@
 package Painter;
 
+import Painter.Convert.ConvertDialog;
+import Painter.Convert.ImageConverter;
 import Painter.Palette.Palette;
 
 import javax.imageio.ImageIO;
