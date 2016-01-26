@@ -1,4 +1,6 @@
-package Painter;
+package Painter.Convert;
+
+import Painter.InterlacedView;
 
 import javax.swing.*;
 import java.awt.*;
@@ -9,7 +11,8 @@ import java.awt.*;
 public class ConvertDialog extends JDialog {
     boolean result = false;
     ImageConverter converter;
-    ConvertDialog(ImageConverter converter) {
+
+    public ConvertDialog(ImageConverter converter) {
         super((Frame) null, "Image conversion", true);
         this.converter = converter;
         add(new InterlacedView(converter));
@@ -23,7 +26,8 @@ public class ConvertDialog extends JDialog {
         add(p,BorderLayout.PAGE_END);
         pack();
     }
-    boolean runDialog() {
+
+    public boolean runDialog() {
         setVisible(true);
         return result;
     }

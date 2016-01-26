@@ -2,8 +2,6 @@ package Painter;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 
 /**
  * Created by ainozemtsev on 21.01.16.
@@ -11,7 +9,7 @@ import java.awt.event.MouseEvent;
 public class InterlacedView extends JComponent{
     ImageSupplier imageSupplier = null;
 
-    InterlacedView(ImageSupplier supplier) {
+    public InterlacedView(ImageSupplier supplier) {
         super();
         this.imageSupplier = supplier;
         setPreferredSize(new Dimension(supplier.getImageWidth()*2,supplier.getImageHeight()*2));

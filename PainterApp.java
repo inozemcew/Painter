@@ -26,6 +26,7 @@ public  class PainterApp extends JFrame {
 
     JFrame createMainForm() {
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        setTitle("Painter for new screen");
 
         JPanel form = new JPanel(new BorderLayout());
 
