@@ -179,6 +179,25 @@ public class Screen implements ImageSupplier {
         stream.writeInt(ImageBuffer.SIZE_Y);
         image.store(stream);
     }
+    public void load(ObjectInputStream stream, boolean old) throws IOException, ClassNotFoundException {
+        int[] ink;
+        int[] paper;
+        if (old) {
+            getImage().load(stream);
+            ink = (int[]) stream.readObject();
+            paper = (int[]) stream.readObject();
+
+        } else {
+            //stream.reset();
+            ink = (int[]) stream.readObject();
+            paper = (int[]) stream.readObject();
+            int x = stream.readInt();
+            int y = stream.readInt();
+            getImage().load(stream,x,y);
+        }
+        getPalette().setPalette(ink, paper);
+        stream.close();
+    }
 
     public void importSCR(InputStream stream) throws IOException {
         byte[] pix = new byte[2048 * 3];

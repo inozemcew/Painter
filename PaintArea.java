@@ -5,12 +5,11 @@ import Painter.Palette.PaletteButton;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.*;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.awt.event.MouseMotionListener;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
-import java.io.*;
-import java.util.ArrayList;
-import java.util.Collection;
 
 /**
  * Created by ainozemtsev on 17.11.15.
@@ -145,60 +144,6 @@ public class PaintArea extends JComponent implements Scrollable {
                 return ((PaletteButton) component).getIndex();
         }
         return -1;
-    }
-
-    public void undo() {
-        screen.undoDraw();
-        getRootPane().repaint();
-    }
-
-    public void redo() {
-        screen.redoDraw();
-        getRootPane().repaint();
-    }
-
-    public void importSCR(File file) throws IOException {
-        final FileInputStream stream = new FileInputStream(file);
-        screen.importSCR(stream);
-        stream.close();
-        repaint();
-    }
-
-    public void importPNG(File file) throws IOException {
-        final FileInputStream stream = new FileInputStream(file);
-        //int[][] p = screen.getImage().importPNG(stream);
-        screen.importPNG(stream);
-        stream.close();
-        //screen.getPalette().setPalette(p[0],p[1]);
-        repaint();
-    }
-
-    public void save(File file) throws IOException {
-        ObjectOutputStream stream = new ObjectOutputStream(new FileOutputStream(file));
-        screen.save(stream);
-        stream.close();
-    }
-
-    public void load(File file) throws IOException, ClassNotFoundException {
-        final FileInputStream fs = new FileInputStream(file);
-        ObjectInputStream stream = new ObjectInputStream(fs);
-        int[] ink;
-        int[] paper;
-        if (fs.getChannel().size() == 50266) {
-            screen.getImage().load(stream);
-            ink = (int[]) stream.readObject();
-            paper = (int[]) stream.readObject();
-
-        } else {
-            //stream.reset();
-            ink = (int[]) stream.readObject();
-            paper = (int[]) stream.readObject();
-            int x = stream.readInt();
-            int y = stream.readInt();
-            screen.getImage().load(stream,x,y);
-        }
-        screen.getPalette().setPalette(ink, paper);
-        stream.close();
     }
 
     class Listener implements MouseListener, MouseMotionListener, PropertyChangeListener {

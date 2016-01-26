@@ -2,8 +2,6 @@ package Painter;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 
 /**
  * Created by ainozemtsev on 21.01.16.
@@ -47,12 +45,5 @@ public class InterlacedView extends JComponent{
 
         }
     }
-
-    /*class Listener extends MouseAdapter {
-        @Override
-        public void mouseClicked(MouseEvent e) {
-            imageSupplier.ScrollInView(e.getX() / 2, e.getY() / 2);
-        }
-    }*/
 
 }

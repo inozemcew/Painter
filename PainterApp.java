@@ -6,8 +6,7 @@ import java.awt.*;
 import java.awt.event.InputEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 
 /**
  * Created by ainozemtsev on 17.11.15.
@@ -15,7 +14,8 @@ import java.io.IOException;
 
 public  class PainterApp extends JFrame {
     JLabel statusBar = new JLabel(" ");
-    private PaintArea paintArea;
+    //private PaintArea paintArea;
+    Screen screen = new Screen();
     private final JFileChooser fileChooser = new JFileChooser();
 
     public static void main(String[] argv) {
@@ -29,9 +29,9 @@ public  class PainterApp extends JFrame {
 
         JPanel form = new JPanel(new BorderLayout());
 
-        Screen screen = new Screen();
-        this.paintArea = new PaintArea(screen);
-        form.add(new JScrollPane(this.paintArea), BorderLayout.CENTER);
+        //Screen screen = new Screen();
+        PaintArea paintArea = new PaintArea(screen);
+        form.add(new JScrollPane(paintArea), BorderLayout.CENTER);
 
 
         InterlacedView view = new InterlacedView(screen);
@@ -47,7 +47,7 @@ public  class PainterApp extends JFrame {
 
         JToolBar toolbar = new JToolBar();
 
-        toolbar.add(this.paintArea.createToolBar());
+        toolbar.add(paintArea.createToolBar());
         toolbar.addPropertyChangeListener(paintArea.new Listener());
 
 
@@ -57,7 +57,7 @@ public  class PainterApp extends JFrame {
         spinner.setPaintTicks(true);
         spinner.setPaintLabels(true);
         spinner.setValue(paintArea.getScale());
-        spinner.addChangeListener(e -> this.paintArea.setScale(spinner.getValue()));
+        spinner.addChangeListener(e -> paintArea.setScale(spinner.getValue()));
         toolbar.add(spinner);
         toolbar.add(new JPanel());
 
@@ -91,10 +91,16 @@ public  class PainterApp extends JFrame {
         edit.setMnemonic('E');
         JMenuItem undo = edit.add("Undo");
         undo.setAccelerator(KeyStroke.getKeyStroke('Z', InputEvent.CTRL_DOWN_MASK));
-        undo.addActionListener(event -> paintArea.undo());
+        undo.addActionListener(event -> {
+            screen.undoDraw();
+            getContentPane().repaint();
+        });
         JMenuItem redo = edit.add("Redo");
         redo.setAccelerator(KeyStroke.getKeyStroke('Y', InputEvent.CTRL_DOWN_MASK));
-        redo.addActionListener(event -> paintArea.redo());
+        redo.addActionListener(event -> {
+            screen.redoDraw();
+            getContentPane().repaint();
+        });
 
         return menuBar;
     }
@@ -108,7 +114,9 @@ public  class PainterApp extends JFrame {
         if (JFileChooser.APPROVE_OPTION == fileChooser.showDialog(this, "Open")) {
             File file = fileChooser.getSelectedFile();
             try {
-                paintArea.importSCR(file);
+                final FileInputStream stream = new FileInputStream(file);
+                screen.importSCR(stream);
+                stream.close();
             } catch (IOException e) {
                 JOptionPane.showMessageDialog(this,
                         "Cannot import " + file,
@@ -127,7 +135,10 @@ public  class PainterApp extends JFrame {
         if (JFileChooser.APPROVE_OPTION == fileChooser.showDialog(this, "Open")) {
             File file = fileChooser.getSelectedFile();
             try {
-                paintArea.importPNG(file);
+                final FileInputStream stream = new FileInputStream(file);
+                screen.importPNG(stream);
+                stream.close();
+                repaint();
             } catch (IOException e) {
                 JOptionPane.showMessageDialog(this,
                         "Cannot import " + file,
@@ -148,7 +159,9 @@ public  class PainterApp extends JFrame {
         if (JFileChooser.APPROVE_OPTION == fileChooser.showDialog(this, "Save")) {
             File file = fileChooser.getSelectedFile();
             try {
-                paintArea.save(file);
+                ObjectOutputStream stream = new ObjectOutputStream(new FileOutputStream(file));
+                screen.save(stream);
+                stream.close();
             } catch (IOException e) {
                 JOptionPane.showMessageDialog(this,
                         "Cannot save " + file,
@@ -168,7 +181,9 @@ public  class PainterApp extends JFrame {
         if (JFileChooser.APPROVE_OPTION == fileChooser.showDialog(this, "Load")) {
             File file = fileChooser.getSelectedFile();
             try {
-                paintArea.load(file);
+                final FileInputStream fs = new FileInputStream(file);
+                ObjectInputStream stream = new ObjectInputStream(fs);
+                screen.load(stream, fs.getChannel().size() == 50266);
             } catch (Exception e) {
                 JOptionPane.showMessageDialog(this,
                         "Cannot load " + file,
