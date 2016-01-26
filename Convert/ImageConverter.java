@@ -41,7 +41,7 @@ public class ImageConverter implements ImageSupplier {
 
     @Override
     public Color getPixelColor(int x, int y) {
-        return converter.remap(new Color(img.getRGB(x,y)));
+        return new Color(img.getRGB(x,y));
     }
 
     @Override
@@ -358,8 +358,8 @@ class ColorConverter implements ColorConverting {
     public int fromRGB(Color color) {
         return cache.computeIfAbsent(color, Palette::fromRGB);
     }
-    Color remap (Color color) {
-        return Palette.toRGB(fromRGB(color));
+    static Color remap (Color color) {
+        return Palette.toRGB(Palette.fromRGB(color));
     }
 
     void replace (Color color, int index) {
