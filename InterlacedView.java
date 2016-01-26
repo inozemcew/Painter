@@ -9,7 +9,7 @@ import java.awt.*;
 public class InterlacedView extends JComponent{
     ImageSupplier imageSupplier = null;
 
-    InterlacedView(ImageSupplier supplier) {
+    public InterlacedView(ImageSupplier supplier) {
         super();
         this.imageSupplier = supplier;
         setPreferredSize(new Dimension(supplier.getImageWidth()*2,supplier.getImageHeight()*2));
