@@ -13,11 +13,9 @@ import java.io.IOException;
  * Created by ainozemtsev on 17.11.15.
  */
 
-public  class PainterApp {
-    JFrame frame = new JFrame("Painter");
+public  class PainterApp extends JFrame {
     JLabel statusBar = new JLabel(" ");
     private PaintArea paintArea;
-//    private Palette palette;
     private final JFileChooser fileChooser = new JFileChooser();
 
     public static void main(String[] argv) {
@@ -27,7 +25,7 @@ public  class PainterApp {
     }
 
     JFrame createMainForm() {
-        frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
         JPanel form = new JPanel(new BorderLayout());
 
@@ -48,7 +46,7 @@ public  class PainterApp {
 
 
         JToolBar toolbar = new JToolBar();
-//        this.palette = new Palette();
+
         toolbar.add(this.paintArea.createToolBar());
         toolbar.addPropertyChangeListener(paintArea.new Listener());
 
@@ -65,7 +63,21 @@ public  class PainterApp {
 
         form.add(toolbar, BorderLayout.NORTH);
 
+        JMenuBar menuBar = createMenuBar();
+
+        setJMenuBar(menuBar);
+
+        form.add(statusBar, BorderLayout.PAGE_END);
+        paintArea.addPropertyChangeListener("status", evt -> statusBar.setText(evt.getNewValue().toString()));
+
+        add(form);
+        pack();
+        return this;
+    }
+
+    private JMenuBar createMenuBar() {
         JMenuBar menuBar = new JMenuBar();
+
         JMenu file = menuBar.add(new JMenu("File"));
         file.setMnemonic('F');
         file.add("Load ..").addActionListener(event -> this.load());
@@ -84,14 +96,7 @@ public  class PainterApp {
         redo.setAccelerator(KeyStroke.getKeyStroke('Y', InputEvent.CTRL_DOWN_MASK));
         redo.addActionListener(event -> paintArea.redo());
 
-        frame.setJMenuBar(menuBar);
-
-        form.add(statusBar, BorderLayout.PAGE_END);
-        paintArea.addPropertyChangeListener("status", evt -> statusBar.setText(evt.getNewValue().toString()));
-
-        frame.add(form);
-        frame.pack();
-        return frame;
+        return menuBar;
     }
 
     private void importSCR() {
@@ -100,17 +105,17 @@ public  class PainterApp {
         fileChooser.resetChoosableFileFilters();
         fileChooser.addChoosableFileFilter(filter);
         fileChooser.setFileFilter(filter);
-        if (JFileChooser.APPROVE_OPTION == fileChooser.showDialog(frame, "Open")) {
+        if (JFileChooser.APPROVE_OPTION == fileChooser.showDialog(this, "Open")) {
             File file = fileChooser.getSelectedFile();
             try {
                 paintArea.importSCR(file);
             } catch (IOException e) {
-                JOptionPane.showMessageDialog(this.frame,
+                JOptionPane.showMessageDialog(this,
                         "Cannot import " + file,
                         "Import error",
                         JOptionPane.ERROR_MESSAGE);
             }
-            frame.repaint();
+            repaint();
         }
     }
     private void importPNG() {
@@ -119,17 +124,17 @@ public  class PainterApp {
         fileChooser.resetChoosableFileFilters();
         fileChooser.addChoosableFileFilter(filter);
         fileChooser.setFileFilter(filter);
-        if (JFileChooser.APPROVE_OPTION == fileChooser.showDialog(frame, "Open")) {
+        if (JFileChooser.APPROVE_OPTION == fileChooser.showDialog(this, "Open")) {
             File file = fileChooser.getSelectedFile();
             try {
                 paintArea.importPNG(file);
             } catch (IOException e) {
-                JOptionPane.showMessageDialog(this.frame,
+                JOptionPane.showMessageDialog(this,
                         "Cannot import " + file,
                         "Import error",
                         JOptionPane.ERROR_MESSAGE);
             }
-            frame.repaint();
+            repaint();
         }
     }
 
@@ -140,17 +145,17 @@ public  class PainterApp {
         fileChooser.resetChoosableFileFilters();
         fileChooser.addChoosableFileFilter(filter);
         fileChooser.setFileFilter(filter);
-        if (JFileChooser.APPROVE_OPTION == fileChooser.showDialog(frame, "Save")) {
+        if (JFileChooser.APPROVE_OPTION == fileChooser.showDialog(this, "Save")) {
             File file = fileChooser.getSelectedFile();
             try {
                 paintArea.save(file);
             } catch (IOException e) {
-                JOptionPane.showMessageDialog(this.frame,
+                JOptionPane.showMessageDialog(this,
                         "Cannot save " + file,
                         "Save error",
                         JOptionPane.ERROR_MESSAGE);
             }
-            frame.repaint();
+            repaint();
         }
     }
 
@@ -160,17 +165,17 @@ public  class PainterApp {
         fileChooser.resetChoosableFileFilters();
         fileChooser.addChoosableFileFilter(filter);
         fileChooser.setFileFilter(filter);
-        if (JFileChooser.APPROVE_OPTION == fileChooser.showDialog(frame, "Load")) {
+        if (JFileChooser.APPROVE_OPTION == fileChooser.showDialog(this, "Load")) {
             File file = fileChooser.getSelectedFile();
             try {
                 paintArea.load(file);
             } catch (Exception e) {
-                JOptionPane.showMessageDialog(this.frame,
+                JOptionPane.showMessageDialog(this,
                         "Cannot load " + file,
                         "Load error",
                         JOptionPane.ERROR_MESSAGE);
             }
-            frame.repaint();
+            repaint();
         }
     }
 

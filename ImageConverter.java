@@ -48,9 +48,12 @@ public class ImageConverter implements ImageSupplier {
 
         //BufferedImage png = ImageIO.read(stream);
         //if (png.getWidth() < 256 || png.getHeight() < 192) throw new IOException("Wrong png size");
-        Integer c[][][] = new Integer[ImageBuffer.ATTR_SIZE_X][ImageBuffer.ATTR_SIZE_Y][4];
-        for (int x = 0; x < ImageBuffer.ATTR_SIZE_X; x++)
-            for (int y = 0; y < ImageBuffer.ATTR_SIZE_Y; y++) {
+        final int imgCellsX = img.getWidth() / 8;
+        final int imgCellsY = img.getHeight() / 8;
+
+        Integer c[][][] = new Integer[imgCellsX][imgCellsY][4];
+        for (int x = 0; x < imgCellsX; x++)
+            for (int y = 0; y < imgCellsY; y++) {
                 Arrays.fill(c[x][y], -2);
                 Map<Integer, Integer> cnt = new HashMap<>();
                 for (int xx = 0; xx < 8; xx++)
@@ -62,13 +65,13 @@ public class ImageConverter implements ImageSupplier {
                         }
                     }
                 c[x][y] = Stream.concat(cnt.keySet().stream().sorted((f, g) -> cnt.get(g) - cnt.get(f)), Stream.of(-2, -2, -2, -2))
-                        .limit(4).toArray(Integer[]::new);
-                Arrays.sort(c[x][y]); //,(a,b)-> b-a);
+                        .limit(4).sorted().toArray(Integer[]::new);
+                //Arrays.sort(c[x][y]); //,(a,b)-> b-a);
             }
 
         Deque<Integer[]> stat = new LinkedList<>();
-        for (int x = 0; x < ImageBuffer.ATTR_SIZE_X; x++)
-            for (int y = 0; y < ImageBuffer.ATTR_SIZE_Y; y++) {
+        for (int x = 0; x < imgCellsX; x++)
+            for (int y = 0; y < imgCellsY; y++) {
                 final Integer[] i = c[x][y];
                 if (!stat.stream().anyMatch(s -> Arrays.deepEquals(s, i)))
                     stat.add(Arrays.copyOf(i, 4));
@@ -86,7 +89,8 @@ public class ImageConverter implements ImageSupplier {
                     pairs.stream()
                             .filter(item -> item.equals(first, second))
                             .findFirst()
-                            .orElseGet(() -> new Pair(first, second).add(pairs)).inc();
+                            .orElseGet(() -> Pair.createAndAdd(first, second, pairs))
+                            .inc();
                 }
         }
         pairs.sort((Pair f, Pair s) -> s.count - f.count);
@@ -108,12 +112,12 @@ public class ImageConverter implements ImageSupplier {
         ByteArrayOutputStream bs = new ByteArrayOutputStream();
         DataOutputStream os = new DataOutputStream(bs);
 
-        comb.getInkPaper(os);
+        comb.saveInkPaper(os);
         os.writeInt(img.getWidth());
         os.writeInt(img.getHeight());
 
-        for (int x = 0; x < img.getWidth()/8; x++)
-            for (int y = 0; y < img.getHeight()/8; y++) {
+        for (int x = 0; x < imgCellsX; x++)
+            for (int y = 0; y < imgCellsY; y++) {
                 final byte attr = comb.getAttr(c[x][y]);
 
                 List<Integer> l = comb.attrToList(attr);
@@ -177,9 +181,10 @@ class Pair {
         return this.equals(o.first, o.second);
     }
 
-    Pair add(ArrayList<Pair> vector) {
-        vector.add(this);
-        return this;
+    static Pair createAndAdd(int first, int second, ArrayList<Pair> vector) {
+        Pair p = new Pair(first, second);
+        vector.add(p);
+        return p;
     }
 
     Pair complement(Integer[] s) {
@@ -234,8 +239,9 @@ class Combinator {
             }
         Map<Integer, List<Pair>> m = ps.stream().collect(Collectors.groupingBy(p -> p.rank(s, ink, paper)));
         if (m.containsKey(0)) return m.get(0);
+        if (m.containsKey(1)) return m.get(1);
         else return Stream.concat(
-                m.containsKey(1) ? m.get(1).stream() : Stream.empty(),
+                /*m.containsKey(1) ? m.get(1).stream() :*/ Stream.empty(),
                 m.containsKey(2) ? m.get(2).stream().sorted((x, y) -> x.compareTo(y, s)) : Stream.empty()
         ).collect(Collectors.toList());
     }
@@ -288,8 +294,8 @@ class Combinator {
     byte getAttr(Integer[] s) {
         int bestN = -1;
         byte best = 0;
-        for (int i = 0; i < ink.size(); i++) {
-            final Pair ip = ink.get(i);
+        for (int i = 0; i <= ink.size(); i++) {
+            final Pair ip = (i<ink.size()) ? ink.get(i) : new Pair(0,0);
             for (int p = 0; p < paper.size(); p++) {
                 final Pair pp = paper.get(p);
                 int n = 0;
@@ -308,7 +314,7 @@ class Combinator {
         return best;
     }
 
-    void getInkPaper(DataOutputStream stream) throws IOException {
+    void saveInkPaper(DataOutputStream stream) throws IOException {
         Pair j;
         for (int i = 0; i < 8; i++) {
             j = (i < ink.size()) ? ink.get(i) : new Pair(0, 0);
@@ -322,12 +328,16 @@ class Combinator {
 
     List<Integer> attrToList(byte attr) {
         List<Integer> l = new ArrayList<>();
-        final Pair p = paper.get((attr >> 3) & 7);
-        l.add(p.first);
-        l.add(p.second);
-        final Pair i = ink.get(attr & 7);
-        l.add(i.first);
-        l.add(i.second);
+        if (paper.size()>0) {
+            final Pair p = paper.get((attr >> 3) & 7);
+            l.add(p.first);
+            l.add(p.second);
+        } else { l.add(-1);l.add(-1);}
+        if (ink.size()>0) {
+            final Pair i = ink.get(attr & 7);
+            l.add(i.first);
+            l.add(i.second);
+        } else {l.add(-1);l.add(-1);}
         return l;
     }
 }
