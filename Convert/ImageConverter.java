@@ -20,14 +20,16 @@ public class ImageConverter implements ImageSupplier {
     ColorConverter converter = new ColorConverter();
     private final int sizeXCells;
     private final int sizeYCells;
-    private final Integer[][][] colors4Tiles;
+    private Integer[][][] colors4Tiles;
     private ImageChangeListener listener = null;
 
     public ImageConverter(BufferedImage img) {
         this.img = img;
         sizeXCells = img.getWidth() / 8;
         sizeYCells = img.getHeight() / 8;
-        colors4Tiles = getColors4Tiles();
+        for (int x = 0; x < img.getWidth(); x++) for (int y = 0; y < img.getHeight(); y++) {
+            converter.fromRGB(new Color(img.getRGB(x,y)));
+        }
     }
 
     private boolean preview = false;
@@ -85,6 +87,8 @@ public class ImageConverter implements ImageSupplier {
     }
 
     public DataInputStream asTileStream() throws IOException {
+
+        colors4Tiles = getColors4Tiles();
 
         Deque<Integer[]> stat = new LinkedList<>();
         for (int x = 0; x < sizeXCells; x++)
