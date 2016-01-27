@@ -6,7 +6,7 @@ import java.awt.*;
 /**
  * Created by ainozemtsev on 26.11.15.
  */
-public class PaletteButton extends JToggleButton implements Palette.PaletteChangeListener{
+public class PaletteButton extends JToggleButton implements Palette.PaletteChangeListener, PalettePopup.ColorIndexSupplier{
     private final Palette palette;
     private final Palette.Table table;
     private final int index;
@@ -19,7 +19,7 @@ public class PaletteButton extends JToggleButton implements Palette.PaletteChang
         setIcon(new PaletteIcon(palette.getColor(table, index, 0), palette.getColor(table, index, 1)));
         setMinimumSize(new Dimension(32, 32));
         setFocusPainted(false);
-        addMouseListener(PalettePopup.createPalettePopup(this));
+        addMouseListener(PalettePopup.createPalettePopup());
         palette.addChangeListener(this, table, index);
     }
 

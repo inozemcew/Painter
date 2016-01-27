@@ -13,6 +13,11 @@ import java.util.Enumeration;
  */
 public class PalettePopup extends JPopupMenu {
 
+    public interface ColorIndexSupplier {
+        int getColorIndex();
+        void setColorIndex(int index);
+    }
+
     MouseListener listener = new MouseAdapter() {
         @Override
         public void mousePressed(MouseEvent e) {
@@ -27,11 +32,11 @@ public class PalettePopup extends JPopupMenu {
 
     private static PalettePopup palettePopup = new PalettePopup();
 
-    public static MouseListener createPalettePopup(PaletteButton button) {
+    public static MouseListener createPalettePopup() {
         return palettePopup.listener;
     }
 
-    private PaletteButton button = null;
+    private ColorIndexSupplier button = null;
     private ButtonGroup group1,group2;
 
 
@@ -58,7 +63,7 @@ public class PalettePopup extends JPopupMenu {
 
     private void doPopUp (MouseEvent e) {
         if (e.isPopupTrigger()) {
-            this.button = (PaletteButton) e.getComponent();
+            this.button = (ColorIndexSupplier) e.getComponent();
             int colorIndex = button.getColorIndex();
             JMenuItem m1 = (JMenuItem)getSubElements()[Palette.first(colorIndex)];
             JMenuItem m2 = (JMenuItem)getSubElements()[Palette.second(colorIndex)+64];

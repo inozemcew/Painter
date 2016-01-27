@@ -21,6 +21,7 @@ public class ImageConverter implements ImageSupplier {
     private final int sizeXCells;
     private final int sizeYCells;
     private final Integer[][][] colors4Tiles;
+    private ImageChangeListener listener = null;
 
     public ImageConverter(BufferedImage img) {
         this.img = img;
@@ -28,6 +29,8 @@ public class ImageConverter implements ImageSupplier {
         sizeYCells = img.getHeight() / 8;
         colors4Tiles = getColors4Tiles();
     }
+
+    private boolean preview = false;
 
     @Override
     public int getImageWidth() {
@@ -41,12 +44,18 @@ public class ImageConverter implements ImageSupplier {
 
     @Override
     public Color getPixelColor(int x, int y) {
-        return new Color(img.getRGB(x,y));
+        Color color = new Color(img.getRGB(x, y));
+        if (preview) return converter.remap(color); else return color;
     }
 
     @Override
     public void addChangeListener(ImageChangeListener listener) {
+        this.listener = listener;
+    }
 
+    void setPreview(boolean enabled) {
+        this.preview = enabled;
+        if (this.listener != null) listener.imageChanged();
     }
 
     Map<Color,Integer> getColorMap() {
@@ -358,8 +367,8 @@ class ColorConverter implements ColorConverting {
     public int fromRGB(Color color) {
         return cache.computeIfAbsent(color, Palette::fromRGB);
     }
-    static Color remap (Color color) {
-        return Palette.toRGB(Palette.fromRGB(color));
+    Color remap (Color color) {
+        return Palette.toRGB(fromRGB(color));
     }
 
     void replace (Color color, int index) {
