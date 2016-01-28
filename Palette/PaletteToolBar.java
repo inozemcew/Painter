@@ -34,7 +34,7 @@ public class PaletteToolBar extends JToolBar {
             toolBar.add(b);
         }
         JToggleButton transparentButton = new JToggleButton("T");
-        transparentButton.addActionListener(e -> fireColorChange(table, 8));
+        transparentButton.addActionListener(e -> fireColorChange(table, -1));
         group.add(transparentButton);
         toolBar.add(transparentButton);
         toolBar.addSeparator();
