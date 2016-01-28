@@ -6,9 +6,11 @@ import Painter.Palette.Palette;
 import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.TableColumnModel;
 import java.awt.*;
 import java.util.ArrayList;
-import java.util.Map;
+import java.util.List;
+import java.util.stream.IntStream;
 
 /**
  * Created by aleksey on 24.01.16.
@@ -16,54 +18,92 @@ import java.util.Map;
 public class ConvertDialog extends JDialog {
     boolean result = false;
     ImageConverter converter;
+    List<Color> colors = new ArrayList<>();
 
     public ConvertDialog(ImageConverter converter) {
-        super((Frame) null, "Image conversion", true);
+        super();
+        setTitle("Image conversion");
+        setModal(true);
         this.converter = converter;
-        add(new InterlacedView(converter));
+        final InterlacedView interlacedView = new InterlacedView(converter);
+        add(interlacedView);
 
-        ColorCellModel model = new ColorCellModel(converter.getColorMap());
-        ColorCellRenderer renderer = new ColorCellRenderer();
+        converter.getColorMap().keySet().forEach(colors::add);
+
+        ColorCellModel model = new ColorCellModel(colors);
+        model.addTableModelListener(e1 -> {
+            if (converter.getPreview()) interlacedView.repaint();
+        });
 
         JTable table = new JTable(model);
+        final TableColumnModel columnModel = table.getColumnModel();
         table.setTableHeader(null);
+        { // Table cell renderer
+            DefaultTableCellRenderer renderer = new DefaultTableCellRenderer() {
+                protected void setValue(Object o) {
+                    final ColorIcon icon = (ColorIcon) o;
+                    setIcon(icon);
+                    setToolTipText(icon.getColor().toString());
+                }
+            };
 
-        table.getColumnModel().getColumn(0).setCellRenderer(renderer);
-        table.getColumnModel().getColumn(1).setCellRenderer(renderer);
+            for (int i = 0; i < 2; i++) {
+                columnModel.getColumn(i).setCellRenderer(renderer);
+                columnModel.getColumn(i).setMinWidth(48);
+            }
+        }
+        { // Table Cell Editor
+            JComboBox<Icon> cb = new JComboBox<>();
+            IntStream.range(0, 16)
+                    .flatMap(i -> IntStream.range(0, 4).map(j -> i + j * 16))
+                    .forEach(index -> cb.addItem(model.getToList().get(index)));
 
-        table.getColumnModel().getColumn(0).setMinWidth(48);
-        table.getColumnModel().getColumn(1).setMinWidth(48);
+            cb.setMaximumRowCount(24);
+            columnModel.getColumn(1).setCellEditor(new DefaultCellEditor(cb));
+            table.setFillsViewportHeight(true);
+        }
+        { // Scroll pane & reset button
+            JScrollPane scrollPane = new JScrollPane(table);
+            scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
+            scrollPane.setPreferredSize(new Dimension(128, 80));
+            JPanel p = new JPanel(new BorderLayout());
+            {
+                JButton b = new JButton("Reset");
+                b.addActionListener(e -> {
+                    converter.loadColorMap();
+                    model.fireTableDataChanged();
+                });
+                p.add(b,BorderLayout.PAGE_END);
+            }
+            p.add(scrollPane, BorderLayout.CENTER);
+            add(p, BorderLayout.LINE_END);
+        }
+        { // bottom buttons panel
+            JPanel p = new JPanel();
 
-        JComboBox<Icon> cb = new JComboBox<>();
-        for (int i = 0; i < 16; i++) for (int j=0; j<64; j+=16) cb.addItem(model.getToList().get(i+j));
+            JButton b = new JButton("OK");
 
-        cb.setMaximumRowCount(24);
-        table.getColumnModel().getColumn(1).setCellEditor(new DefaultCellEditor(cb));
-        table.setFillsViewportHeight(true);
+            b.addActionListener(e -> {
+                result = true;
+                this.setVisible(false);
+            });
+            p.add(b);
 
-        JScrollPane scrollPane = new JScrollPane(table);
-        scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
-        scrollPane.setPreferredSize(new Dimension(180,80));
-        add(scrollPane, BorderLayout.LINE_END);
+            b = new JButton("Cancel");
+            b.addActionListener(e -> {
+                result = false;
+                this.setVisible(false);
+            });
+            p.add(b);
 
-        JPanel p = new JPanel();
-        JButton b = new JButton("OK");
-        b.addActionListener(e -> {
-            result = true;
-            this.setVisible(false);
-        });
-        p.add(b);
-        b = new JButton("Cancel");
-        b.addActionListener(e -> {
-            result = false;
-            this.setVisible(false);
-        });
-        p.add(b);
-        p.add(new JSeparator(SwingConstants.VERTICAL));
-        JToggleButton t = new JToggleButton("Preview");
-        t.addActionListener(e -> converter.setPreview(t.isSelected()));
-        p.add(t);
-        add(p, BorderLayout.PAGE_END);
+            p.add(new JSeparator(SwingConstants.VERTICAL));
+
+            JToggleButton t = new JToggleButton("Preview");
+            t.addActionListener(e -> converter.setPreview(t.isSelected()));
+            p.add(t);
+
+            add(p, BorderLayout.PAGE_END);
+        }
         pack();
     }
 
@@ -72,34 +112,23 @@ public class ConvertDialog extends JDialog {
         return result;
     }
 
-    static class ColorCellRenderer extends DefaultTableCellRenderer{
-        protected void setValue(Object o) {
-            setIcon(((ColorIcon) o));
-        }
-
-    }
-
     class ColorCellModel extends AbstractTableModel {
-        ArrayList<ColorIcon> from = new ArrayList<>();
-        ArrayList<ColorIndexIcon> to = new ArrayList<>();
+        ArrayList<ColorIcon> fromIcons = new ArrayList<>();
+        ArrayList<ColorIndexIcon> toIcons = new ArrayList<>();
 
-        public ColorCellModel(Map<Color,Integer> map) {
+        public ColorCellModel(List<Color> colors) {
             super();
-            for (Color c : map.keySet()) {
-                from.add(new ColorIcon(c));
-            }
-            for (int i=0; i<64; i++) {
-                to.add(new ColorIndexIcon(i));
-            }
+            colors.forEach(c -> this.fromIcons.add(new ColorIcon(c)));
+            IntStream.range(0,64).forEach(i -> toIcons.add(new ColorIndexIcon(i)));
         }
 
         ArrayList<ColorIndexIcon> getToList() {
-            return this.to;
+            return this.toIcons;
         }
 
         @Override
         public int getRowCount() {
-            return converter.getColorMap().size();
+            return colors.size();
         }
 
         @Override
@@ -114,8 +143,11 @@ public class ConvertDialog extends JDialog {
 
         @Override
         public Object getValueAt(int r, int c) {
-            ColorIcon ci = from.get(r);
-            if (c == 0) return ci; else return to.get(converter.getColorMap().get(ci.getColor()));
+            ColorIcon ci = fromIcons.get(r);
+            if (c == 0) return ci; else {
+                final Integer index = converter.getColorMap().get(ci.getColor());
+                return toIcons.get(index);
+            }
         }
 
         @Override
@@ -125,8 +157,9 @@ public class ConvertDialog extends JDialog {
 
         @Override
         public void setValueAt(Object aValue, int rowIndex, int columnIndex) {
-            Color color = converter.getColorMap().keySet().toArray(new Color[0])[rowIndex];
+            Color color = fromIcons.get(rowIndex).getColor();
             converter.getColorMap().replace(color,((ColorIndexIcon)aValue).getIndex());
+            fireTableRowsUpdated(rowIndex,rowIndex);
         }
     }
 }

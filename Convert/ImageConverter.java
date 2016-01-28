@@ -27,6 +27,11 @@ public class ImageConverter implements ImageSupplier {
         this.img = img;
         sizeXCells = img.getWidth() / 8;
         sizeYCells = img.getHeight() / 8;
+        loadColorMap();
+    }
+
+    void loadColorMap() {
+        converter.getColorMap().clear();
         for (int x = 0; x < img.getWidth(); x++) for (int y = 0; y < img.getHeight(); y++) {
             converter.fromRGB(new Color(img.getRGB(x,y)));
         }
@@ -53,6 +58,10 @@ public class ImageConverter implements ImageSupplier {
     @Override
     public void addChangeListener(ImageChangeListener listener) {
         this.listener = listener;
+    }
+
+    boolean getPreview() {
+        return this.preview;
     }
 
     void setPreview(boolean enabled) {
