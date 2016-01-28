@@ -31,6 +31,10 @@ public class PaletteButton extends JToggleButton implements Palette.PaletteChang
         return this.index;
     }
 
+    public Palette.Table getTable() {
+        return this.table;
+    }
+
     public void setColorIndex(int value) {
         palette.setColorIndex(value,this.table,this.index);
     }

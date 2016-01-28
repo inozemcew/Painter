@@ -2,6 +2,7 @@ package Painter;
 
 import Painter.Palette.Palette;
 import Painter.Palette.PaletteButton;
+import Painter.Palette.PaletteToolBar;
 
 import javax.swing.*;
 import java.awt.*;
@@ -14,7 +15,7 @@ import java.beans.PropertyChangeListener;
 /**
  * Created by ainozemtsev on 17.11.15.
  */
-public class PaintArea extends JComponent implements Scrollable {
+public class PaintArea extends JComponent implements Scrollable, PaletteToolBar.ColorChangeListener {
     private Screen screen;
     private int scale = 2;
     private final JToolBar inkBar = new JToolBar();
@@ -136,14 +137,23 @@ public class PaintArea extends JComponent implements Scrollable {
         this.revalidate();
     }
 
+    private int[] ink_paper = {0,0};
+
+
+    @Override
+    public void colorChanged(Palette.Table table, int index) {
+        ink_paper[table.ordinal()] = index;
+    }
+
     private int findColorIndex(Palette.Table table) {
-        JToolBar group = (table == Palette.Table.INK) ? inkBar : paperBar;
+        return ink_paper[table.ordinal()];
+        /*JToolBar group = (table == Palette.Table.INK) ? inkBar : paperBar;
         for (int i = 0; i < group.getComponentCount(); i++) {
             Component component = group.getComponent(i);
             if (component instanceof PaletteButton && ((PaletteButton) component).isSelected())
                 return ((PaletteButton) component).getIndex();
         }
-        return -1;
+        return -1;*/
     }
 
     class Listener implements MouseListener, MouseMotionListener, PropertyChangeListener {

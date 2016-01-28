@@ -1,7 +1,9 @@
 package Painter.Palette;
 
 import java.awt.*;
-import java.io.*;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.stream.Stream;
@@ -20,7 +22,7 @@ public class Palette {
         void paletteChanged();
     }
 
-    private class PaletteChangeListenerItem {
+    private static class PaletteChangeListenerItem {
         private Table table;
         private int index;
         private PaletteChangeListener listener;

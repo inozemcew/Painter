@@ -1,5 +1,7 @@
 package Painter;
 
+import Painter.Palette.PaletteToolBar;
+
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
@@ -48,7 +50,10 @@ public  class PainterApp extends JFrame {
 
         JToolBar toolbar = new JToolBar();
 
-        toolbar.add(paintArea.createToolBar());
+        //toolbar.add(paintArea.createToolBar());
+        final PaletteToolBar paletteToolBar = new PaletteToolBar(screen.getPalette());
+        paletteToolBar.addActionListener(paintArea);
+        toolbar.add(paletteToolBar);
         toolbar.addPropertyChangeListener(paintArea.new Listener());
 
 
