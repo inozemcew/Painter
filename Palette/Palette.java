@@ -6,6 +6,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 /**
@@ -190,24 +191,34 @@ public class Palette {
         return new Converter();
     }
 
-    public static int fromRGB(Color color){
+    public static int fromRGB(Color color,int[] indices){
         int bestIndex = 0;
         double bestYUV = Integer.MAX_VALUE;
-        for (int i = 0; i<64; i++){
-            final int dr = color.getRed() - toRGB(i).getRed();
-            final int dg = color.getGreen() - toRGB(i).getGreen();
-            final int db = color.getBlue() - toRGB(i).getBlue();
-            final double y = 0.299 * dr + 0.587 * dg + 0.114 * db;
-            final double u = -0.14713 * dr - 0.28886 * dg + 0.436 *db;
-            final double v = 0.615 * dr  - 0.51499 * dg - 0.10001 * db;
-            //final int d = dr * dr + dg * dg + db * db;
-            final double yuv = (y*y)/10 +  u*u + v*v;
+        for (int i = 0; i < indices.length; i++){
+            final double yuv = getYuvDiff(color, indices[i]);
             if (yuv < bestYUV) {
                 bestYUV = yuv;
                 bestIndex = i;
             }
         }
         return bestIndex;
+    }
+
+    private static int[] allColorIndices = IntStream.range(0,64).toArray();
+
+    public static int fromRGB(Color color) {
+        return fromRGB(color,allColorIndices);
+    }
+
+    private static double getYuvDiff(Color color, int i) {
+        final int dr = color.getRed() - toRGB(i).getRed();
+        final int dg = color.getGreen() - toRGB(i).getGreen();
+        final int db = color.getBlue() - toRGB(i).getBlue();
+        final double y = 0.299 * dr + 0.587 * dg + 0.114 * db;
+        final double u = -0.14713 * dr - 0.28886 * dg + 0.436 *db;
+        final double v = 0.615 * dr  - 0.51499 * dg - 0.10001 * db;
+        //final int d = dr * dr + dg * dg + db * db;
+        return (y*y)/10 +  u*u + v*v;
     }
 
     public static int fromRGB1(Color color) {

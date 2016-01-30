@@ -150,16 +150,15 @@ public class ImageConverter implements ImageSupplier {
             for (int y = 0; y < sizeYCells; y++) {
                 final byte attr = comb.getAttr(colors4Tiles[x][y]);
 
-                List<Integer> l = comb.attrToList(attr);
+                int[] l = comb.attrToList(attr);
                 for (int yy = 0; yy < 8; yy++)
                     for (int xx = 0; xx < 8; xx++) {
                         final int xi = x * 8 + xx;
                         final int yi = y * 8 + yy;
-                        final int color = (xi < img.getWidth() && yi < img.getHeight())
-                                ? converter.fromRGB(new Color(img.getRGB(xi, yi)))
-                                : converter.fromRGB(new Color(img.getRGB(0, 0)));
-                        final byte b = (byte) (l.indexOf(color));
-                        os.write ((b >= 0) ? b : 0);
+                        final Color color = converter.remap(new Color(
+                                (xi < img.getWidth() && yi < img.getHeight())
+                                ? img.getRGB(xi, yi) : img.getRGB(0, 0)));
+                        os.write ((byte) (Palette.fromRGB(color,l)));
                     }
                 os.write(attr);
             }
@@ -357,18 +356,18 @@ class Combinator {
         }
     }
 
-    List<Integer> attrToList(byte attr) {
-        List<Integer> l = new ArrayList<>();
+    int[] attrToList(byte attr) {
+        int[] l = {-1,-1,-1,-1};
         if (paper.size()>0) {
             final Pair p = paper.get((attr >> 3) & 7);
-            l.add(p.first);
-            l.add(p.second);
-        } else { l.add(-1);l.add(-1);}
+            l[0] = p.first;
+            l[1] = p.second;
+        }
         if (ink.size()>0) {
             final Pair i = ink.get(attr & 7);
-            l.add(i.first);
-            l.add(i.second);
-        } else {l.add(-1);l.add(-1);}
+            l[2] = i.first;
+            l[3] = i.second;
+        }
         return l;
     }
 }
