@@ -36,16 +36,21 @@ public class Screen implements ImageSupplier {
 
     @Override
     public int getImageHeight() {
-        return ImageBuffer.SIZE_Y;
+        return image.SIZE_Y;
     }
 
     @Override
     public int getImageWidth() {
-        return ImageBuffer.SIZE_X;
+        return image.SIZE_X;
     }
 
     Palette getPalette() {
         return palette;
+    }
+
+    void newImageBuffer(int sizeX, int sizeY) {
+        this.image = new ImageBuffer(sizeX,sizeY);
+        listeners.forEach(ImageChangeListener::imageChanged);
     }
 
     ImageBuffer getImage() {
@@ -64,7 +69,7 @@ public class Screen implements ImageSupplier {
     }
 
     boolean isInImage(int x, int y) {
-        return x >= 0 && x < ImageBuffer.SIZE_X && y >= 0 && y < ImageBuffer.SIZE_Y;
+        return x >= 0 && x < image.SIZE_X && y >= 0 && y < image.SIZE_Y;
     }
 
     public void beginDraw() {
@@ -166,8 +171,8 @@ public class Screen implements ImageSupplier {
                 setPixel(p.x, p.y, table, index, shift);
                 if (p.x > 0) stack.push(new Point(p.x - 1, p.y));
                 if (p.y > 0) stack.push(new Point(p.x, p.y - 1));
-                if (p.x < ImageBuffer.SIZE_X - 1) stack.push(new Point(p.x + 1, p.y));
-                if (p.y < ImageBuffer.SIZE_Y - 1) stack.push(new Point(p.x, p.y + 1));
+                if (p.x < image.SIZE_X - 1) stack.push(new Point(p.x + 1, p.y));
+                if (p.y < image.SIZE_Y - 1) stack.push(new Point(p.x, p.y + 1));
             }
             endDraw();
             listeners.forEach(ImageChangeListener::imageChanged);
@@ -177,8 +182,8 @@ public class Screen implements ImageSupplier {
     void save(ObjectOutputStream stream) throws IOException {
         stream.writeObject(getPalette().getPalette(Palette.Table.INK));
         stream.writeObject(getPalette().getPalette(Palette.Table.PAPER));
-        stream.writeInt(ImageBuffer.SIZE_X);
-        stream.writeInt(ImageBuffer.SIZE_Y);
+        stream.writeInt(image.SIZE_X);
+        stream.writeInt(image.SIZE_Y);
         image.store(stream);
     }
     public void load(ObjectInputStream stream, boolean old) throws IOException, ClassNotFoundException {
@@ -245,8 +250,8 @@ public class Screen implements ImageSupplier {
         palette.loadPalette(is);
         int w = is.readInt() / 8;
         int h = is.readInt() / 8;
-        int x = (ImageBuffer.ATTR_SIZE_X - w) / 2;
-        int y = (ImageBuffer.ATTR_SIZE_Y - h) / 2;
+        int x = (image.ATTR_SIZE_X - w) / 2;
+        int y = (image.ATTR_SIZE_Y - h) / 2;
         image.loadByTiles(is, (x < 0) ? 0 : x, (y < 0) ? 0 : y, w, h);
         is.close();
     }

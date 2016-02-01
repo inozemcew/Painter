@@ -19,6 +19,8 @@ public  class PainterApp extends JFrame {
     //private PaintArea paintArea;
     Screen screen = new Screen();
     private final JFileChooser fileChooser = new JFileChooser();
+    private InterlacedView interlacedView;
+    private JSplitPane splitPane;
 
     public static void main(String[] argv) {
         PainterApp form = new PainterApp();
@@ -32,20 +34,34 @@ public  class PainterApp extends JFrame {
 
         JPanel form = new JPanel(new BorderLayout());
 
-        //Screen screen = new Screen();
         PaintArea paintArea = new PaintArea(screen);
-        form.add(new JScrollPane(paintArea), BorderLayout.CENTER);
+        //form.add(new JScrollPane(paintArea), BorderLayout.LINE_END);
 
 
-        InterlacedView view = new InterlacedView(screen);
-        view.addMouseListener(new MouseAdapter() {
+        interlacedView = new InterlacedView(screen);
+        interlacedView.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent mouseEvent) {
                 super.mousePressed(mouseEvent);
                 paintArea.ScrollInView(mouseEvent.getX() / 2, mouseEvent.getY() / 2);
             }
         });
-        form.add(view, BorderLayout.LINE_START);
+        //form.add(new JScrollPane(view), BorderLayout.LINE_START);
+        splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+        splitPane.setOneTouchExpandable(true);
+
+        //splitPane.setPreferredSize(new Dimension(1280,480));
+        splitPane.setResizeWeight(0);
+        JScrollPane pane = new JScrollPane(interlacedView);
+        //pane.setPreferredSize(interlacedView.getPreferredSize());
+        splitPane.setLeftComponent(pane);
+        pane = new JScrollPane(paintArea);
+        pane.setMinimumSize(new Dimension(128,128));
+        pane.setPreferredSize(new Dimension(512,384));
+        splitPane.setRightComponent(pane);
+        //splitPane.resetToPreferredSizes();
+        form.add(splitPane);
+
 
 
         JToolBar toolbar = new JToolBar();
@@ -86,6 +102,11 @@ public  class PainterApp extends JFrame {
 
         JMenu file = menuBar.add(new JMenu("File"));
         file.setMnemonic('F');
+        JMenu n = new JMenu("New");
+        n.add("256x192").addActionListener(event -> newScreen(256,192));
+        n.add("320x200").addActionListener(event -> newScreen(320,200));
+        n.add("320x240").addActionListener(event -> newScreen(320,240));
+        file.add(n);
         file.add("Load ..").addActionListener(event -> this.load());
         file.add("Save as ..").addActionListener(event -> this.saveAs());
         file.add("Import SCR..").addActionListener(event -> this.importSCR());
@@ -109,6 +130,15 @@ public  class PainterApp extends JFrame {
         });
 
         return menuBar;
+    }
+
+    private void newScreen(int x, int y) {
+        screen.newImageBuffer(x, y);
+        interlacedView.updatePreferredSize();
+        Dimension preferredSize = interlacedView.getPreferredSize();
+        preferredSize.setSize(preferredSize.getWidth()+3,preferredSize.getHeight()+3);
+        interlacedView.getParent().getParent().setPreferredSize(preferredSize);
+        splitPane.resetToPreferredSizes();
     }
 
     private void importSCR() {

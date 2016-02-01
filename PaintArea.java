@@ -23,57 +23,30 @@ public class PaintArea extends JComponent implements Scrollable, PaletteToolBar.
 
     public PaintArea(Screen screen) {
         super();
-        this.screen = screen;
-        this.updatePreferredSize();
+        setScreen(screen);
         Listener l = new Listener();
         this.addMouseListener(l);
         this.addMouseMotionListener(l);
+    }
+
+    void setScreen(Screen screen) {
+        this.screen = screen;
+        this.updatePreferredSize();
         this.screen.addChangeListener(new ImageSupplier.ImageChangeListener() {
             @Override
             public void imageChanged(int x, int y, int w, int h) {
                 repaint(x*scale,y*scale,w*scale,h*scale);
             }
-
             @Override
             public void imageChanged() {
                 repaint();
             }
-
             @Override
             public void paletteChanged() {
                 repaint();
             }
         });
     }
-
-    public JComponent createToolBar() {
-        JComponent panel = new JToolBar() {{
-            setFloatable(false);
-        }};
-        inkBar.setFloatable(false);
-        this.createButtonGroup(Palette.Table.INK, inkBar);
-        panel.add(inkBar);
-        paperBar.setFloatable(false);
-        this.createButtonGroup(Palette.Table.PAPER, paperBar);
-        panel.add(paperBar);
-        return panel;
-    }
-
-    ButtonGroup createButtonGroup(Palette.Table table, JToolBar toolBar) {
-        ButtonGroup group = new ButtonGroup();
-        for (int i = 0; i < 8; i++) {
-            AbstractButton b = new PaletteButton(screen.getPalette(), table, i);
-            if (i == 0) b.setSelected(true);
-            group.add(b);
-            toolBar.add(b);
-        }
-        JToggleButton transparentButton = new JToggleButton("T");
-        group.add(transparentButton);
-        toolBar.add(transparentButton);
-        toolBar.addSeparator();
-        return group;
-    }
-
 
     @Override
     public int getScrollableUnitIncrement(Rectangle rectangle, int i, int i1) {
@@ -133,7 +106,7 @@ public class PaintArea extends JComponent implements Scrollable, PaletteToolBar.
     }
 
     private void updatePreferredSize() {
-        this.setPreferredSize(new Dimension(ImageBuffer.SIZE_X * scale, ImageBuffer.SIZE_Y * scale));
+        this.setPreferredSize(new Dimension(screen.getImageWidth() * scale, screen.getImageHeight() * scale));
         this.revalidate();
     }
 

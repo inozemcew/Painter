@@ -8,15 +8,27 @@ import java.io.OutputStream;
  * Created by ainozemtsev on 23.11.15.
  */
 public class ImageBuffer {
-    public static final int SIZE_X = 320;
-    public static final int SIZE_Y = 240;
+    public final int SIZE_X;
+    public final int SIZE_Y;
 
-    public static final int ATTR_SIZE_X = SIZE_X / 8;
-    public static final int ATTR_SIZE_Y = SIZE_Y / 8;
+    public final int ATTR_SIZE_X;
+    public final int ATTR_SIZE_Y;
 
-    private byte pixbuf[][] = new byte[SIZE_X][SIZE_Y];
-    private byte attrbuf[][] = new byte[ATTR_SIZE_X][ATTR_SIZE_Y];
+    private byte pixbuf[][];
+    private byte attrbuf[][];
 
+    public ImageBuffer() {
+        this(320,240);
+    }
+
+    public ImageBuffer(int sizeX, int sizeY) {
+        this.SIZE_X = sizeX;
+        this.SIZE_Y = sizeY;
+        this.ATTR_SIZE_X = SIZE_X / 8;
+        this.ATTR_SIZE_Y = SIZE_Y / 8;
+        this.pixbuf = new byte[SIZE_X][SIZE_Y];
+        this.attrbuf = new byte[ATTR_SIZE_X][ATTR_SIZE_Y];
+    }
 
     public byte getPixel(int x, int y) {
         return (x >= 0 && x < SIZE_X && y >= 0 && y < SIZE_Y) ? pixbuf[x][y] : -1;
@@ -47,8 +59,8 @@ public class ImageBuffer {
     }
 
     void load(InputStream stream, int width, int height) throws IOException {
-        int ox = (SIZE_X - width) / 2;
-        int oy = (SIZE_Y - height) / 2;
+        int ox = (SIZE_X - width) / 16 * 8;
+        int oy = (SIZE_Y - height) / 16 * 8;
         load(stream, ox, oy, width, height);
     }
 
