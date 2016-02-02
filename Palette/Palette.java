@@ -11,11 +11,13 @@ import java.util.stream.Stream;
 
 /**
  * Created by ainozemtsev on 18.11.15.
+ * Palette tables
  */
 public class Palette {
 
     public enum Table {INK, PAPER}
 
+    public static final int COLORS_PER_CELL = 2;
 
     private int[][] colorTable = new int[2][8];
 
@@ -45,16 +47,20 @@ public class Palette {
         }
     }
 
-    public static int combine(int f, int s)     { return  f|(s<<6); }
+    public static int combine(int... f)     {
+        int result = 0;
+        for (int i=0; i<f.length;i++)
+            result |= f[i]<<(6*i);
+        return  result; }
     public static int split  (int c, int shift) { return (c>>(6*shift)&63); }
     public static int first  (int c)            { return split(c,0); }
     public static int second (int c)            { return split(c,1); }
 
-    public int getColorIndex(Table table, int index) {
+    public int getColorCell(Table table, int index) {
         return colorTable[table.ordinal()][index];
     }
 
-    public void setColorIndex(int value, Table table, int index) {
+    public void setColorCell(int value, Table table, int index) {
         colorTable[table.ordinal()][index] = value;
         fireChangeEvent(table,index);
     }
@@ -84,20 +90,20 @@ public class Palette {
     }
 
     public void loadPalette(DataInputStream stream) throws IOException {
-        for (int i = 0; i < 8; i++) setColorIndex(stream.readInt(), Table.INK,i);
-        for (int i = 0; i < 8; i++) setColorIndex(stream.readInt(), Table.PAPER,i);
+        for (int i = 0; i < 8; i++) setColorCell(stream.readInt(), Table.INK,i);
+        for (int i = 0; i < 8; i++) setColorCell(stream.readInt(), Table.PAPER,i);
     }
 
     public void savePalette(DataOutputStream stream) throws IOException {
-        for (int i = 0; i < 8; i++) stream.writeInt(getColorIndex(Table.INK,i));
-        for (int i = 0; i < 8; i++) stream.writeInt(getColorIndex(Table.PAPER,i));
+        for (int i = 0; i < 8; i++) stream.writeInt(getColorCell(Table.INK,i));
+        for (int i = 0; i < 8; i++) stream.writeInt(getColorCell(Table.PAPER,i));
     }
 
     public void setPalette(int[] ink, int[] paper) {
         setLocked(true);
         for (int i=0; i<8; i++){
-            setColorIndex(ink[i],Table.INK,i);
-            setColorIndex(paper[i],Table.PAPER,i);
+            setColorCell(ink[i],Table.INK,i);
+            setColorCell(paper[i],Table.PAPER,i);
         }
         setLocked(false);
     }
@@ -108,7 +114,7 @@ public class Palette {
 
 
     public Color getColor(Palette.Table table, int index, int fs) {
-        return toRGB(split(getColorIndex(table, index),fs));
+        return toRGB(split(getColorCell(table, index),fs));
     }
 
     public Color getInkColor (int index, int shift) {

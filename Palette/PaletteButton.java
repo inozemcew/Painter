@@ -5,6 +5,7 @@ import java.awt.*;
 
 /**
  * Created by ainozemtsev on 26.11.15.
+ * Button for selection current colors
  */
 public class PaletteButton extends JToggleButton implements Palette.PaletteChangeListener, PalettePopup.ColorIndexSupplier{
     private final Palette palette;
@@ -16,15 +17,15 @@ public class PaletteButton extends JToggleButton implements Palette.PaletteChang
         this.index = index;
         this.table = table;
         this.palette = palette;
-        setIcon(new PaletteIcon(palette.getColor(table, index, 0), palette.getColor(table, index, 1)));
+        setIcon(new PaletteIcon(palette.getColorCell(table, index)));
         setMinimumSize(new Dimension(32, 32));
         setFocusPainted(false);
         addMouseListener(PalettePopup.createPalettePopup());
         palette.addChangeListener(this, table, index);
     }
 
-    public int getColorIndex() {
-        return palette.getColorIndex(this.table, this.index);
+    public int getColorCell() {
+        return palette.getColorCell(this.table, this.index);
     }
 
     public int getIndex() {
@@ -35,31 +36,34 @@ public class PaletteButton extends JToggleButton implements Palette.PaletteChang
         return this.table;
     }
 
-    public void setColorIndex(int value) {
-        palette.setColorIndex(value,this.table,this.index);
+    public void setColorCell(int value) {
+        palette.setColorCell(value,this.table,this.index);
     }
 
     @Override
     public void paletteChanged() {
-        setIcon(new PaletteIcon(palette.getColor(table, index, 0), palette.getColor(table, index, 1)));
+        setIcon(new PaletteIcon(palette.getColorCell(table, index)));
     }
 }
 
 class PaletteIcon implements Icon {
     private final int SIZE = 32;
-    private Color color1, color2;
+    private Color[] colors = new Color[Palette.COLORS_PER_CELL];
 
-    public PaletteIcon(Color color1, Color color2) {
-        this.color1 = color1;
-        this.color2 = color2;
+    public PaletteIcon(int cell) {
+        for (int i = 0; i < colors.length; i++) {
+            this.colors[i] = Palette.toRGB(Palette.split(cell,i));
+        }
     }
 
     @Override
     public void paintIcon(Component c, Graphics g, int x, int y) {
-        g.setColor(this.color1);
-        g.fillRect(x, y, SIZE, SIZE / 2);
-        g.setColor(this.color2);
-        g.fillRect(x, SIZE / 2 + y, SIZE, SIZE / 2);
+        int dy = SIZE/colors.length;
+        for (int i=0; i < colors.length; i++) {
+            g.setColor(this.colors[i]);
+            g.fillRect(x, y + dy * i, SIZE , dy);
+
+        }
     }
 
     @Override

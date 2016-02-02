@@ -7,15 +7,17 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.util.Enumeration;
+import java.util.stream.IntStream;
 
 /**
  * Created by ainozemtsev on 26.11.15.
+ * Popup menu for selection colors in palette.
  */
 public class PalettePopup extends JPopupMenu {
 
     public interface ColorIndexSupplier {
-        int getColorIndex();
-        void setColorIndex(int index);
+        int getColorCell();
+        void setColorCell(int index);
     }
 
     MouseListener listener = new MouseAdapter() {
@@ -37,15 +39,17 @@ public class PalettePopup extends JPopupMenu {
     }
 
     private ColorIndexSupplier button = null;
-    private ButtonGroup group1,group2;
+    private ButtonGroup[] groups = new ButtonGroup[Palette.COLORS_PER_CELL];
 
 
     private PalettePopup() {
         super();
-        this.setLayout(new GridLayout(9, 16));
-        group1 = createButtonGroup();
-        for (int i = 0; i < 16; i++) addSeparator();
-        group2 = createButtonGroup();
+        this.setLayout(new GridLayout(5*groups.length-1, 16));
+        for (int i = 0; i < groups.length; i++) {
+            groups[i] = createButtonGroup();
+            if (i == groups.length-1) break;
+            IntStream.range(0,16).forEach(x -> addSeparator());
+        }
     }
 
     private ButtonGroup createButtonGroup() {
@@ -64,17 +68,25 @@ public class PalettePopup extends JPopupMenu {
     private void doPopUp (MouseEvent e) {
         if (e.isPopupTrigger()) {
             this.button = (ColorIndexSupplier) e.getComponent();
-            int colorIndex = button.getColorIndex();
-            JMenuItem m1 = (JMenuItem)getSubElements()[Palette.first(colorIndex)];
-            JMenuItem m2 = (JMenuItem)getSubElements()[Palette.second(colorIndex)+64];
-            m1.setSelected(true);
-            m2.setSelected(true);
+            int colorIndex = button.getColorCell();
+            for (int i =0; i< Palette.COLORS_PER_CELL; i++) {
+                JMenuItem m = (JMenuItem)getSubElements()[Palette.split(colorIndex,i)+64*i];
+                m.setSelected(true);
+            }
+//            JMenuItem m1 = (JMenuItem)getSubElements()[Palette.first(colorIndex)];
+//            JMenuItem m2 = (JMenuItem)getSubElements()[Palette.second(colorIndex)+64];
+//            m1.setSelected(true);
+//            m2.setSelected(true);
             show(e.getComponent(), e.getX(), e.getY());
         }
     }
 
     private void doSelect(ActionEvent e) {
-        button.setColorIndex(Palette.combine(findSelected(group1), findSelected(group2)));
+        button.setColorCell(Palette.combine(
+                IntStream.range(0,groups.length)
+                .map(i -> findSelected(groups[i]))
+                .toArray()
+        ));
     }
 
     private int findSelected(ButtonGroup group) {
