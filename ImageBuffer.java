@@ -6,6 +6,7 @@ import java.io.OutputStream;
 
 /**
  * Created by ainozemtsev on 23.11.15.
+ * Image buffer for 2 bitplanes
  */
 public class ImageBuffer {
     public final int SIZE_X;
@@ -67,7 +68,9 @@ public class ImageBuffer {
     void load(InputStream stream, int ox, int oy, int width, int height) throws IOException {
         byte[] b = new byte[height];
         for (int i = ox; i < width + ox; i++) {
-            for (int v = 0; v < height; v += stream.read(b, v, height - v)) ;
+            int v = 0;
+            while (v < height)
+                v += stream.read(b, v, height - v) ;
             if (i >= 0 && i < SIZE_X) {
                 for (int j = oy; j < height + oy; j++) {
                     if (j >= 0 && j < SIZE_Y) pixbuf[i][j] = b[j - oy];
@@ -78,7 +81,9 @@ public class ImageBuffer {
         byte[] a = new byte[height / 8];
         for (int i = ox / 8; i < (ox + width) / 8; i++) {
             final int h = height / 8;
-            for (int v = 0; v < h; v += stream.read(a, v, h - v)) ;
+            int v = 0;
+            while (v < h)
+                v += stream.read(a, v, h - v);
             if (i >= 0 && i < ATTR_SIZE_X) {
                 for (int j = oy / 8; j < (height + oy) / 8; j++) {
                     if (j >= 0 && j < ATTR_SIZE_Y) attrbuf[i][j] = a[j - oy / 8];
@@ -95,11 +100,13 @@ public class ImageBuffer {
                     for (int xx = 0; xx < 8; xx++) {
                         final int xi = x * 8 + xx;
                         final int yi = y * 8 + yy;
+                        byte b = (byte) stream.read();
                         if (xi < SIZE_X && yi < SIZE_Y)
-                            pixbuf[(xi)][(yi)] = (byte) stream.read();
+                            pixbuf[(xi)][(yi)] = b;
                     }
+                byte b = (byte) stream.read();
                 if (x < ATTR_SIZE_X && y < ATTR_SIZE_Y)
-                    attrbuf[x][y] = (byte) stream.read();
+                    attrbuf[x][y] = b;
             }
     }
 
