@@ -26,12 +26,22 @@ public class Screen implements ImageSupplier {
 
     @Override
     public Color getPixelColor(int x, int y) {
+        int xx = x & 0xfffe;
         int attr = image.getAttr(x, y);
-        int pix = image.getPixel(x, y);
+        int pix1 = image.getPixel(xx, y);
+        int pix2 = image.getPixel(xx+1, y);
+        if ((pix1 & 2) == (pix2 & 2))  {
+            if ((pix1 < 2) ? (pix1 & 1) == (pix2 & 1) : (pix1 & 1) != (pix2 & 1))
+                return palette.getPaperColor((attr >> ((pix1&1)==(pix2&1)?3:0)) & 7, pix1 & 1);
+            else
+                return palette.getInkColor((attr >>((pix1&1)!=(pix2&1)?3:0)) & 7, pix1 & 1);
+        } else {
+            int pix = (x==xx) ? pix1 : pix2;
         if (pix < 2)
             return palette.getPaperColor((attr >> 3) & 7, pix & 1);
         else
             return palette.getInkColor(attr & 7, pix & 1);
+        }
     }
 
     @Override
