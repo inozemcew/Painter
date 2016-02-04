@@ -31,7 +31,7 @@ public class Screen implements ImageSupplier {
 
     private Mode mode = Mode.Color6;
 
-
+    private int locked = 0;
 
     @Override
     public void addChangeListener(ImageChangeListener listener) {
@@ -152,6 +152,7 @@ public class Screen implements ImageSupplier {
 
     void drawLine(int ox, int oy, int x, int y, Palette.Table table, int index, byte shift) {
         if (isInImage(x, y) && isInImage(ox, oy)) {
+            lock();
             float dx = x - ox, dy = y - oy;
             if (Math.abs(dx) < Math.abs(dy)) {
                 dx = dx / Math.abs(dy);
@@ -182,12 +183,14 @@ public class Screen implements ImageSupplier {
                 sy = y / 8 * 8;
                 h = oy / 8 * 8 + 8 - sy;
             }
+            unlock();
             fireImageChanged(sx, sy, w, h);
         }
     }
 
     void fill(int x, int y, Palette.Table table, int index, byte shift) {
         if (isInImage(x, y)) {
+            lock();
             beginDraw();
             Stack<Point> stack = new Stack<>();
             stack.push(new Point(x, y));
@@ -204,15 +207,30 @@ public class Screen implements ImageSupplier {
                 if (p.y < image.SIZE_Y - 1) stack.push(new Point(p.x, p.y + 1));
             }
             endDraw();
+            unlock();
             fireImageChanged();
         }
     }
 
+    boolean isLocked() {
+        return locked !=0;
+    }
+
+    void lock() {
+        locked++;
+    }
+
+    void unlock() {
+        if (isLocked()) locked--;
+    }
+
     private void fireImageChanged() {
+        if (isLocked()) return;
         listeners.forEach(ImageChangeListener::imageChanged);
     }
 
     private void fireImageChanged(int x, int y, int w, int h) {
+        if (isLocked()) return;
         listeners.forEach(l -> l.imageChanged(x, y, w, h));
     }
 

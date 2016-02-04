@@ -1,7 +1,6 @@
 package Painter;
 
 import Painter.Palette.Palette;
-import Painter.Palette.PaletteButton;
 import Painter.Palette.PaletteToolBar;
 
 import javax.swing.*;
@@ -78,21 +77,27 @@ public class PaintArea extends JComponent implements Scrollable, PaletteToolBar.
         PaintArea.this.scrollRectToVisible(r);
     }
 
+    private static Color gridColor = new Color(128,128,255);
     @Override
     protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
-        for (int x = 0; x < screen.getImageWidth(); x++)
-            for (int y = 0; y < screen.getImageHeight(); y++) {
+        //super.paintComponent(g);
+        Rectangle c = g.getClipBounds();
+
+        final int mx = Integer.min((c.x + c.width) / scale, screen.getImageWidth());
+        final int my = Integer.min((c.y + c.height) / scale, screen.getImageHeight());
+        for (int x = c.x / scale; x < mx; x++) {
+            for (int y = c.y / scale; y < my; y++) {
                 g.setColor(screen.getPixelColor(x,y));
                 int xx = x * scale;
                 int yy = y * scale;
                 g.fillRect(xx, yy, scale, scale);
                 if (scale > 7) {
-                    g.setColor(Color.PINK);
+                    g.setColor(gridColor);
                     if (x % 8 == 0) g.drawLine(xx, yy, xx, yy + scale - 1);
                     if (y % 8 == 0) g.drawLine(xx, yy, xx + scale - 1, yy);
                 }
             }
+        }
     }
 
     public int getScale() {
@@ -120,13 +125,6 @@ public class PaintArea extends JComponent implements Scrollable, PaletteToolBar.
 
     private int findColorIndex(Palette.Table table) {
         return ink_paper[table.ordinal()];
-        /*JToolBar group = (table == Palette.Table.INK) ? inkBar : paperBar;
-        for (int i = 0; i < group.getComponentCount(); i++) {
-            Component component = group.getComponent(i);
-            if (component instanceof PaletteButton && ((PaletteButton) component).isSelected())
-                return ((PaletteButton) component).getIndex();
-        }
-        return -1;*/
     }
 
     class Listener implements MouseListener, MouseMotionListener, PropertyChangeListener {
