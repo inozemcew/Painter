@@ -129,6 +129,18 @@ public  class PainterApp extends JFrame {
             getContentPane().repaint();
         });
 
+        JMenu options = menuBar.add(new JMenu("Options"));
+        ButtonGroup g = new ButtonGroup();
+        JRadioButtonMenuItem c4 = new JRadioButtonMenuItem("4 colors mode");
+        JRadioButtonMenuItem c6 = new JRadioButtonMenuItem("6 colors mode");
+        c6.setSelected(true);
+        c4.addActionListener(e -> screen.setMode(Screen.Mode.Color4));
+        c6.addActionListener(e -> screen.setMode(Screen.Mode.Color6));
+        g.add(c4);
+        g.add(c6);
+        options.add(c4);
+        options.add(c6);
+
         return menuBar;
     }
 

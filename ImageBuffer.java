@@ -44,6 +44,23 @@ public class ImageBuffer {
         this.attrbuf[x / 8][y / 8] = attr;
     }
 
+    @FunctionalInterface
+    interface ImageProcessor {
+        byte process(int x, int y, byte b);
+    }
+
+    void forEachPixel(ImageProcessor proc) {
+        for (int x = 0; x < SIZE_X; x++)
+            for (int y = 0; y < SIZE_Y; y++)
+                pixbuf[x][y] = proc.process(x, y, pixbuf[x][y]);
+    }
+
+    void forEachAttr(ImageProcessor proc) {
+        for (int x = 0; x < ATTR_SIZE_X; x++)
+            for (int y = 0; y < ATTR_SIZE_Y; y++)
+                attrbuf[x][y] = proc.process(x, y, attrbuf[x][y]);
+    }
+
     void store(OutputStream stream) throws IOException {
         store(stream, 0, 0, SIZE_X, SIZE_Y);
     }

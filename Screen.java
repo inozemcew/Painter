@@ -11,12 +11,27 @@ import java.util.*;
 
 /**
  * Created by aleksey on 22.01.16.
+ * Screen as virtual device for painting on
+ * Unites screen buffer and palette
  */
 public class Screen implements ImageSupplier {
     private ImageBuffer image = new ImageBuffer();
     private Palette palette = new Palette();
     private Collection<ImageChangeListener> listeners = new ArrayList<>();
     private final UndoRedo undo = new UndoRedo();
+
+    static int paperFromAttr(byte attr) { return (attr >> 3) & 7; }
+    static int inkFromAttr(byte attr) { return attr & 7; }
+    static byte paperToAttr(byte attr, int paper) { return (byte) ((attr & 7) | (paper<<3));}
+    static byte inkToAttr(byte attr, int ink) { return (byte) ((attr & 0x38) | ink);}
+
+    public enum Mode {
+        Color4, Color6
+    }
+
+    private Mode mode = Mode.Color6;
+
+
 
     @Override
     public void addChangeListener(ImageChangeListener listener) {
@@ -27,10 +42,10 @@ public class Screen implements ImageSupplier {
     @Override
     public Color getPixelColor(int x, int y) {
         int xx = x & 0xfffe;
-        int attr = image.getAttr(x, y);
+        byte attr = image.getAttr(x, y);
         int pix1 = image.getPixel(xx, y);
         int pix2 = image.getPixel(xx+1, y);
-        if ((pix1 & 2) == (pix2 & 2))  {
+        if ((pix1 < 2) && (pix2 < 2) && mode == Mode.Color6) {
             if ((pix1 < 2) ? (pix1 & 1) == (pix2 & 1) : (pix1 & 1) != (pix2 & 1))
                 return palette.getPaperColor((attr >> ((pix1&1)==(pix2&1)?3:0)) & 7, pix1 & 1);
             else
@@ -38,10 +53,19 @@ public class Screen implements ImageSupplier {
         } else {
             int pix = (x==xx) ? pix1 : pix2;
         if (pix < 2)
-            return palette.getPaperColor((attr >> 3) & 7, pix & 1);
+            return palette.getPaperColor(paperFromAttr(attr), pix & 1);
         else
-            return palette.getInkColor(attr & 7, pix & 1);
+            return palette.getInkColor(inkFromAttr(attr), pix & 1);
         }
+    }
+
+    public Mode getMode() {
+        return mode;
+    }
+
+    public void setMode(Mode mode) {
+        this.mode = mode;
+        fireImageChanged();
     }
 
     @Override
@@ -60,18 +84,14 @@ public class Screen implements ImageSupplier {
 
     void newImageBuffer(int sizeX, int sizeY) {
         this.image = new ImageBuffer(sizeX,sizeY);
-        listeners.forEach(ImageChangeListener::imageChanged);
-    }
-
-    ImageBuffer getImage() {
-        return image;
+        fireImageChanged();
     }
 
     String getPixelDescription(int x, int y) {
         int v = image.getPixel(x, y);
         byte attr = image.getAttr(x, y);
         return ((v < 2) ? "Paper" : "Ink") + String.valueOf(v & 1)
-                + "=" + String.valueOf(((v < 2) ? attr >> 3 : attr ) & 7);
+                + "=" + String.valueOf( (v < 2) ? paperFromAttr(attr): inkFromAttr(attr));
     }
 
     private boolean isInImage(Point p) {
@@ -113,21 +133,20 @@ public class Screen implements ImageSupplier {
 
     void setPixel(int x, int y, Palette.Table table, int index, byte shift) {
         if (isInImage(x, y)) {
-            //image.setPixel(x, y, table, index, shift);
             byte a = image.getAttr(x, y);
             byte s;
             if (table == Palette.Table.INK) {
-                if (index >= 0) a = (byte) ((a & 0x38) | index);
+                if (index >= 0) a = inkToAttr(a, index);
                 s = 2;
             } else {
-                if (index >= 0) a = (byte) ((a & 7) | (index << 3));
+                if (index >= 0) a = paperToAttr(a, index);
                 s = 0;
             }
             s = (byte) (shift | s);
 
             undo.add(x, y, image.getPixel(x, y), image.getAttr(x, y), s, a);
             image.putPixel(x, y, s, a);
-            listeners.forEach(l -> l.imageChanged(x / 8 * 8, y / 8 * 8, 8, 8));
+            fireImageChanged(x / 8 * 8, y / 8 * 8, 8, 8);
         }
     }
 
@@ -163,7 +182,7 @@ public class Screen implements ImageSupplier {
                 sy = y / 8 * 8;
                 h = oy / 8 * 8 + 8 - sy;
             }
-            listeners.forEach(l -> l.imageChanged(sx, sy, w, h));
+            fireImageChanged(sx, sy, w, h);
         }
     }
 
@@ -185,9 +204,25 @@ public class Screen implements ImageSupplier {
                 if (p.y < image.SIZE_Y - 1) stack.push(new Point(p.x, p.y + 1));
             }
             endDraw();
-            listeners.forEach(ImageChangeListener::imageChanged);
+            fireImageChanged();
         }
     }
+
+    private void fireImageChanged() {
+        listeners.forEach(ImageChangeListener::imageChanged);
+    }
+
+    private void fireImageChanged(int x, int y, int w, int h) {
+        listeners.forEach(l -> l.imageChanged(x, y, w, h));
+    }
+
+    void rearrangeColorTable(Palette.Table table, int[] order) {
+        image.forEachAttr( (x, y, attr) -> {
+            int a = (table == Palette.Table.INK) ? inkFromAttr(attr) : paperFromAttr(attr);
+            return (table == Palette.Table.INK) ? inkToAttr(attr,order[a]) : paperToAttr(attr,order[a]);
+        });
+    }
+
 
     void save(ObjectOutputStream stream) throws IOException {
         stream.writeObject(getPalette().getPalette(Palette.Table.INK));
@@ -200,7 +235,7 @@ public class Screen implements ImageSupplier {
         int[] ink;
         int[] paper;
         if (old) {
-            getImage().load(stream);
+            image.load(stream);
             ink = (int[]) stream.readObject();
             paper = (int[]) stream.readObject();
 
@@ -210,7 +245,7 @@ public class Screen implements ImageSupplier {
             paper = (int[]) stream.readObject();
             int x = stream.readInt();
             int y = stream.readInt();
-            getImage().load(stream,x,y);
+            image.load(stream,x,y);
         }
         getPalette().setPalette(ink, paper);
         stream.close();
