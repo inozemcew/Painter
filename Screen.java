@@ -239,6 +239,11 @@ public class Screen implements ImageSupplier {
             int a = (table == Palette.Table.INK) ? inkFromAttr(attr) : paperFromAttr(attr);
             return (table == Palette.Table.INK) ? inkToAttr(attr,order[a]) : paperToAttr(attr,order[a]);
         });
+        final int[] p = this.palette.getPalette(table);
+        int[] cells = Arrays.copyOf(p,p.length);
+        for (int i = 0; i< cells.length; i++)
+            this.palette.setColorCell(cells[i],table,order[i]);
+        fireImageChanged();
     }
 
 

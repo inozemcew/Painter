@@ -19,6 +19,7 @@ public class PaletteButton extends JToggleButton implements Palette.PaletteChang
         this.palette = palette;
         setIcon(new PaletteIcon(palette.getColorCell(table, index)));
         setMinimumSize(new Dimension(32, 32));
+        setPreferredSize(new Dimension(42,42));
         setFocusPainted(false);
         addMouseListener(PalettePopup.createPalettePopup());
         palette.addChangeListener(this, table, index);

@@ -8,17 +8,16 @@ import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
 
 /**
  * Created by ainozemtsev on 17.11.15.
+ * Component for screen editing
  */
 public class PaintArea extends JComponent implements Scrollable, PaletteToolBar.ColorChangeListener {
     private Screen screen;
     private int scale = 2;
-    private final JToolBar inkBar = new JToolBar();
-    private final JToolBar paperBar = new JToolBar();
+    //private final JToolBar inkBar = new JToolBar();
+    //private final JToolBar paperBar = new JToolBar();
 
     public PaintArea(Screen screen) {
         super();
@@ -127,17 +126,17 @@ public class PaintArea extends JComponent implements Scrollable, PaletteToolBar.
         return ink_paper[table.ordinal()];
     }
 
-    class Listener implements MouseListener, MouseMotionListener, PropertyChangeListener {
+    class Listener implements MouseListener, MouseMotionListener {
         private int button = 0;
         Point pos = new Point();
 
-        @Override
+        /*@Override
         public void propertyChange(PropertyChangeEvent evt) {
             if (evt.getPropertyName().equals("orientation")) {
                 inkBar.setOrientation((Integer) evt.getNewValue());
                 paperBar.setOrientation((Integer) evt.getNewValue());
             }
-        }
+        }*/
 
         @Override
         public void mouseClicked(MouseEvent e) {

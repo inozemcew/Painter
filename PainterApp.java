@@ -1,5 +1,6 @@
 package Painter;
 
+import Painter.Palette.Palette;
 import Painter.Palette.PaletteToolBar;
 
 import javax.swing.*;
@@ -16,7 +17,7 @@ import java.io.*;
 
 public  class PainterApp extends JFrame {
     JLabel statusBar = new JLabel(" ");
-    //private PaintArea paintArea;
+
     Screen screen = new Screen();
     private final JFileChooser fileChooser = new JFileChooser();
     private InterlacedView interlacedView;
@@ -35,7 +36,6 @@ public  class PainterApp extends JFrame {
         JPanel form = new JPanel(new BorderLayout());
 
         PaintArea paintArea = new PaintArea(screen);
-        //form.add(new JScrollPane(paintArea), BorderLayout.LINE_END);
 
 
         interlacedView = new InterlacedView(screen);
@@ -46,44 +46,32 @@ public  class PainterApp extends JFrame {
                 paintArea.ScrollInView(mouseEvent.getX() / 2, mouseEvent.getY() / 2);
             }
         });
-        //form.add(new JScrollPane(view), BorderLayout.LINE_START);
         splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
         splitPane.setOneTouchExpandable(true);
 
-        //splitPane.setPreferredSize(new Dimension(1280,480));
         splitPane.setResizeWeight(0);
         JScrollPane pane = new JScrollPane(interlacedView);
-        //pane.setPreferredSize(interlacedView.getPreferredSize());
         splitPane.setLeftComponent(pane);
         pane = new JScrollPane(paintArea);
         pane.setMinimumSize(new Dimension(128,128));
         pane.setPreferredSize(new Dimension(512,384));
         splitPane.setRightComponent(pane);
-        //splitPane.resetToPreferredSizes();
         form.add(splitPane);
 
-
-
-        JToolBar toolbar = new JToolBar();
-
-        //toolbar.add(paintArea.createToolBar());
-        final PaletteToolBar paletteToolBar = new PaletteToolBar(screen.getPalette());
-        paletteToolBar.addActionListener(paintArea);
-        toolbar.add(paletteToolBar);
-        toolbar.addPropertyChangeListener(paintArea.new Listener());
-
+        final PaletteToolBar toolbar = new PaletteToolBar(screen.getPalette());
+        toolbar.addActionListener(paintArea);
 
         JSlider spinner = new JSlider(1, 16, 2);
-        spinner.setPreferredSize(new Dimension(40, 36));
+        //spinner.setPreferredSize(new Dimension(40, 36));
         spinner.setMajorTickSpacing(1);
         spinner.setPaintTicks(true);
         spinner.setPaintLabels(true);
         spinner.setValue(paintArea.getScale());
         spinner.addChangeListener(e -> paintArea.setScale(spinner.getValue()));
         toolbar.add(spinner);
-        toolbar.add(new JPanel());
+        toolbar.add(Box.createHorizontalGlue()); //  Separator();
 
-        form.add(toolbar, BorderLayout.NORTH);
+        form.add(toolbar, BorderLayout.PAGE_START);
 
         JMenuBar menuBar = createMenuBar();
 
@@ -128,6 +116,10 @@ public  class PainterApp extends JFrame {
             screen.redoDraw();
             getContentPane().repaint();
         });
+        edit.addSeparator();
+        final int[] revs = {7, 6, 5, 4, 3, 2, 1, 0};
+        edit.add("Reverse ink").addActionListener(e1 -> screen.rearrangeColorTable(Palette.Table.INK, revs));
+        edit.add("Reverse paper").addActionListener(e1 -> screen.rearrangeColorTable(Palette.Table.PAPER, revs));
 
         JMenu options = menuBar.add(new JMenu("Options"));
         ButtonGroup g = new ButtonGroup();
