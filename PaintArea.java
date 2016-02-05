@@ -1,7 +1,6 @@
 package Painter;
 
 import Painter.Palette.Palette;
-import Painter.Palette.PaletteToolBar;
 
 import javax.swing.*;
 import java.awt.*;
@@ -13,7 +12,7 @@ import java.awt.event.MouseMotionListener;
  * Created by ainozemtsev on 17.11.15.
  * Component for screen editing
  */
-public class PaintArea extends JComponent implements Scrollable, PaletteToolBar.ColorChangeListener {
+public class PaintArea extends JComponent implements Scrollable {
     private Screen screen;
     private int scale = 2;
     //private final JToolBar inkBar = new JToolBar();
@@ -117,7 +116,7 @@ public class PaintArea extends JComponent implements Scrollable, PaletteToolBar.
     private int[] ink_paper = {0,0};
 
 
-    @Override
+    //@Override
     public void colorChanged(Palette.Table table, int index) {
         ink_paper[table.ordinal()] = index;
     }

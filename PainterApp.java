@@ -37,7 +37,6 @@ public  class PainterApp extends JFrame {
 
         PaintArea paintArea = new PaintArea(screen);
 
-
         interlacedView = new InterlacedView(screen);
         interlacedView.addMouseListener(new MouseAdapter() {
             @Override
@@ -58,8 +57,33 @@ public  class PainterApp extends JFrame {
         splitPane.setRightComponent(pane);
         form.add(splitPane);
 
+        final PaletteToolBar toolbar = createToolBar(paintArea);
+        form.add(toolbar, BorderLayout.PAGE_START);
+
+        JMenuBar menuBar = createMenuBar();
+        setJMenuBar(menuBar);
+
+        form.add(statusBar, BorderLayout.PAGE_END);
+        paintArea.addPropertyChangeListener("status", evt -> statusBar.setText(evt.getNewValue().toString()));
+
+        add(form);
+        pack();
+        return this;
+    }
+
+    private PaletteToolBar createToolBar(final PaintArea paintArea) {
         final PaletteToolBar toolbar = new PaletteToolBar(screen.getPalette());
-        toolbar.addActionListener(paintArea);
+
+        toolbar.addActionListener(new PaletteToolBar.ColorChangeListener() {
+            @Override
+            public void colorChanged(Palette.Table table, int index) {
+                paintArea.colorChanged(table,index);
+            }
+            @Override
+            public void reorder(Palette.Table table, int from, int to) {
+                screen.swapColors(table, from, to);
+            }
+        });
 
         JSlider spinner = new JSlider(1, 16, 2);
         //spinner.setPreferredSize(new Dimension(40, 36));
@@ -70,19 +94,7 @@ public  class PainterApp extends JFrame {
         spinner.addChangeListener(e -> paintArea.setScale(spinner.getValue()));
         toolbar.add(spinner);
         toolbar.add(Box.createHorizontalGlue()); //  Separator();
-
-        form.add(toolbar, BorderLayout.PAGE_START);
-
-        JMenuBar menuBar = createMenuBar();
-
-        setJMenuBar(menuBar);
-
-        form.add(statusBar, BorderLayout.PAGE_END);
-        paintArea.addPropertyChangeListener("status", evt -> statusBar.setText(evt.getNewValue().toString()));
-
-        add(form);
-        pack();
-        return this;
+        return toolbar;
     }
 
     private JMenuBar createMenuBar() {

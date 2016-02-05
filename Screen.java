@@ -22,8 +22,15 @@ public class Screen implements ImageSupplier {
 
     static int paperFromAttr(byte attr) { return (attr >> 3) & 7; }
     static int inkFromAttr(byte attr) { return attr & 7; }
+    static int fromAttr(byte attr, Palette.Table table) {
+        return (table == Palette.Table.INK) ? inkFromAttr(attr) : paperFromAttr(attr);
+    }
     static byte paperToAttr(byte attr, int paper) { return (byte) ((attr & 7) | (paper<<3));}
     static byte inkToAttr(byte attr, int ink) { return (byte) ((attr & 0x38) | ink);}
+    private static byte toAttr(byte attr, int value, Palette.Table table) {
+        return (table == Palette.Table.INK) ? inkToAttr(attr,value) : paperToAttr(attr,value);
+    }
+
 
     public enum Mode {
         Color4, Color6
@@ -236,8 +243,8 @@ public class Screen implements ImageSupplier {
 
     void rearrangeColorTable(Palette.Table table, int[] order) {
         image.forEachAttr( (x, y, attr) -> {
-            int a = (table == Palette.Table.INK) ? inkFromAttr(attr) : paperFromAttr(attr);
-            return (table == Palette.Table.INK) ? inkToAttr(attr,order[a]) : paperToAttr(attr,order[a]);
+            int a = fromAttr(attr, table);
+            return toAttr(attr, order[a], table);
         });
         final int[] p = this.palette.getPalette(table);
         int[] cells = Arrays.copyOf(p,p.length);
@@ -246,6 +253,19 @@ public class Screen implements ImageSupplier {
         fireImageChanged();
     }
 
+    void swapColors(Palette.Table table, int from, int to) {
+        final int length = palette.getPalette(table).length;
+        int[] order = new int[length];
+        int j = 0;
+        for (int i = 0; i < length; i++) {
+            if (i == from) order[i] = to; else {
+                if (j == to) j++;
+                order[i] = j;
+                j++;
+            }
+        }
+        rearrangeColorTable(table, order);
+    }
 
     void save(ObjectOutputStream stream) throws IOException {
         stream.writeObject(getPalette().getPalette(Palette.Table.INK));

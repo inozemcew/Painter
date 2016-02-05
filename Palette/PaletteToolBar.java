@@ -30,9 +30,11 @@ public class PaletteToolBar extends JToolBar {
         p.setLayout(new BoxLayout(p,BoxLayout.LINE_AXIS));
         p.setMaximumSize(new Dimension(380,380));
         p.setOpaque(false);
+        final DragListener l = new DragListener(p,(f, t) -> fireReorder(table,f,t));
         for (int i = 0; i < 8; i++) {
             PaletteButton b = new PaletteButton(palette, table, i);
             if (i == 0) b.setSelected(true);
+            l.addComponent(b);
             b.addActionListener(e -> fireColorChange(b.getTable(), b.getIndex()));
             group.add(b);
             p.add(b);
@@ -49,6 +51,7 @@ public class PaletteToolBar extends JToolBar {
 
     public interface ColorChangeListener {
         void colorChanged(Palette.Table table, int index);
+        void reorder(Palette.Table table, int from, int to);
     }
 
     List<ColorChangeListener> listeners = new ArrayList<>();
@@ -59,6 +62,10 @@ public class PaletteToolBar extends JToolBar {
 
     private void fireColorChange(Palette.Table table, int index) {
         listeners.forEach(listener -> listener.colorChanged(table, index));
+    }
+
+    private void fireReorder(Palette.Table table, Integer from, Integer to) {
+        listeners.forEach(listener -> listener.reorder(table, from, to));
     }
 
     @Override

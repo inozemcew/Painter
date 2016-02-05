@@ -7,7 +7,8 @@ import java.awt.*;
  * Created by ainozemtsev on 26.11.15.
  * Button for selection current colors
  */
-public class PaletteButton extends JToggleButton implements Palette.PaletteChangeListener, PalettePopup.ColorIndexSupplier{
+public class PaletteButton extends JToggleButton
+        implements Palette.PaletteChangeListener, PalettePopup.ColorIndexSupplier {
     private final Palette palette;
     private final Palette.Table table;
     private final int index;
@@ -45,6 +46,11 @@ public class PaletteButton extends JToggleButton implements Palette.PaletteChang
     public void paletteChanged() {
         setIcon(new PaletteIcon(palette.getColorCell(table, index)));
     }
+
+/*    @Override
+    public void reorder(int oldIndex, int newIndex) {
+
+    }*/
 }
 
 class PaletteIcon implements Icon {
@@ -77,3 +83,4 @@ class PaletteIcon implements Icon {
         return SIZE;
     }
 }
+
