@@ -22,6 +22,7 @@ public  class PainterApp extends JFrame {
     private final JFileChooser fileChooser = new JFileChooser();
     private InterlacedView interlacedView;
     private JSplitPane splitPane;
+    private PaintArea paintArea;
 
     public static void main(String[] argv) {
         PainterApp form = new PainterApp();
@@ -35,7 +36,7 @@ public  class PainterApp extends JFrame {
 
         JPanel form = new JPanel(new BorderLayout());
 
-        PaintArea paintArea = new PaintArea(screen);
+        paintArea = new PaintArea(screen);
 
         interlacedView = new InterlacedView(screen);
         interlacedView.addMouseListener(new MouseAdapter() {
@@ -57,7 +58,7 @@ public  class PainterApp extends JFrame {
         splitPane.setRightComponent(pane);
         form.add(splitPane);
 
-        final PaletteToolBar toolbar = createToolBar(paintArea);
+        final PaletteToolBar toolbar = createToolBar();
         form.add(toolbar, BorderLayout.PAGE_START);
 
         JMenuBar menuBar = createMenuBar();
@@ -71,7 +72,7 @@ public  class PainterApp extends JFrame {
         return this;
     }
 
-    private PaletteToolBar createToolBar(final PaintArea paintArea) {
+    private PaletteToolBar createToolBar() {
         final PaletteToolBar toolbar = new PaletteToolBar(screen.getPalette());
 
         toolbar.addActionListener(new PaletteToolBar.ColorChangeListener() {
@@ -129,10 +130,15 @@ public  class PainterApp extends JFrame {
             getContentPane().repaint();
         });
         edit.addSeparator();
-        final int[] revs = {7, 6, 5, 4, 3, 2, 1, 0};
+        /*final int[] revs = {7, 6, 5, 4, 3, 2, 1, 0};
         edit.add("Reverse ink").addActionListener(e1 -> screen.rearrangeColorTable(Palette.Table.INK, revs));
         edit.add("Reverse paper").addActionListener(e1 -> screen.rearrangeColorTable(Palette.Table.PAPER, revs));
-
+*/
+        edit.add("Flip ink").addActionListener(e ->
+                screen.flipColorCell(Palette.Table.INK, paintArea.getColorIndex(Palette.Table.INK)));
+        edit.add("Flip paper").addActionListener(e ->
+                screen.flipColorCell(Palette.Table.PAPER, paintArea.getColorIndex(Palette.Table.PAPER)));
+        edit.add("Inverse palette").addActionListener(e -> screen.inverseColors());
         JMenu options = menuBar.add(new JMenu("Options"));
         ButtonGroup g = new ButtonGroup();
         JRadioButtonMenuItem c4 = new JRadioButtonMenuItem("4 colors mode");

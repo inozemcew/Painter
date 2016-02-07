@@ -54,15 +54,15 @@ public class Screen implements ImageSupplier {
         int pix2 = image.getPixel(xx+1, y);
         if ((pix1 < 2) && (pix2 < 2) && mode == Mode.Color6) {
             if ((pix1 < 2) ? (pix1 & 1) == (pix2 & 1) : (pix1 & 1) != (pix2 & 1))
-                return palette.getPaperColor((attr >> ((pix1&1)==(pix2&1)?3:0)) & 7, pix1 & 1);
+                return palette.getPaperRGBColor((attr >> ((pix1&1)==(pix2&1)?3:0)) & 7, pix1 & 1);
             else
-                return palette.getInkColor((attr >>((pix1&1)!=(pix2&1)?3:0)) & 7, pix1 & 1);
+                return palette.getInkRBGColor((attr >>((pix1&1)!=(pix2&1)?3:0)) & 7, pix1 & 1);
         } else {
             int pix = (x==xx) ? pix1 : pix2;
         if (pix < 2)
-            return palette.getPaperColor(paperFromAttr(attr), pix & 1);
+            return palette.getPaperRGBColor(paperFromAttr(attr), pix & 1);
         else
-            return palette.getInkColor(inkFromAttr(attr), pix & 1);
+            return palette.getInkRBGColor(inkFromAttr(attr), pix & 1);
         }
     }
 
@@ -265,6 +265,30 @@ public class Screen implements ImageSupplier {
             }
         }
         rearrangeColorTable(table, order);
+    }
+
+    void flipColorCell(Palette.Table table, int index){
+        image.forEachPixel( (x, y, b, a) -> {
+            if (table == Palette.Table.INK)
+                return (byte) (inkFromAttr(a) == index && b >= 2 ? 5 - b : b);
+            else
+                return (byte) (paperFromAttr(a) == index && b < 2 ? 1 - b : b);
+        });
+        int c = palette.getColorCell(table, index);
+        palette.setColorCell(Palette.combine(Palette.second(c),Palette.first(c)), table,index);
+    }
+
+    void inverseColors() {
+        image.forEachPixel((x, y, b, a) -> (byte) (b ^ 2));
+        image.forEachAttr((x, y, b) -> (byte) (((b & 7) << 3) | ((b >> 3) & 7)));
+        int l = Integer.min(palette.getPalette(Palette.Table.INK).length,
+                palette.getPalette(Palette.Table.PAPER).length);
+        for (int i = 0; i < l; i++) {
+            int ink = palette.getColorCell(Palette.Table.INK,i);
+            int paper = palette.getColorCell(Palette.Table.PAPER,i);
+            palette.setColorCell(ink, Palette.Table.PAPER,i);
+            palette.setColorCell(paper, Palette.Table.INK, i);
+        }
     }
 
     void save(ObjectOutputStream stream) throws IOException {
