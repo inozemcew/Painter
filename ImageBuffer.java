@@ -45,17 +45,26 @@ public class ImageBuffer {
     }
 
     @FunctionalInterface
-    interface ImageProcessor {
+    interface PixelProcessor {
+        byte process(int x, int y, byte b, byte a);
+    }
+
+    @FunctionalInterface
+    interface AttrProcessor {
         byte process(int x, int y, byte b);
     }
 
-    void forEachPixel(ImageProcessor proc) {
-        for (int x = 0; x < SIZE_X; x++)
-            for (int y = 0; y < SIZE_Y; y++)
-                pixbuf[x][y] = proc.process(x, y, pixbuf[x][y]);
+    void forEachPixel(PixelProcessor proc) {
+        for (int x = 0; x < SIZE_X; x++) {
+            int xx = x / 8;
+            for (int y = 0; y < SIZE_Y; y++){
+                int yy = y/8;
+                pixbuf[x][y] = proc.process(x, y, pixbuf[x][y], attrbuf[xx][yy]);
+            }
+        }
     }
 
-    void forEachAttr(ImageProcessor proc) {
+    void forEachAttr(AttrProcessor proc) {
         for (int x = 0; x < ATTR_SIZE_X; x++)
             for (int y = 0; y < ATTR_SIZE_Y; y++)
                 attrbuf[x][y] = proc.process(x, y, attrbuf[x][y]);
