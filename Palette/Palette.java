@@ -47,6 +47,7 @@ public class Palette {
         }
     }
 
+
     public static int combine(int... f)     {
         int result = 0;
         for (int i=0; i<f.length;i++)
@@ -113,16 +114,16 @@ public class Palette {
     }
 
 
-    public Color getColor(Palette.Table table, int index, int fs) {
+    public Color getRGBColor(Palette.Table table, int index, int fs) {
         return toRGB(split(getColorCell(table, index),fs));
     }
 
-    public Color getInkColor (int index, int shift) {
-        return getColor(Table.INK, index, shift);
+    public Color getInkRBGColor(int index, int shift) {
+        return getRGBColor(Table.INK, index, shift);
     }
 
-    public Color getPaperColor (int index, int shift) {
-        return getColor(Table.PAPER,index, shift);
+    public Color getPaperRGBColor(int index, int shift) {
+        return getRGBColor(Table.PAPER,index, shift);
     }
 
     static Color toRGB2(int index) {
