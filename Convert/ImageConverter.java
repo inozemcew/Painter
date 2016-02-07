@@ -14,6 +14,7 @@ import java.util.stream.Stream;
 
 /**
  * Created by aleksey on 23.01.16.
+ * Converter for images into screen format
  */
 public class ImageConverter implements ImageSupplier {
     BufferedImage img = null;
@@ -138,6 +139,7 @@ public class ImageConverter implements ImageSupplier {
                                 })
                                 .collect(Collectors.toCollection(LinkedList<Integer[]>::new)),
                         pairs);
+        if (comb.ink.size()<8) comb.ink.add(new Pair(0,0));
 
         ByteArrayOutputStream bs = new ByteArrayOutputStream();
         DataOutputStream os = new DataOutputStream(bs);
@@ -324,8 +326,8 @@ class Combinator {
     byte getAttr(Integer[] s) {
         int bestN = -1;
         byte best = 0;
-        for (int i = 0; i <= ink.size(); i++) {
-            final Pair ip = (i<ink.size()) ? ink.get(i) : new Pair(0,0);
+        for (int i = 0; i < ink.size(); i++) {
+            final Pair ip = ink.get(i); //(i<ink.size()) ? ink.get(i) : new Pair(0,0);
             for (int p = 0; p < paper.size(); p++) {
                 final Pair pp = paper.get(p);
                 int n = 0;
