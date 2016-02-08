@@ -139,6 +139,10 @@ public  class PainterApp extends JFrame {
         edit.add("Flip paper").addActionListener(e ->
                 screen.flipColorCell(Palette.Table.PAPER, paintArea.getColorIndex(Palette.Table.PAPER)));
         edit.add("Inverse palette").addActionListener(e -> screen.inverseColors());
+        edit.add("Swap ink0 <-> paper0").addActionListener(e ->
+                screen.swapInkPaper(paintArea.getColorIndex(Palette.Table.INK),
+                        paintArea.getColorIndex(Palette.Table.PAPER), 0)
+        );
         JMenu options = menuBar.add(new JMenu("Options"));
         ButtonGroup g = new ButtonGroup();
         JRadioButtonMenuItem c4 = new JRadioButtonMenuItem("4 colors mode");

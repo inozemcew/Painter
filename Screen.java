@@ -291,6 +291,18 @@ public class Screen implements ImageSupplier {
         }
     }
 
+    void swapInkPaper(int ink, int paper, int shift) {
+        image.forEachPixel((x, y, b, a) -> (byte) (
+                (inkFromAttr(a) == ink && paperFromAttr(a) == paper && (b & 1) == shift) ? b ^ 2 : b
+        ));
+        int i = palette.getColorCell(Palette.Table.INK, ink);
+        int i1 = Palette.split(i, shift);
+        int p = palette.getColorCell(Palette.Table.PAPER, paper);
+        int p1 = Palette.split(p, shift);
+        palette.setColorCell(Palette.replace(i, p1, shift), Palette.Table.INK, ink);
+        palette.setColorCell(Palette.replace(p, i1, shift), Palette.Table.PAPER, paper);
+    }
+
     void save(ObjectOutputStream stream) throws IOException {
         stream.writeObject(getPalette().getPalette(Palette.Table.INK));
         stream.writeObject(getPalette().getPalette(Palette.Table.PAPER));

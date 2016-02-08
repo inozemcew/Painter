@@ -56,6 +56,9 @@ public class Palette {
     public static int split  (int c, int shift) { return (c>>(6*shift)&63); }
     public static int first  (int c)            { return split(c,0); }
     public static int second (int c)            { return split(c,1); }
+    public static int replace (int cc, int c, int shift) {
+        return (cc & (~(63<<(6*shift)))) | (c << (6 * shift));
+    }
 
     public int getColorCell(Table table, int index) {
         return colorTable[table.ordinal()][index];
