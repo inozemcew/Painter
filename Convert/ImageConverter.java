@@ -126,19 +126,20 @@ public class ImageConverter implements ImageSupplier {
         }
         pairs.sort((Pair f, Pair s) -> s.count - f.count);
 
-        Combinator comb = new Combinator(new ArrayList<>(8), new ArrayList<>(8))
-                .next(
-                        stat.stream()
-                                .sorted((x, y) -> {
-                                    int xx = 0, yy = 0;
-                                    for (int i = 0; i < 4; i++) {
-                                        if (x[i] == -2) xx++;
-                                        if (y[i] == -2) yy++;
-                                    }
-                                    return xx - yy;
-                                })
-                                .collect(Collectors.toCollection(LinkedList<Integer[]>::new)),
-                        pairs);
+        Combinator comb = new Combinator(new ArrayList<>(8), new ArrayList<>(8));
+        Combinator ncomb = comb.next(
+                stat.stream()
+                        .sorted((x, y) -> {
+                            int xx = 0, yy = 0;
+                            for (int i = 0; i < 4; i++) {
+                                if (x[i] == -2) xx++;
+                                if (y[i] == -2) yy++;
+                            }
+                            return xx - yy;
+                        })
+                        .collect(Collectors.toCollection(LinkedList<Integer[]>::new)),
+                pairs);
+        comb = (ncomb != null) ? ncomb : comb.best;
         if (comb.ink.size()<8) comb.ink.add(new Pair(0,0));
 
         ByteArrayOutputStream bs = new ByteArrayOutputStream();
@@ -230,8 +231,8 @@ class Pair {
     }
 
     int rank(Integer[] s, List<Pair> ink, List<Pair> paper) {
-        if (this.isIn(ink) && this.complement(s).isIn(paper)) return 1;
-        if (this.isIn(ink) || this.complement(s).isIn(paper)) return 2;
+        if (this.isIn(ink) && this.complement(s).isIn(paper)) return 0;
+        if (this.isIn(ink) || this.complement(s).isIn(paper)) return 1;
         return 2;
     }
 
