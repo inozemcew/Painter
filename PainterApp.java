@@ -143,6 +143,10 @@ public  class PainterApp extends JFrame {
                 screen.swapInkPaper(paintArea.getColorIndex(Palette.Table.INK),
                         paintArea.getColorIndex(Palette.Table.PAPER), 0)
         );
+        edit.add("Swap ink1 <-> paper1").addActionListener(e ->
+                screen.swapInkPaper(paintArea.getColorIndex(Palette.Table.INK),
+                        paintArea.getColorIndex(Palette.Table.PAPER), 1)
+        );
         JMenu options = menuBar.add(new JMenu("Options"));
         ButtonGroup g = new ButtonGroup();
         JRadioButtonMenuItem c4 = new JRadioButtonMenuItem("4 colors mode");
