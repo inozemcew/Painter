@@ -94,11 +94,14 @@ public class Screen implements ImageSupplier {
         fireImageChanged();
     }
 
-    String getPixelDescription(int x, int y) {
+    Palette.PixelDescriptor getPixelDescriptor(int x, int y) {
         int v = image.getPixel(x, y);
         byte attr = image.getAttr(x, y);
-        return ((v < 2) ? "Paper" : "Ink") + String.valueOf(v & 1)
-                + "=" + String.valueOf( (v < 2) ? paperFromAttr(attr): inkFromAttr(attr));
+        return new Palette.PixelDescriptor((v<2)? Palette.Table.PAPER: Palette.Table.INK,
+                (v < 2) ? paperFromAttr(attr): inkFromAttr(attr),
+                v & 1);
+        //return ((v < 2) ? "Paper" : "Ink") + String.valueOf(v & 1)
+         //       + "=" + String.valueOf( (v < 2) ? paperFromAttr(attr): inkFromAttr(attr));
     }
 
     private boolean isInImage(Point p) {

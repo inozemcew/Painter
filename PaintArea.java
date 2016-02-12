@@ -15,6 +15,7 @@ import java.awt.event.MouseMotionListener;
 public class PaintArea extends JComponent implements Scrollable {
     private Screen screen;
     private int scale = 2;
+    private int[] ink_paper = {0,0};
 
     public PaintArea(Screen screen) {
         super();
@@ -76,7 +77,7 @@ public class PaintArea extends JComponent implements Scrollable {
     private static Color gridColor = new Color(128,128,255);
     @Override
     protected void paintComponent(Graphics g) {
-        //super.paintComponent(g);
+        super.paintComponent(g);
         Rectangle c = g.getClipBounds();
 
         final int mx = Integer.min((c.x + c.width) / scale, screen.getImageWidth());
@@ -110,9 +111,6 @@ public class PaintArea extends JComponent implements Scrollable {
         this.setPreferredSize(new Dimension(screen.getImageWidth() * scale, screen.getImageHeight() * scale));
         this.revalidate();
     }
-
-    private int[] ink_paper = {0,0};
-
 
     //@Override
     public void colorChanged(Palette.Table table, int index) {
@@ -201,8 +199,8 @@ public class PaintArea extends JComponent implements Scrollable {
             int x = e.getX() / scale;
             int y = e.getY() / scale;
             if (screen.isInImage(x,y)) {
-                String s = screen.getPixelDescription(x,y);
-                firePropertyChange("status", "", x + "x" + y + " : " + s);
+                Palette.PixelDescriptor s = screen.getPixelDescriptor(x,y);
+                firePropertyChange("status", "", x + "x" + y + " : " + s.table.name()+s.shift+" = "+s.index);
             }
         }
     }
