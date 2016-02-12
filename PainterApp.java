@@ -1,7 +1,7 @@
 package Painter;
 
 import Painter.Palette.Palette;
-import Painter.Palette.PaletteToolBar;
+import Painter.Palette.PaletteToolPanel;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -58,7 +58,7 @@ public  class PainterApp extends JFrame {
         splitPane.setRightComponent(pane);
         form.add(splitPane);
 
-        final PaletteToolBar toolbar = createToolBar();
+        final JToolBar toolbar = createToolBar();
         form.add(toolbar, BorderLayout.PAGE_START);
 
         JMenuBar menuBar = createMenuBar();
@@ -72,10 +72,11 @@ public  class PainterApp extends JFrame {
         return this;
     }
 
-    private PaletteToolBar createToolBar() {
-        final PaletteToolBar toolbar = new PaletteToolBar(screen.getPalette());
+    private JToolBar createToolBar() {
+        JToolBar toolbar = new JToolBar();
+        final PaletteToolPanel panel = new PaletteToolPanel(screen.getPalette());
 
-        toolbar.addActionListener(new PaletteToolBar.ColorChangeListener() {
+        panel.addColorChangeListener(new PaletteToolPanel.ColorChangeListener() {
             @Override
             public void colorChanged(Palette.Table table, int index) {
                 paintArea.colorChanged(table,index);
@@ -86,15 +87,18 @@ public  class PainterApp extends JFrame {
             }
         });
 
+        toolbar.addPropertyChangeListener("orientation", evt -> panel.setOrientation((Integer)evt.getNewValue()));
+        toolbar.add(panel);
+
         JSlider spinner = new JSlider(1, 16, 2);
-        //spinner.setPreferredSize(new Dimension(40, 36));
+        spinner.setPreferredSize(new Dimension(96, 36));
         spinner.setMajorTickSpacing(1);
         spinner.setPaintTicks(true);
         spinner.setPaintLabels(true);
         spinner.setValue(paintArea.getScale());
         spinner.addChangeListener(e -> paintArea.setScale(spinner.getValue()));
         toolbar.add(spinner);
-        toolbar.add(Box.createHorizontalGlue()); //  Separator();
+        toolbar.add(Box.createGlue()); //  Separator();
         return toolbar;
     }
 
