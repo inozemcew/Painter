@@ -14,9 +14,16 @@ public interface ImageSupplier {
         void imageChanged();
     }
 
+    enum Status {
+        Normal, Dimmed, Enhanced
+    }
+
     int getImageWidth();
     int getImageHeight();
     Color getPixelColor(int x, int y);
     void  addChangeListener(ImageChangeListener listener);
     //void ScrollInView(int x, int y);
+    default Status getStatus(int x, int y) {
+        return Status.Normal;
+    }
 }

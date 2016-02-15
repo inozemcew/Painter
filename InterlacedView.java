@@ -42,10 +42,13 @@ public class InterlacedView extends JComponent {
         for (int x = 0; x < imageSupplier.getImageWidth(); x++)
             for (int y = 0; y < imageSupplier.getImageHeight(); y++) {
                 Color c = imageSupplier.getPixelColor(x, y);
+                ImageSupplier.Status s = imageSupplier.getStatus(x,y);
                 g.setColor(c);
-                g.drawLine(x * 2, y * 2, x * 2 + 1, y * 2);
-                g.setColor(c.darker());
-                g.drawLine(x * 2, y * 2 + 1, x * 2 + 1, y * 2 + 1);
+                g.drawLine(x * 2, y * 2, x * 2 + ((s == ImageSupplier.Status.Dimmed) ? 0 : 1), y * 2);
+                if (s != ImageSupplier.Status.Enhanced)
+                    g.setColor(c.darker());
+                if (s != ImageSupplier.Status.Dimmed)
+                    g.drawLine(x * 2, y * 2 + 1, x * 2 + 1, y * 2 + 1);
 
             }
     }

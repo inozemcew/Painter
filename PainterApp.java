@@ -6,6 +6,7 @@ import Painter.Palette.PaletteToolPanel;
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
+import java.awt.event.ActionEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -98,6 +99,44 @@ public  class PainterApp extends JFrame {
         spinner.setValue(paintArea.getScale());
         spinner.addChangeListener(e -> paintArea.setScale(spinner.getValue()));
         toolbar.add(spinner);
+
+        class Enhancer extends AbstractAction implements PaletteToolPanel.ColorChangeListener {
+            int ink = 0, paper = 0;
+            private boolean selected = false;
+
+            public Enhancer() {
+                super("Enhance");
+            }
+
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                Object source = actionEvent.getSource();
+                if (source instanceof JToggleButton ) {
+                    selected = ((JToggleButton) source).isSelected();
+                    if (selected)
+                        screen.setEnhanced(ink, paper);
+                    else
+                        screen.setEnhanced(-1, -1);
+                }
+            }
+
+            @Override
+            public void colorChanged(Palette.Table table, int index) {
+                if (table == Palette.Table.INK) ink = index; else paper = index;
+                if (selected) screen.setEnhanced(ink, paper);
+            }
+
+            @Override
+            public void reorder(Palette.Table table, int from, int to) {
+
+            }
+        }
+
+        Enhancer action = new Enhancer();
+        panel.addColorChangeListener(action);
+        JToggleButton button = new JToggleButton(action);
+        toolbar.add(button);
+
         toolbar.add(Box.createGlue()); //  Separator();
         return toolbar;
     }

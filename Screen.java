@@ -19,6 +19,7 @@ public class Screen implements ImageSupplier {
     private Palette palette = new Palette();
     private Collection<ImageChangeListener> listeners = new ArrayList<>();
     private final UndoRedo undo = new UndoRedo();
+    private int enhancedInk = -1, enhancedPaper = -1;
 
     static int paperFromAttr(byte attr) { return (attr >> 3) & 7; }
     static int inkFromAttr(byte attr) { return attr & 7; }
@@ -64,6 +65,25 @@ public class Screen implements ImageSupplier {
         else
             return palette.getInkRBGColor(inkFromAttr(attr), pix & 1);
         }
+    }
+
+    @Override
+    public Status getStatus(int x, int y) {
+        if (enhancedInk ==-1 && enhancedPaper == -1) return Status.Normal;
+        byte attr = image.getAttr(x,y);
+        int ink = inkFromAttr(attr);
+        int paper = paperFromAttr(attr);
+        int pix = image.getPixel(x,y);
+        if (pix<2)
+            return (paper == enhancedPaper) ? Status.Enhanced : Status.Dimmed;
+        else
+            return (ink == enhancedInk) ? Status.Enhanced : Status.Dimmed;
+    }
+
+    public void setEnhanced(int ink, int paper) {
+        this.enhancedInk = ink;
+        this.enhancedPaper = paper;
+        fireImageChanged();
     }
 
     public Mode getMode() {
@@ -141,18 +161,18 @@ public class Screen implements ImageSupplier {
     }
 
 
-    void setPixel(int x, int y, Palette.Table table, int index, byte shift) {
+    void setPixel(int x, int y, Palette.PixelDescriptor pixel) {
         if (isInImage(x, y)) {
             byte a = image.getAttr(x, y);
             byte s;
-            if (table == Palette.Table.INK) {
-                if (index >= 0) a = inkToAttr(a, index);
+            if (pixel.table == Palette.Table.INK) {
+                if (pixel.index >= 0) a = inkToAttr(a, pixel.index);
                 s = 2;
             } else {
-                if (index >= 0) a = paperToAttr(a, index);
+                if (pixel.index >= 0) a = paperToAttr(a, pixel.index);
                 s = 0;
             }
-            s = (byte) (shift | s);
+            s = (byte) (pixel.shift | s);
 
             undo.add(x, y, image.getPixel(x, y), image.getAttr(x, y), s, a);
             image.putPixel(x, y, s, a);
@@ -160,7 +180,7 @@ public class Screen implements ImageSupplier {
         }
     }
 
-    void drawLine(int ox, int oy, int x, int y, Palette.Table table, int index, byte shift) {
+    void drawLine(int ox, int oy, int x, int y, Palette.PixelDescriptor pixel) {
         if (isInImage(x, y) && isInImage(ox, oy)) {
             lock();
             float dx = x - ox, dy = y - oy;
@@ -175,7 +195,7 @@ public class Screen implements ImageSupplier {
             while (Math.round(xi) != x || Math.round(yi) != y) {
                 xi += dx;
                 yi += dy;
-                setPixel((int) xi, (int) yi, table, index, shift);
+                setPixel((int) xi, (int) yi, pixel);
             }
 
             int sx, sy, w, h;
@@ -198,19 +218,19 @@ public class Screen implements ImageSupplier {
         }
     }
 
-    void fill(int x, int y, Palette.Table table, int index, byte shift) {
+    void fill(int x, int y, Palette.PixelDescriptor pixel) {
         if (isInImage(x, y)) {
             lock();
             beginDraw();
             Stack<Point> stack = new Stack<>();
             stack.push(new Point(x, y));
             int pix = image.getPixel(x, y);
-            int npix = (table == Palette.Table.INK) ? (2 | shift) : shift;
+            int npix = (pixel.table == Palette.Table.INK) ? (2 | pixel.shift) : pixel.shift;
             while (!stack.empty()) {
                 Point p = stack.pop();
-                int pixel = image.getPixel(p.x, p.y);
-                if (pixel == npix || pixel != pix) continue;
-                setPixel(p.x, p.y, table, index, shift);
+                int pix2 = image.getPixel(p.x, p.y);
+                if (pix2 == npix || pix2 != pix) continue;
+                setPixel(p.x, p.y, pixel);
                 if (p.x > 0) stack.push(new Point(p.x - 1, p.y));
                 if (p.y > 0) stack.push(new Point(p.x, p.y - 1));
                 if (p.x < image.SIZE_X - 1) stack.push(new Point(p.x + 1, p.y));
