@@ -4,10 +4,11 @@ import javax.swing.*;
 import java.awt.*;
 
 /**
+ *
  * Created by ainozemtsev on 21.01.16.
  */
 public class InterlacedView extends JComponent {
-    ImageSupplier imageSupplier = null;
+    private ImageSupplier imageSupplier = null;
 
     public InterlacedView(ImageSupplier supplier) {
         super();
@@ -37,8 +38,10 @@ public class InterlacedView extends JComponent {
     }
 
     @Override
-    public void paint(Graphics g) {
-        super.paint(g);
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        g.setColor(new Color(140,140,100));
+        g.fillRect(getX(), getY(), 2*imageSupplier.getImageWidth(), 2*imageSupplier.getImageHeight());
         for (int x = 0; x < imageSupplier.getImageWidth(); x++)
             for (int y = 0; y < imageSupplier.getImageHeight(); y++) {
                 Color c = imageSupplier.getPixelColor(x, y);
