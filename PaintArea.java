@@ -140,7 +140,7 @@ public class PaintArea extends JComponent implements Scrollable {
                 byte p;
                 if ((button & MouseEvent.SHIFT_DOWN_MASK) == 0) p = 0; else p = 1;
                 Palette.Table t = (e.getButton() == MouseEvent.BUTTON1) ? Palette.Table.INK : Palette.Table.PAPER;
-                screen.fill(e.getX()/scale,e.getY()/scale,new Palette.PixelDescriptor(t, getColorIndex(t),p));
+                screen.fill(e.getX()/scale,e.getY()/scale,new Palette.Descriptor(t, getColorIndex(t),p));
             }
         }
 
@@ -160,7 +160,7 @@ public class PaintArea extends JComponent implements Scrollable {
             byte p;
             if ((button & MouseEvent.SHIFT_DOWN_MASK) == 0) p = 0; else p = 1;
             Palette.Table t = (button & MouseEvent.BUTTON1_DOWN_MASK) != 0 ? Palette.Table.INK : Palette.Table.PAPER;
-            screen.setPixel(e.getX()/scale, e.getY()/scale, new Palette.PixelDescriptor(t, getColorIndex(t), p));
+            screen.setPixel(e.getX()/scale, e.getY()/scale, new Palette.Descriptor(t, getColorIndex(t), p));
         }
 
         private void doDrawLine(MouseEvent e) {
@@ -168,7 +168,7 @@ public class PaintArea extends JComponent implements Scrollable {
             if ((button & MouseEvent.SHIFT_DOWN_MASK) == 0) p = 0; else p = 1;
             Palette.Table t = (button & MouseEvent.BUTTON1_DOWN_MASK) != 0 ? Palette.Table.INK : Palette.Table.PAPER;
             screen.drawLine(pos.x/scale, pos.y/scale, e.getX()/scale, e.getY()/scale,
-                    new Palette.PixelDescriptor(t, getColorIndex(t), p));
+                    new Palette.Descriptor(t, getColorIndex(t), p));
         }
 
         @Override
@@ -199,7 +199,7 @@ public class PaintArea extends JComponent implements Scrollable {
             int x = e.getX() / scale;
             int y = e.getY() / scale;
             if (screen.isInImage(x,y)) {
-                Palette.PixelDescriptor s = screen.getPixelDescriptor(x,y);
+                Palette.Descriptor s = screen.getPixelDescriptor(x,y);
                 firePropertyChange("status", "", x + "x" + y + " : " + s.table.name()+s.shift+" = "+s.index);
             }
         }

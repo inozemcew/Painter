@@ -1,8 +1,11 @@
 package Painter;
 
+import Painter.Convert.ConvertDialog;
+import Painter.Convert.ImageConverter;
 import Painter.Palette.Palette;
 import Painter.Palette.PaletteToolPanel;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
@@ -245,7 +248,11 @@ public  class PainterApp extends JFrame {
             File file = fileChooser.getSelectedFile();
             try {
                 final FileInputStream stream = new FileInputStream(file);
-                screen.importPNG(stream);
+                ImageConverter converter = new ImageConverter(ImageIO.read(stream));
+                ConvertDialog convertDialog = new ConvertDialog(converter);
+                if (!convertDialog.runDialog()) return;
+                DataInputStream is = converter.asTileStream();
+                screen.importPNG(is);
                 stream.close();
                 repaint();
             } catch (IOException e) {

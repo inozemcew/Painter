@@ -1,10 +1,7 @@
 package Painter;
 
-import Painter.Convert.ConvertDialog;
-import Painter.Convert.ImageConverter;
 import Painter.Palette.Palette;
 
-import javax.imageio.ImageIO;
 import java.awt.*;
 import java.io.*;
 import java.util.*;
@@ -114,10 +111,10 @@ public class Screen implements ImageSupplier {
         fireImageChanged();
     }
 
-    Palette.PixelDescriptor getPixelDescriptor(int x, int y) {
+    Palette.Descriptor getPixelDescriptor(int x, int y) {
         int v = image.getPixel(x, y);
         byte attr = image.getAttr(x, y);
-        return new Palette.PixelDescriptor((v<2)? Palette.Table.PAPER: Palette.Table.INK,
+        return new Palette.Descriptor((v<2)? Palette.Table.PAPER: Palette.Table.INK,
                 (v < 2) ? paperFromAttr(attr): inkFromAttr(attr),
                 v & 1);
         //return ((v < 2) ? "Paper" : "Ink") + String.valueOf(v & 1)
@@ -161,7 +158,7 @@ public class Screen implements ImageSupplier {
     }
 
 
-    void setPixel(int x, int y, Palette.PixelDescriptor pixel) {
+    void setPixel(int x, int y, Palette.Descriptor pixel) {
         if (isInImage(x, y)) {
             byte a = image.getAttr(x, y);
             byte s;
@@ -180,7 +177,7 @@ public class Screen implements ImageSupplier {
         }
     }
 
-    void drawLine(int ox, int oy, int x, int y, Palette.PixelDescriptor pixel) {
+    void drawLine(int ox, int oy, int x, int y, Palette.Descriptor pixel) {
         if (isInImage(x, y) && isInImage(ox, oy)) {
             lock();
             float dx = x - ox, dy = y - oy;
@@ -218,7 +215,7 @@ public class Screen implements ImageSupplier {
         }
     }
 
-    void fill(int x, int y, Palette.PixelDescriptor pixel) {
+    void fill(int x, int y, Palette.Descriptor pixel) {
         if (isInImage(x, y)) {
             lock();
             beginDraw();
@@ -269,10 +266,11 @@ public class Screen implements ImageSupplier {
             int a = fromAttr(attr, table);
             return toAttr(attr, order[a], table);
         });
-        final int[] p = this.palette.getPalette(table);
+        palette.reorder(table, order);
+        /*final int[] p = this.palette.getPalette(table);
         int[] cells = Arrays.copyOf(p,p.length);
         for (int i = 0; i< cells.length; i++)
-            this.palette.setColorCell(cells[i],table,order[i]);
+            this.palette.setColorCell(cells[i],table,order[i]);*/
         fireImageChanged();
     }
 
@@ -315,15 +313,19 @@ public class Screen implements ImageSupplier {
     }
 
     void swapInkPaper(int ink, int paper, int shift) {
-        image.forEachPixel((x, y, b, a) -> (byte) (
-                (inkFromAttr(a) == ink && paperFromAttr(a) == paper && (b & 1) == shift) ? b ^ 2 : b
-        ));
+        beginDraw();
+        image.forEachPixel((x, y, b, a) -> {
+            final boolean f = (inkFromAttr(a) == ink && paperFromAttr(a) == paper && (b&1) == shift);
+            if (f) undo.add(x, y, b, a, (byte) (b ^ 2), a);
+            return (byte) (f ? b ^ 2 : b);
+        });
         int i = palette.getColorCell(Palette.Table.INK, ink);
         int i1 = Palette.split(i, shift);
         int p = palette.getColorCell(Palette.Table.PAPER, paper);
         int p1 = Palette.split(p, shift);
         palette.setColorCell(Palette.replace(i, p1, shift), Palette.Table.INK, ink);
         palette.setColorCell(Palette.replace(p, i1, shift), Palette.Table.PAPER, paper);
+        endDraw();
     }
 
     void save(ObjectOutputStream stream) throws IOException {
@@ -389,11 +391,7 @@ public class Screen implements ImageSupplier {
 
     }
 
-    void importPNG(InputStream stream) throws IOException {
-        ImageConverter converter = new ImageConverter(ImageIO.read(stream));
-        ConvertDialog convertDialog = new ConvertDialog(converter);
-        if (!convertDialog.runDialog()) return;
-        DataInputStream is = converter.asTileStream();
+    void importPNG(DataInputStream is) throws IOException {
         palette.loadPalette(is);
         int w = is.readInt() / 8;
         int h = is.readInt() / 8;

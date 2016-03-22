@@ -5,6 +5,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -21,12 +22,12 @@ public class Palette {
 
     private int[][] colorTable = new int[2][8];
 
-    public static class PixelDescriptor {
+    public static class Descriptor {
         public final Palette.Table table;
         public final int index;
         public final int shift;
 
-        public PixelDescriptor(Palette.Table table, int index, int shift) {
+        public Descriptor(Palette.Table table, int index, int shift) {
             this.index = index;
             this.shift = shift;
             this.table = table;
@@ -132,6 +133,51 @@ public class Palette {
 
     public Color getRGBColor(Palette.Table table, int index, int fs) {
         return toRGB(split(getColorCell(table, index),fs));
+    }
+
+    public byte findAttr(Integer[] s) {
+        int bestN = -1;
+        byte best = 0;
+        final int[] ink = colorTable[Table.INK.ordinal()], paper = colorTable[Table.PAPER.ordinal()];
+        for (int i = 0; i < 8; i++) {
+            for (int p = 0; p < 8; p++) {
+                int n = 0;
+                for (int k : s) {
+                    boolean f = k == -2;
+                    for (int m = 0; m < COLORS_PER_CELL; m++)
+                        f |= (k == split(ink[i], m) || (k == split(paper[p], m)));
+                    if (f) n++;
+                }
+                final byte b = (byte) (i + (p << 3));
+                if (n == s.length) return b;
+                if (n > bestN) {
+                    bestN = n;
+                    best = b;
+                }
+            }
+        }
+        return best;
+    }
+
+    public int[] indexListByAttr(byte attr) {
+        int[] l = {-1, -1, -1, -1};
+        int ink = getColorCell(Table.INK, attr & 7);
+        int paper = getColorCell(Table.PAPER, (attr >> 3) & 7);
+        for (int i = 0; i < COLORS_PER_CELL; i++) {
+            l[i] = split(paper, i);
+            l[i + COLORS_PER_CELL] = split(ink, i);
+        }
+        return l;
+    }
+
+    public void reorder (Table table, int[] order) {
+        final int[] p = colorTable[table.ordinal()];
+        int[] cells = Arrays.copyOf(p,p.length);
+        setLocked(true);
+        for (int i = 0; i< cells.length; i++)
+            setColorCell(cells[i],table,order[i]);
+        setLocked(false);
+
     }
 
     public Color getInkRBGColor(int index, int shift) {

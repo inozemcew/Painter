@@ -23,6 +23,7 @@ public class ImageConverter implements ImageSupplier {
     private final int sizeYCells;
     private Integer[][][] colors4Tiles;
     private ImageChangeListener listener = null;
+    private Palette palette = null;
 
     public ImageConverter(BufferedImage img) {
         this.img = img;
@@ -96,7 +97,8 @@ public class ImageConverter implements ImageSupplier {
         return c;
     }
 
-    public DataInputStream asTileStream() throws IOException {
+    public void calcPalette() {
+        if (palette == null) palette = new Palette();
 
         colors4Tiles = getColors4Tiles();
 
@@ -141,19 +143,25 @@ public class ImageConverter implements ImageSupplier {
                 pairs);
         comb = (ncomb != null) ? ncomb : comb.best;
         if (comb.ink.size()<8) comb.ink.add(new Pair(0,0));
+        comb.fillPalette(palette);
+    }
+
+    public DataInputStream asTileStream() throws IOException {
+
+        if (palette == null) calcPalette();
 
         ByteArrayOutputStream bs = new ByteArrayOutputStream();
         DataOutputStream os = new DataOutputStream(bs);
 
-        comb.saveInkPaper(os);
+        palette.savePalette(os);
         os.writeInt(img.getWidth());
         os.writeInt(img.getHeight());
 
         for (int x = 0; x < sizeXCells; x++)
             for (int y = 0; y < sizeYCells; y++) {
-                final byte attr = comb.getAttr(colors4Tiles[x][y]);
+                final byte attr = palette.findAttr(colors4Tiles[x][y]);
 
-                int[] l = comb.attrToList(attr);
+                int[] l = palette.indexListByAttr(attr);
                 for (int yy = 0; yy < 8; yy++)
                     for (int xx = 0; xx < 8; xx++) {
                         final int xi = x * 8 + xx;
@@ -357,6 +365,26 @@ class Combinator {
             j = (i < paper.size()) ? paper.get(i) : new Pair(0, 0);
             stream.writeInt(Palette.combine(j.first, j.second));
         }
+    }
+
+    private static int[] asArray(List<Pair> table) {
+        int[] array = {0,0,0,0,0,0,0,0};
+        int i = 0;
+        for(Pair p : table)
+            array[i++] = Palette.combine(p.first, p.second);
+        return array;
+    }
+
+    void fillPalette(Palette palette) {
+        int[] ink = new int[8], paper = new int[8];
+        Pair j, zero = new Pair(0,0);
+        for (int i = 0; i < 8; i++) {
+            j = (i < this.ink.size()) ? this.ink.get(i) : zero;
+            ink[i] = Palette.combine(j.first, j.second);
+            j = (i < this.paper.size()) ? this.paper.get(i) : zero;
+            paper[i] = Palette.combine(j.first, j.second);
+        }
+        palette.setPalette(ink, paper);
     }
 
     int[] attrToList(byte attr) {
