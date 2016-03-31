@@ -20,19 +20,91 @@ public class ConvertDialog extends JDialog {
     ImageConverter converter;
     List<Color> colors = new ArrayList<>();
 
+
     public ConvertDialog(ImageConverter converter) {
         super();
         setTitle("Image conversion");
         setModal(true);
         this.converter = converter;
-        final InterlacedView interlacedView = new InterlacedView(converter);
-        add(interlacedView);
-
         converter.getColorMap().keySet().forEach(colors::add);
+
+
+        final CardLayout layout = new CardLayout();
+        JPanel pager = new JPanel(layout);
+        final JPanel page1 = createPage1();
+        pager.add(page1);
+        final JPanel page2 = createPage2();
+        pager.add(page2);
+        add(pager);
+
+
+        { // bottom buttons panel
+            JPanel p = new JPanel();
+            p.setLayout(new BoxLayout(p,BoxLayout.LINE_AXIS));
+
+            JButton prev = new JButton("<Prev");
+            JButton next = new JButton("Next>");
+            prev.setVisible(false);
+            prev.addActionListener(e -> {
+                layout.previous(pager);
+                if (page1.isVisible()) prev.setVisible(false);
+                next.setVisible(true);
+            });
+
+            next.addActionListener(e -> {
+                layout.next(pager);
+                if(page2.isVisible()) next.setVisible(false);
+                prev.setVisible(true);
+            });
+
+            p.add(prev);
+            p.add(Box.createHorizontalGlue());
+
+            JButton b = new JButton("OK");
+
+            b.addActionListener(e -> {
+                result = true;
+                this.setVisible(false);
+            });
+            p.add(b);
+
+            p.add(Box.createHorizontalBox());
+
+            b = new JButton("Cancel");
+            b.addActionListener(e -> {
+                result = false;
+                this.setVisible(false);
+            });
+            p.add(b);
+
+            p.add(new JSeparator(SwingConstants.VERTICAL));
+
+            JToggleButton t = new JToggleButton("Preview");
+            t.addActionListener(e -> setPreview(t.isSelected()));
+            p.add(t);
+
+            p.add(Box.createHorizontalGlue());
+
+            p.add(next);
+
+            add(p, BorderLayout.PAGE_END);
+        }
+        pack();
+    }
+
+    private void setPreview(boolean value) {
+        converter.setPreview(value);
+    }
+
+    private JPanel createPage1() {
+        JPanel panel = new JPanel(new BorderLayout());
+
+        final InterlacedView interlacedView = new InterlacedView(this.converter);
+        panel.add(interlacedView);
 
         ColorCellModel model = new ColorCellModel(colors);
         model.addTableModelListener(e1 -> {
-            if (converter.getPreview()) interlacedView.repaint();
+            if (this.converter.getPreview()) interlacedView.repaint();
         });
 
         JTable table = new JTable(model);
@@ -70,41 +142,21 @@ public class ConvertDialog extends JDialog {
             {
                 JButton b = new JButton("Reset");
                 b.addActionListener(e -> {
-                    converter.loadColorMap();
+                    this.converter.loadColorMap();
                     model.fireTableDataChanged();
                 });
                 p.add(b,BorderLayout.PAGE_END);
             }
             p.add(scrollPane, BorderLayout.CENTER);
-            add(p, BorderLayout.LINE_END);
+            panel.add(p, BorderLayout.LINE_END);
         }
-        { // bottom buttons panel
-            JPanel p = new JPanel();
+        return panel;
+    }
 
-            JButton b = new JButton("OK");
+    private JPanel createPage2() {
+        JPanel panel = new JPanel();
 
-            b.addActionListener(e -> {
-                result = true;
-                this.setVisible(false);
-            });
-            p.add(b);
-
-            b = new JButton("Cancel");
-            b.addActionListener(e -> {
-                result = false;
-                this.setVisible(false);
-            });
-            p.add(b);
-
-            p.add(new JSeparator(SwingConstants.VERTICAL));
-
-            JToggleButton t = new JToggleButton("Preview");
-            t.addActionListener(e -> converter.setPreview(t.isSelected()));
-            p.add(t);
-
-            add(p, BorderLayout.PAGE_END);
-        }
-        pack();
+        return panel;
     }
 
     public boolean runDialog() {
