@@ -2,6 +2,7 @@ package Painter;
 
 import Painter.Convert.ConvertDialog;
 import Painter.Convert.ImageConverter;
+import Painter.Palette.ChangeAdapter;
 import Painter.Palette.Palette;
 import Painter.Palette.PaletteToolPanel;
 
@@ -9,7 +10,6 @@ import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
-import java.awt.event.ActionEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -80,16 +80,15 @@ public  class PainterApp extends JFrame {
         JToolBar toolbar = new JToolBar();
         final PaletteToolPanel panel = new PaletteToolPanel(screen.getPalette());
 
-        panel.addColorChangeListener(new PaletteToolPanel.ColorChangeListener() {
+        ChangeAdapter action = new ChangeAdapter(screen){
             @Override
             public void colorChanged(Palette.Table table, int index) {
+                super.colorChanged(table, index);
                 paintArea.colorChanged(table,index);
             }
-            @Override
-            public void reorder(Palette.Table table, int from, int to) {
-                screen.swapColors(table, from, to);
-            }
-        });
+        };
+
+        panel.addChangeListener(action);
 
         toolbar.addPropertyChangeListener("orientation", evt -> panel.setOrientation((Integer)evt.getNewValue()));
         toolbar.add(panel);
@@ -103,40 +102,7 @@ public  class PainterApp extends JFrame {
         spinner.addChangeListener(e -> paintArea.setScale(spinner.getValue()));
         toolbar.add(spinner);
 
-        class Enhancer extends AbstractAction implements PaletteToolPanel.ColorChangeListener {
-            int ink = 0, paper = 0;
-            private boolean selected = false;
-
-            public Enhancer() {
-                super("Enhance");
-            }
-
-            @Override
-            public void actionPerformed(ActionEvent actionEvent) {
-                Object source = actionEvent.getSource();
-                if (source instanceof JToggleButton ) {
-                    selected = ((JToggleButton) source).isSelected();
-                    if (selected)
-                        screen.setEnhanced(ink, paper);
-                    else
-                        screen.setEnhanced(-1, -1);
-                }
-            }
-
-            @Override
-            public void colorChanged(Palette.Table table, int index) {
-                if (table == Palette.Table.INK) ink = index; else paper = index;
-                if (selected) screen.setEnhanced(ink, paper);
-            }
-
-            @Override
-            public void reorder(Palette.Table table, int from, int to) {
-
-            }
-        }
-
-        Enhancer action = new Enhancer();
-        panel.addColorChangeListener(action);
+        //panel.addChangeListener(action);
         JToggleButton button = new JToggleButton(action);
         toolbar.add(button);
 
@@ -252,7 +218,7 @@ public  class PainterApp extends JFrame {
                 ConvertDialog convertDialog = new ConvertDialog(converter);
                 if (!convertDialog.runDialog()) return;
                 DataInputStream is = converter.asTileStream();
-                screen.importPNG(is);
+                screen.importImage(is);
                 stream.close();
                 repaint();
             } catch (IOException e) {

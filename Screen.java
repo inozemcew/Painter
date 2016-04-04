@@ -102,7 +102,7 @@ public class Screen implements ImageSupplier {
         return image.SIZE_X;
     }
 
-    Palette getPalette() {
+    public Palette getPalette() {
         return palette;
     }
 
@@ -274,7 +274,7 @@ public class Screen implements ImageSupplier {
         fireImageChanged();
     }
 
-    void swapColors(Palette.Table table, int from, int to) {
+    public void swapColors(Palette.Table table, int from, int to) {
         final int length = palette.getPalette(table).length;
         int[] order = new int[length];
         int j = 0;
@@ -391,7 +391,7 @@ public class Screen implements ImageSupplier {
 
     }
 
-    void importPNG(DataInputStream is) throws IOException {
+    public void importImage(DataInputStream is) throws IOException {
         palette.loadPalette(is);
         int w = is.readInt() / 8;
         int h = is.readInt() / 8;

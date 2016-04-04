@@ -52,14 +52,14 @@ public class PaletteToolPanel extends JPanel {
         return group;
     }
 
-    public interface ColorChangeListener {
+    public interface ChangeListener {
         void colorChanged(Palette.Table table, int index);
         void reorder(Palette.Table table, int from, int to);
     }
 
-    List<ColorChangeListener> listeners = new ArrayList<>();
+    List<ChangeListener> listeners = new ArrayList<>();
 
-    public void addColorChangeListener(ColorChangeListener listener) {
+    public void addChangeListener(ChangeListener listener) {
         listeners.add(listener);
     }
 

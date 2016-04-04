@@ -23,7 +23,8 @@ public class ImageConverter implements ImageSupplier {
     private final int sizeYCells;
     private Integer[][][] colors4Tiles;
     private ImageChangeListener listener = null;
-    private Palette palette = null;
+    private Palette palette = new Palette();
+    private boolean isPaletteCalculated = false;
 
     public ImageConverter(BufferedImage img) {
         this.img = img;
@@ -75,6 +76,10 @@ public class ImageConverter implements ImageSupplier {
         return converter.getColorMap();
     }
 
+    Palette getPalette() {
+        return palette;
+    }
+
     protected Integer[][][] getColors4Tiles() {
         Integer c[][][] = new Integer[sizeXCells][sizeYCells][4];
         for (int x = 0; x < sizeXCells; x++)
@@ -97,8 +102,12 @@ public class ImageConverter implements ImageSupplier {
         return c;
     }
 
+    public void calcPalette(Palette palette) {
+        this.palette = palette;
+        calcPalette();
+    }
+
     public void calcPalette() {
-        if (palette == null) palette = new Palette();
 
         colors4Tiles = getColors4Tiles();
 
@@ -144,11 +153,12 @@ public class ImageConverter implements ImageSupplier {
         comb = (ncomb != null) ? ncomb : comb.best;
         if (comb.ink.size()<8) comb.ink.add(new Pair(0,0));
         comb.fillPalette(palette);
+        isPaletteCalculated = true;
     }
 
     public DataInputStream asTileStream() throws IOException {
 
-        if (palette == null) calcPalette();
+        if (!isPaletteCalculated) calcPalette();
 
         ByteArrayOutputStream bs = new ByteArrayOutputStream();
         DataOutputStream os = new DataOutputStream(bs);

@@ -34,7 +34,7 @@ class DragListener extends MouseInputAdapter {
     public /*<T extends Component & Reordering>*/ void addComponent(Component comp) {
         this.selectedComponent = comp;
         //this.listener = comp;
-        //comp.addColorChangeListener(e -> fireColorChange(b.getTable(), b.getIndex()));
+        //comp.addChangeListener(e -> fireColorChange(b.getTable(), b.getIndex()));
         comp.addMouseListener(this);
         comp.addMouseMotionListener(this);
 
