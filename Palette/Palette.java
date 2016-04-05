@@ -146,8 +146,8 @@ public class Palette {
                     if (k != -2) {
                         double f = Integer.MAX_VALUE;
                         for (int m = 0; m < COLORS_PER_CELL; m++) {
-                            f = Double.min(f, calcYuvDiff(toRGB(k), split(ink[i], m)));
-                            f = Double.min(f, calcYuvDiff(toRGB(k), split(paper[p], m)));
+                            f = Double.min(f, getColorDiff(k, split(ink[i], m)));
+                            f = Double.min(f, getColorDiff(k, split(paper[p], m)));
                         }
                         n += f;
                     }
@@ -303,7 +303,7 @@ public class Palette {
         final double u = -0.14713 * dr - 0.28886 * dg + 0.436 *db;
         final double v = 0.615 * dr  - 0.51499 * dg - 0.10001 * db;
         //final int d = dr * dr + dg * dg + db * db;
-        return (y*y)/10 +  u*u + v*v;
+        return (y*y)/2 +  u*u + v*v;
     }
 
     public static int fromRGB1(Color color) {
