@@ -136,21 +136,25 @@ public class Palette {
     }
 
     public byte findAttr(Integer[] s) {
-        int bestN = -1;
+        double bestN = Integer.MAX_VALUE;
         byte best = 0;
         final int[] ink = colorTable[Table.INK.ordinal()], paper = colorTable[Table.PAPER.ordinal()];
         for (int i = 0; i < 8; i++) {
             for (int p = 0; p < 8; p++) {
-                int n = 0;
+                double n = 0;
                 for (int k : s) {
-                    boolean f = k == -2;
-                    for (int m = 0; m < COLORS_PER_CELL; m++)
-                        f |= (k == split(ink[i], m) || (k == split(paper[p], m)));
-                    if (f) n++;
+                    if (k != -2) {
+                        double f = Integer.MAX_VALUE;
+                        for (int m = 0; m < COLORS_PER_CELL; m++) {
+                            f = Double.min(f, calcYuvDiff(toRGB(k), split(ink[i], m)));
+                            f = Double.min(f, calcYuvDiff(toRGB(k), split(paper[p], m)));
+                        }
+                        n += f;
+                    }
                 }
                 final byte b = (byte) (i + (p << 3));
-                if (n == s.length) return b;
-                if (n > bestN) {
+                if (n == 0) return b;
+                if (n < bestN) {
                     bestN = n;
                     best = b;
                 }
@@ -224,6 +228,7 @@ public class Palette {
     }
 
     private static Color[] colorCache = new Color[64];
+    private static double[][] colorDiff = new double[64][];
 
     static {
         for (int index = 0; index<64; index++) {
@@ -242,12 +247,23 @@ public class Palette {
             //return new Color(r*l+m,g*l+m,b*l+m);
             colorCache[index] = new Color(l*r+m,l*g+m,l*b+m);
         }
+
+        for (int i = 0; i < 64; i++) {
+            colorDiff[i] = new double[64];
+            for (int j = 0; j < 64; j++) {
+                colorDiff[i][j] = calcYuvDiff(toRGB(i),j);
+            }
+
+        }
     }
 
     public static Color toRGB(int index) {
         return colorCache[index & 63];
     }
 
+    public static double getColorDiff(int i, int j) {
+        return colorDiff[i][j];
+    }
     /*
     4 128   0   0| 5 128  64   0| 6   0 128 128| 7   0  64 128| 8   0 128   0| 9   0 128  64|10 128   0 128|11 128   0  64|12   0   0 128|13  64   0 128|14 128 128   0|15  64 128   0
    20 170   0   0|21 170  85   0|22   0 170 170|23   0  85 170|24   0 170   0|25   0 170  85|26 170   0 170|27 170   0  85|28   0   0 170|29  85   0 170|30 170 170   0|31  85 170   0
@@ -264,7 +280,7 @@ public class Palette {
         int bestIndex = 0;
         double bestYUV = Integer.MAX_VALUE;
         for (int i = 0; i < indices.length; i++){
-            final double yuv = getYuvDiff(color, indices[i]);
+            final double yuv = calcYuvDiff(color, indices[i]);
             if (yuv < bestYUV) {
                 bestYUV = yuv;
                 bestIndex = i;
@@ -279,7 +295,7 @@ public class Palette {
         return fromRGB(color,allColorIndices);
     }
 
-    private static double getYuvDiff(Color color, int i) {
+    private static double calcYuvDiff(Color color, int i) {
         final int dr = color.getRed() - toRGB(i).getRed();
         final int dg = color.getGreen() - toRGB(i).getGreen();
         final int db = color.getBlue() - toRGB(i).getBlue();
