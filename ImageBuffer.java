@@ -127,11 +127,11 @@ public class ImageBuffer {
                         final int xi = x * 8 + xx;
                         final int yi = y * 8 + yy;
                         byte b = (byte) stream.read();
-                        if (xi < SIZE_X && yi < SIZE_Y)
+                        if (0 <= xi && xi < SIZE_X && 0 <= yi && yi < SIZE_Y)
                             pixbuf[(xi)][(yi)] = b;
                     }
                 byte b = (byte) stream.read();
-                if (x < ATTR_SIZE_X && y < ATTR_SIZE_Y)
+                if (0 <= x && x < ATTR_SIZE_X && 0 <= y && y < ATTR_SIZE_Y)
                     attrbuf[x][y] = b;
             }
     }

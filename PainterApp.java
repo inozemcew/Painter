@@ -150,6 +150,12 @@ public  class PainterApp extends JFrame {
                 screen.flipColorCell(Palette.Table.INK, paintArea.getColorIndex(Palette.Table.INK)));
         edit.add("Flip paper").addActionListener(e ->
                 screen.flipColorCell(Palette.Table.PAPER, paintArea.getColorIndex(Palette.Table.PAPER)));
+        edit.add("Flip all inks").addActionListener(e ->  {
+            for (int i =0; i < Palette.SIZE; i++) screen.flipColorCell(Palette.Table.INK, i);
+        } );
+        edit.add("Flip all papers").addActionListener(e ->  {
+            for (int i =0; i < Palette.SIZE; i++) screen.flipColorCell(Palette.Table.PAPER, i);
+        } );
         edit.add("Inverse palette").addActionListener(e -> screen.inverseColors());
         edit.add("Swap ink0 <-> paper0").addActionListener(e ->
                 screen.swapInkPaper(paintArea.getColorIndex(Palette.Table.INK),

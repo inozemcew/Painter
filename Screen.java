@@ -50,12 +50,17 @@ public class Screen implements ImageSupplier {
         byte attr = image.getAttr(x, y);
         int pix1 = image.getPixel(xx, y);
         int pix2 = image.getPixel(xx+1, y);
+
+        if ((pix1 & pix2) == 1 && ((pix1 ^ pix2) == 2) && mode == Mode.Color6 ) {
+            return palette.getInkRBGColor(paperFromAttr(attr), (pix1 & 2) == 2 ? 0 : 1);
+        } else {
+        /*
         if ((pix1 < 2) && (pix2 < 2) && mode == Mode.Color6) {
             if ((pix1 < 2) ? (pix1 & 1) == (pix2 & 1) : (pix1 & 1) != (pix2 & 1))
                 return palette.getPaperRGBColor((attr >> ((pix1&1)==(pix2&1)?3:0)) & 7, pix1 & 1);
             else
                 return palette.getInkRBGColor((attr >>((pix1&1)!=(pix2&1)?3:0)) & 7, pix1 & 1);
-        } else {
+        } else {*/
             int pix = (x==xx) ? pix1 : pix2;
         if (pix < 2)
             return palette.getPaperRGBColor(paperFromAttr(attr), pix & 1);
@@ -397,7 +402,7 @@ public class Screen implements ImageSupplier {
         int h = is.readInt() / 8;
         int x = (image.ATTR_SIZE_X - w) / 2;
         int y = (image.ATTR_SIZE_Y - h) / 2;
-        image.loadByTiles(is, (x < 0) ? 0 : x, (y < 0) ? 0 : y, w, h);
+        image.loadByTiles(is, x, y, w, h);
         is.close();
     }
 
