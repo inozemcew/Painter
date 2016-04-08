@@ -151,7 +151,7 @@ public class ImageConverter implements ImageSupplier {
                         .collect(Collectors.toCollection(LinkedList<Integer[]>::new)),
                 pairs);
         comb = (ncomb != null) ? ncomb : comb.best;
-        if (comb.ink.size()<8) comb.ink.add(new Pair(0,0));
+        if (comb.ink.size() < Palette.SIZE) comb.ink.add(new Pair(0,0));
         comb.fillPalette(palette);
         isPaletteCalculated = true;
     }
@@ -321,7 +321,7 @@ class Combinator {
             n.bestCount = bestCount;
             n.addTo(n.ink, p);
             n.addTo(n.paper, p.complement(s));
-            if (n.ink.size() <= 8 && n.paper.size() <= 8) {
+            if (n.ink.size() <= Palette.SIZE && n.paper.size() <= Palette.SIZE) {
                 Combinator r = n.next(stat, pairs);
                 if (r != null) return r;
                 tries = n.tries;
@@ -386,9 +386,9 @@ class Combinator {
     }
 
     void fillPalette(Palette palette) {
-        int[] ink = new int[8], paper = new int[8];
+        int[] ink = new int[Palette.SIZE], paper = new int[Palette.SIZE];
         Pair j, zero = new Pair(0,0);
-        for (int i = 0; i < 8; i++) {
+        for (int i = 0; i < Palette.SIZE; i++) {
             j = (i < this.ink.size()) ? this.ink.get(i) : zero;
             ink[i] = Palette.combine(j.first, j.second);
             j = (i < this.paper.size()) ? this.paper.get(i) : zero;

@@ -19,8 +19,9 @@ public class Palette {
     public enum Table {INK, PAPER}
 
     public static final int COLORS_PER_CELL = 2;
+    public static final int SIZE = 8;
 
-    private int[][] colorTable = new int[2][8];
+    private int[][] colorTable = new int[2][SIZE];
 
     public static class Descriptor {
         public final Palette.Table table;
@@ -55,7 +56,7 @@ public class Palette {
     private boolean locked = false;
 
     {
-        for (int i = 0; i<8; i++) {
+        for (int i = 0; i< SIZE; i++) {
             colorTable [1][i] = (i+16) | ((i+48)<<6);
             colorTable [0][i] = (i+40) | ((i+56)<<6);
         }
@@ -108,13 +109,13 @@ public class Palette {
     }
 
     public void loadPalette(DataInputStream stream) throws IOException {
-        for (int i = 0; i < 8; i++) setColorCell(stream.readInt(), Table.INK,i);
-        for (int i = 0; i < 8; i++) setColorCell(stream.readInt(), Table.PAPER,i);
+        for (int i = 0; i < SIZE; i++) setColorCell(stream.readInt(), Table.INK,i);
+        for (int i = 0; i < SIZE; i++) setColorCell(stream.readInt(), Table.PAPER,i);
     }
 
     public void savePalette(DataOutputStream stream) throws IOException {
-        for (int i = 0; i < 8; i++) stream.writeInt(getColorCell(Table.INK,i));
-        for (int i = 0; i < 8; i++) stream.writeInt(getColorCell(Table.PAPER,i));
+        for (int i = 0; i < SIZE; i++) stream.writeInt(getColorCell(Table.INK,i));
+        for (int i = 0; i < SIZE; i++) stream.writeInt(getColorCell(Table.PAPER,i));
     }
 
     public void setPalette(int[] ink, int[] paper) {
@@ -139,8 +140,8 @@ public class Palette {
         double bestN = Integer.MAX_VALUE;
         byte best = 0;
         final int[] ink = colorTable[Table.INK.ordinal()], paper = colorTable[Table.PAPER.ordinal()];
-        for (int i = 0; i < 8; i++) {
-            for (int p = 0; p < 8; p++) {
+        for (int i = 0; i < SIZE; i++) {
+            for (int p = 0; p < SIZE; p++) {
                 double n = 0;
                 for (int k : s) {
                     if (k != -2) {
@@ -232,17 +233,20 @@ public class Palette {
 
     static {
         for (int index = 0; index<64; index++) {
-            int x=2,y=0,z=0,r,g,b;
-            if ((index & 1) != 0) y = 1;
-            if ((index & 2) != 0) { x=2-x; y=2-y; z=2-z; }
+            int xh = 1, yh = 0, zh = 0;
+            int xl = 1, yl = 0, zl = 1;
+            int r, g, b;
+            yh = index & 1;
+            yl = 1 - yh;
+            if ((index & 2) != 0) { xh=1-xh; yh=yl^yh; zh=1-zh;}
             switch (index & 12) {
-                case 0: { r=z; g=y; b=y; break;}
-                case 4: { r=y; g=z; b=x; break;}
-                case 8: { r=x; g=y; b=z; break;}
-                default:{ r=z; g=x; b=y; break;}
+                case 0: { r = zh*(1+zl); g = yh*(1+yl); b = yh*(1+yl); break;}
+                case 4: { r = yh*(1+yl); g = zh*(1+zl); b = xh*(1+xl); break;}
+                case 8: { r = xh*(1+xl); g = yh*(1+yl); b = zh*(1+zl); break;}
+                default:{ r = zh*(1+zl); g = xh*(1+xl); b = yh*(1+yl); break;}
             }
-            int l =  (index & 48) == 0  ? 64: 80;
-            int m =  (index & 48)*2;
+            int l = (index & 48) == 0  ? 64: 80;
+            int m = (index & 48)*2;
             m = m>95 ? 95:m;
             //return new Color(r*l+m,g*l+m,b*l+m);
             colorCache[index] = new Color(l*r+m,l*g+m,l*b+m);
