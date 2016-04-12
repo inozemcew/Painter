@@ -107,6 +107,7 @@ public  class PainterApp extends JFrame {
         toolbar.add(button);
 
         toolbar.add(Box.createGlue()); //  Separator();
+        toolbar.add(paintArea.getClipIcon());
         return toolbar;
     }
 

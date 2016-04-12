@@ -2,6 +2,7 @@ package Painter;
 
 import Painter.Palette.Palette;
 
+import javax.swing.*;
 import java.awt.*;
 import java.io.*;
 import java.util.*;
@@ -244,6 +245,22 @@ public class Screen implements ImageSupplier {
         }
     }
 
+    void copyCell(int fx, int fy, int tx, int ty) {
+        if (isInImage(fx*8, fy*8) && isInImage(tx*8,ty*8)) {
+            lock();
+            beginDraw();
+            for (int x = 0; x < 8; x++) {
+                for (int y = 0; y < 8; y++) {
+                    Palette.Descriptor p = getPixelDescriptor(fx*8+x, fy*8+y);
+                    setPixel(tx*8+x, ty*8+y, p);
+                }
+            }
+            endDraw();
+            unlock();
+            fireImageChanged(tx*8,ty*8,8,8);
+        }
+    }
+
     boolean isLocked() {
         return locked !=0;
     }
@@ -404,6 +421,26 @@ public class Screen implements ImageSupplier {
         int y = (image.ATTR_SIZE_Y - h) / 2;
         image.loadByTiles(is, x, y, w, h);
         is.close();
+    }
+
+}
+
+class Clip implements Icon {
+    byte[] buffer = new byte[65];
+
+    @Override
+    public int getIconHeight() {
+        return 32;
+    }
+
+    @Override
+    public int getIconWidth() {
+        return 32;
+    }
+
+    @Override
+    public void paintIcon(Component c, Graphics g, int x, int y) {
+
     }
 
 }
