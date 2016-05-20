@@ -350,6 +350,20 @@ public class Screen implements ImageSupplier {
         endDraw();
     }
 
+    enum Shift {
+        Left(-1,0), Right(1,0), Up(0,-1), Down(0,1);
+        private int dx, dy;
+        Shift(int x, int y) {
+            this.dx = x;
+            this.dy = y;
+        };
+    }
+
+    void shift(Shift shift) {
+        image.shift(shift.dx, shift.dy);
+        fireImageChanged();
+    }
+
     void save(ObjectOutputStream stream) throws IOException {
         stream.writeObject(getPalette().getPalette(Palette.Table.INK));
         stream.writeObject(getPalette().getPalette(Palette.Table.PAPER));

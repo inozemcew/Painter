@@ -44,6 +44,19 @@ public class ImageBuffer {
         this.attrbuf[x / 8][y / 8] = attr;
     }
 
+    void shift (int dx, int dy) {
+        byte newPixBuf[][] = new byte[SIZE_X][SIZE_Y];
+        for (int x = 0; x < SIZE_X; x++) {
+            for (int y = 0; y < SIZE_Y; y++) {
+                int nx = x + dx, ny = y + dy;
+                if (nx >= 0 && nx < SIZE_X && ny >= 0 && ny <SIZE_Y) {
+                    newPixBuf[nx][ny] = pixbuf[x][y];
+                }
+            }
+        }
+        pixbuf = newPixBuf;
+    }
+
     @FunctionalInterface
     interface PixelProcessor {
         byte process(int x, int y, byte b, byte a);
