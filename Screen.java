@@ -32,7 +32,7 @@ public class Screen implements ImageSupplier {
 
 
     public enum Mode {
-        Color4, Color6
+        Color4, Color6, Color8
     }
 
     private Mode mode = Mode.Color6;
@@ -52,22 +52,15 @@ public class Screen implements ImageSupplier {
         int pix1 = image.getPixel(xx, y);
         int pix2 = image.getPixel(xx+1, y);
 
-        if ((pix1 & pix2) == 1 && ((pix1 ^ pix2) == 2) && mode == Mode.Color6 ) {
-            return palette.getInkRBGColor(paperFromAttr(attr), (pix1 & 2) == 2 ? 0 : 1);
-        } else {
-        /*
-        if ((pix1 < 2) && (pix2 < 2) && mode == Mode.Color6) {
-            if ((pix1 < 2) ? (pix1 & 1) == (pix2 & 1) : (pix1 & 1) != (pix2 & 1))
-                return palette.getPaperRGBColor((attr >> ((pix1&1)==(pix2&1)?3:0)) & 7, pix1 & 1);
-            else
-                return palette.getInkRBGColor((attr >>((pix1&1)!=(pix2&1)?3:0)) & 7, pix1 & 1);
-        } else {*/
-            int pix = (x==xx) ? pix1 : pix2;
+        if ((pix1 ^ pix2) == 2 && (pix1 & pix2) == 1 && mode != Mode.Color4 )
+                return palette.getInkRBGColor(paperFromAttr(attr), (pix1 & 2) == 2 ? 0 : 1);
+        if ((pix1 ^ pix2) == 3 && (pix1 * pix2) != 0 && mode == Mode.Color8 )
+                return palette.getPaperRGBColor(inkFromAttr(attr), (pix1 & 2) == 2 ? 0 : 1);
+        int pix = (x==xx) ? pix1 : pix2;
         if (pix < 2)
             return palette.getPaperRGBColor(paperFromAttr(attr), pix & 1);
         else
             return palette.getInkRBGColor(inkFromAttr(attr), pix & 1);
-        }
     }
 
     @Override
