@@ -29,9 +29,11 @@ public  class PainterApp extends JFrame {
     private PaintArea paintArea;
 
     public static void main(String[] argv) {
-        PainterApp form = new PainterApp();
-        JFrame frame = form.createMainForm();
-        frame.setVisible(true);
+        SwingUtilities.invokeLater( () -> {
+            PainterApp form = new PainterApp();
+            JFrame frame = form.createMainForm();
+            frame.setVisible(true);
+        });
     }
 
     JFrame createMainForm() {

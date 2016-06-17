@@ -9,6 +9,10 @@ import java.io.OutputStream;
  * Image buffer for 2 bitplanes
  */
 public class ImageBuffer {
+
+    protected final int CELL_SIZE_X = 8;
+    protected final int CELL_SIZE_Y = 8;
+
     public final int SIZE_X;
     public final int SIZE_Y;
 
@@ -25,8 +29,8 @@ public class ImageBuffer {
     public ImageBuffer(int sizeX, int sizeY) {
         this.SIZE_X = sizeX;
         this.SIZE_Y = sizeY;
-        this.ATTR_SIZE_X = SIZE_X / 8;
-        this.ATTR_SIZE_Y = SIZE_Y / 8;
+        this.ATTR_SIZE_X = SIZE_X / CELL_SIZE_X;
+        this.ATTR_SIZE_Y = SIZE_Y / CELL_SIZE_Y;
         this.pixbuf = new byte[SIZE_X][SIZE_Y];
         this.attrbuf = new byte[ATTR_SIZE_X][ATTR_SIZE_Y];
     }
@@ -36,12 +40,12 @@ public class ImageBuffer {
     }
 
     public byte getAttr(int x, int y) {
-        return attrbuf[x / 8][y / 8];
+        return attrbuf[x / CELL_SIZE_X][y / CELL_SIZE_Y];
     }
 
     void putPixel(int x, int y, byte pixel, byte attr) {
         this.pixbuf[x][y] = pixel;
-        this.attrbuf[x / 8][y / 8] = attr;
+        this.attrbuf[x / CELL_SIZE_X][y / CELL_SIZE_Y] = attr;
     }
 
     void shift (int dx, int dy) {
@@ -69,9 +73,9 @@ public class ImageBuffer {
 
     void forEachPixel(PixelProcessor proc) {
         for (int x = 0; x < SIZE_X; x++) {
-            int xx = x / 8;
+            int xx = x / CELL_SIZE_X;
             for (int y = 0; y < SIZE_Y; y++){
-                int yy = y/8;
+                int yy = y / CELL_SIZE_Y;
                 pixbuf[x][y] = proc.process(x, y, pixbuf[x][y], attrbuf[xx][yy]);
             }
         }
@@ -90,8 +94,8 @@ public class ImageBuffer {
     void store(OutputStream stream, int x, int y, int width, int height) throws IOException {
         for (int i = x; i < Integer.min(x + width, SIZE_X); i++)
             stream.write(pixbuf[i], y, height);
-        for (int i = x / 8; i < Integer.min((x + width) / 8, ATTR_SIZE_X); i++)
-            stream.write(attrbuf[i], y / 8, height / 8);
+        for (int i = x / CELL_SIZE_X; i < Integer.min((x + width) / CELL_SIZE_X, ATTR_SIZE_X); i++)
+            stream.write(attrbuf[i], y / CELL_SIZE_Y, height / CELL_SIZE_Y);
     }
 
     void load(InputStream stream) throws IOException {
@@ -99,8 +103,8 @@ public class ImageBuffer {
     }
 
     void load(InputStream stream, int width, int height) throws IOException {
-        int ox = (SIZE_X - width) / 16 * 8;
-        int oy = (SIZE_Y - height) / 16 * 8;
+        int ox = (SIZE_X - width) / (2 * CELL_SIZE_X) * CELL_SIZE_X;
+        int oy = (SIZE_Y - height) / (2 * CELL_SIZE_Y) * CELL_SIZE_Y;
         load(stream, ox, oy, width, height);
     }
 
@@ -117,15 +121,15 @@ public class ImageBuffer {
             }
         }
 
-        byte[] a = new byte[height / 8];
-        for (int i = ox / 8; i < (ox + width) / 8; i++) {
-            final int h = height / 8;
+        final int h = height / CELL_SIZE_Y;
+        byte[] a = new byte[h];
+        for (int i = ox / CELL_SIZE_X; i < (ox + width) / CELL_SIZE_X; i++) {
             int v = 0;
             while (v < h)
                 v += stream.read(a, v, h - v);
             if (i >= 0 && i < ATTR_SIZE_X) {
-                for (int j = oy / 8; j < (height + oy) / 8; j++) {
-                    if (j >= 0 && j < ATTR_SIZE_Y) attrbuf[i][j] = a[j - oy / 8];
+                for (int j = oy / CELL_SIZE_Y; j < (height + oy) / CELL_SIZE_Y; j++) {
+                    if (j >= 0 && j < ATTR_SIZE_Y) attrbuf[i][j] = a[j - oy / CELL_SIZE_Y];
                 }
             }
         }

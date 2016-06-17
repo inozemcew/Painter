@@ -1,5 +1,7 @@
 package Painter.Palette;
 
+import Painter.PixelFormat;
+
 import java.awt.*;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -22,18 +24,6 @@ public class Palette {
     public static final int SIZE = 8;
 
     private int[][] colorTable = new int[2][SIZE];
-
-    public static class Descriptor {
-        public final Palette.Table table;
-        public final int index;
-        public final int shift;
-
-        public Descriptor(Palette.Table table, int index, int shift) {
-            this.index = index;
-            this.shift = shift;
-            this.table = table;
-        }
-    }
 
 
     public interface PaletteChangeListener {
@@ -132,7 +122,11 @@ public class Palette {
     }
 
 
-    public Color getRGBColor(Palette.Table table, int index, int fs) {
+    public Color getRGBColor(PixelFormat pixel) {
+        return getRGBColor(pixel.table, pixel.index, pixel.shift);
+    }
+
+    private Color getRGBColor(Palette.Table table, int index, int fs) {
         return toRGB(split(getColorCell(table, index),fs));
     }
 

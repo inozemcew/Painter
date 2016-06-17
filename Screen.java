@@ -18,6 +18,11 @@ public class Screen implements ImageSupplier {
     private Collection<ImageChangeListener> listeners = new ArrayList<>();
     private final UndoRedo undo = new UndoRedo();
     private int enhancedInk = -1, enhancedPaper = -1;
+    private PixelFormat pixelFormat;
+
+    public Screen(PixelFormat pixelFormat) {
+        this.pixelFormat = pixelFormat;
+    }
 
     static int paperFromAttr(byte attr) { return (attr >> 3) & 7; }
     static int inkFromAttr(byte attr) { return attr & 7; }
@@ -110,14 +115,8 @@ public class Screen implements ImageSupplier {
         fireImageChanged();
     }
 
-    Palette.Descriptor getPixelDescriptor(int x, int y) {
-        int v = image.getPixel(x, y);
-        byte attr = image.getAttr(x, y);
-        return new Palette.Descriptor((v<2)? Palette.Table.PAPER: Palette.Table.INK,
-                (v < 2) ? paperFromAttr(attr): inkFromAttr(attr),
-                v & 1);
-        //return ((v < 2) ? "Paper" : "Ink") + String.valueOf(v & 1)
-         //       + "=" + String.valueOf( (v < 2) ? paperFromAttr(attr): inkFromAttr(attr));
+    PixelFormat getPixelDescriptor(int x, int y) {
+        return new PixelFormat(image.getPixel(x, y), image.getAttr(x, y));
     }
 
     private boolean isInImage(Point p) {
@@ -157,7 +156,7 @@ public class Screen implements ImageSupplier {
     }
 
 
-    void setPixel(int x, int y, Palette.Descriptor pixel) {
+    void setPixel(int x, int y, PixelFormat pixel) {
         if (isInImage(x, y)) {
             byte a = image.getAttr(x, y);
             byte s;
@@ -176,7 +175,7 @@ public class Screen implements ImageSupplier {
         }
     }
 
-    void drawLine(int ox, int oy, int x, int y, Palette.Descriptor pixel) {
+    void drawLine(int ox, int oy, int x, int y, PixelFormat pixel) {
         if (isInImage(x, y) && isInImage(ox, oy)) {
             lock();
             float dx = x - ox, dy = y - oy;
@@ -214,14 +213,14 @@ public class Screen implements ImageSupplier {
         }
     }
 
-    void fill(int x, int y, Palette.Descriptor pixel) {
+    void fill(int x, int y, PixelFormat pixel) {
         if (isInImage(x, y)) {
             lock();
             beginDraw();
             Stack<Point> stack = new Stack<>();
             stack.push(new Point(x, y));
             int pix = image.getPixel(x, y);
-            int npix = (pixel.table == Palette.Table.INK) ? (2 | pixel.shift) : pixel.shift;
+            int npix = pixel.pack();
             while (!stack.empty()) {
                 Point p = stack.pop();
                 int pix2 = image.getPixel(p.x, p.y);
@@ -244,7 +243,7 @@ public class Screen implements ImageSupplier {
             beginDraw();
             for (int x = 0; x < 8; x++) {
                 for (int y = 0; y < 8; y++) {
-                    Palette.Descriptor p = getPixelDescriptor(fx*8+x, fy*8+y);
+                    PixelFormat p = getPixelDescriptor(fx*8+x, fy*8+y);
                     setPixel(tx*8+x, ty*8+y, p);
                 }
             }
@@ -349,7 +348,7 @@ public class Screen implements ImageSupplier {
         Shift(int x, int y) {
             this.dx = x;
             this.dy = y;
-        };
+        }
     }
 
     void shift(Shift shift) {
@@ -364,6 +363,7 @@ public class Screen implements ImageSupplier {
         stream.writeInt(image.SIZE_Y);
         image.store(stream);
     }
+
     public void load(ObjectInputStream stream, boolean old) throws IOException, ClassNotFoundException {
         int[] ink;
         int[] paper;
