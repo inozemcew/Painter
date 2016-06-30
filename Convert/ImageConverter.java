@@ -33,7 +33,7 @@ public class ImageConverter implements ImageSupplier {
         loadColorMap();
     }
 
-    void loadColorMap() {
+    public void loadColorMap() {
         converter.getColorMap().clear();
         for (int x = 0; x < img.getWidth(); x++) for (int y = 0; y < img.getHeight(); y++) {
             converter.fromRGB(new Color(img.getRGB(x,y)));
@@ -63,16 +63,16 @@ public class ImageConverter implements ImageSupplier {
         this.listener = listener;
     }
 
-    boolean getPreview() {
+    public boolean getPreview() {
         return this.preview;
     }
 
-    void setPreview(boolean enabled) {
+    public void setPreview(boolean enabled) {
         this.preview = enabled;
         if (this.listener != null) listener.imageChanged();
     }
 
-    Map<Color,Integer> getColorMap() {
+    public Map<Color,Integer> getColorMap() {
         return converter.getColorMap();
     }
 

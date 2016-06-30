@@ -15,6 +15,9 @@ public class ImageBuffer {
     public final int ATTR_SIZE_X;
     public final int ATTR_SIZE_Y;
 
+    public final int ATTR_FACTOR_X;
+    public final int ATTR_FACTOR_Y;
+
     private byte pixbuf[][];
     private byte attrbuf[][];
 
@@ -23,10 +26,16 @@ public class ImageBuffer {
     }
 
     public ImageBuffer(int sizeX, int sizeY) {
+        this(sizeX, sizeY, 8,8);
+    }
+
+    public ImageBuffer(int sizeX, int sizeY, int factorX, int factorY) {
         this.SIZE_X = sizeX;
         this.SIZE_Y = sizeY;
-        this.ATTR_SIZE_X = SIZE_X / 8;
-        this.ATTR_SIZE_Y = SIZE_Y / 8;
+        this.ATTR_FACTOR_X = factorX;
+        this.ATTR_FACTOR_Y = factorY;
+        this.ATTR_SIZE_X = SIZE_X / factorX;
+        this.ATTR_SIZE_Y = SIZE_Y / factorY;
         this.pixbuf = new byte[SIZE_X][SIZE_Y];
         this.attrbuf = new byte[ATTR_SIZE_X][ATTR_SIZE_Y];
     }
@@ -36,12 +45,12 @@ public class ImageBuffer {
     }
 
     public byte getAttr(int x, int y) {
-        return attrbuf[x / 8][y / 8];
+        return attrbuf[x / ATTR_FACTOR_X][y / ATTR_FACTOR_Y];
     }
 
-    void putPixel(int x, int y, byte pixel, byte attr) {
+    public void putPixel(int x, int y, byte pixel, byte attr) {
         this.pixbuf[x][y] = pixel;
-        this.attrbuf[x / 8][y / 8] = attr;
+        this.attrbuf[x / ATTR_FACTOR_X][y / ATTR_FACTOR_Y] = attr;
     }
 
     void shift (int dx, int dy) {
@@ -58,26 +67,26 @@ public class ImageBuffer {
     }
 
     @FunctionalInterface
-    interface PixelProcessor {
+    public interface PixelProcessor {
         byte process(int x, int y, byte b, byte a);
     }
 
     @FunctionalInterface
-    interface AttrProcessor {
+    public interface AttrProcessor {
         byte process(int x, int y, byte b);
     }
 
-    void forEachPixel(PixelProcessor proc) {
+    public void forEachPixel(PixelProcessor proc) {
         for (int x = 0; x < SIZE_X; x++) {
-            int xx = x / 8;
+            int xx = x / ATTR_FACTOR_X;
             for (int y = 0; y < SIZE_Y; y++){
-                int yy = y/8;
+                int yy = y / ATTR_FACTOR_Y;
                 pixbuf[x][y] = proc.process(x, y, pixbuf[x][y], attrbuf[xx][yy]);
             }
         }
     }
 
-    void forEachAttr(AttrProcessor proc) {
+    public void forEachAttr(AttrProcessor proc) {
         for (int x = 0; x < ATTR_SIZE_X; x++)
             for (int y = 0; y < ATTR_SIZE_Y; y++)
                 attrbuf[x][y] = proc.process(x, y, attrbuf[x][y]);
@@ -90,17 +99,17 @@ public class ImageBuffer {
     void store(OutputStream stream, int x, int y, int width, int height) throws IOException {
         for (int i = x; i < Integer.min(x + width, SIZE_X); i++)
             stream.write(pixbuf[i], y, height);
-        for (int i = x / 8; i < Integer.min((x + width) / 8, ATTR_SIZE_X); i++)
-            stream.write(attrbuf[i], y / 8, height / 8);
+        for (int i = x / ATTR_FACTOR_X; i < Integer.min((x + width) / ATTR_FACTOR_X, ATTR_SIZE_X); i++)
+            stream.write(attrbuf[i], y / ATTR_FACTOR_Y, height / ATTR_FACTOR_Y);
     }
 
-    void load(InputStream stream) throws IOException {
+    public void load(InputStream stream) throws IOException {
         load(stream, 256, 192);
     }
 
-    void load(InputStream stream, int width, int height) throws IOException {
-        int ox = (SIZE_X - width) / 16 * 8;
-        int oy = (SIZE_Y - height) / 16 * 8;
+    public void load(InputStream stream, int width, int height) throws IOException {
+        int ox = (SIZE_X - width) / (2 * ATTR_FACTOR_X) * ATTR_FACTOR_X;
+        int oy = (SIZE_Y - height) / (2 * ATTR_FACTOR_Y) * ATTR_FACTOR_Y;
         load(stream, ox, oy, width, height);
     }
 
@@ -117,15 +126,15 @@ public class ImageBuffer {
             }
         }
 
-        byte[] a = new byte[height / 8];
-        for (int i = ox / 8; i < (ox + width) / 8; i++) {
-            final int h = height / 8;
+        byte[] a = new byte[height / ATTR_FACTOR_Y];
+        for (int i = ox / ATTR_FACTOR_X; i < (ox + width) / ATTR_FACTOR_X; i++) {
+            final int h = height / ATTR_FACTOR_Y;
             int v = 0;
             while (v < h)
                 v += stream.read(a, v, h - v);
             if (i >= 0 && i < ATTR_SIZE_X) {
-                for (int j = oy / 8; j < (height + oy) / 8; j++) {
-                    if (j >= 0 && j < ATTR_SIZE_Y) attrbuf[i][j] = a[j - oy / 8];
+                for (int j = oy / ATTR_FACTOR_Y; j < (height + oy) / ATTR_FACTOR_Y; j++) {
+                    if (j >= 0 && j < ATTR_SIZE_Y) attrbuf[i][j] = a[j - oy / ATTR_FACTOR_Y];
                 }
             }
         }
@@ -135,10 +144,10 @@ public class ImageBuffer {
         for (int x = sx; x < sx + width; x++)
             for (int y = sy; y < sy + height; y++) {
 
-                for (int yy = 0; yy < 8; yy++)
-                    for (int xx = 0; xx < 8; xx++) {
-                        final int xi = x * 8 + xx;
-                        final int yi = y * 8 + yy;
+                for (int yy = 0; yy < ATTR_FACTOR_Y; yy++)
+                    for (int xx = 0; xx < ATTR_FACTOR_X; xx++) {
+                        final int xi = x * ATTR_FACTOR_X + xx;
+                        final int yi = y * ATTR_FACTOR_Y + yy;
                         byte b = (byte) stream.read();
                         if (0 <= xi && xi < SIZE_X && 0 <= yi && yi < SIZE_Y)
                             pixbuf[(xi)][(yi)] = b;

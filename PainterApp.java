@@ -1,12 +1,9 @@
 package Painter;
 
-import Painter.Convert.ConvertDialog;
-import Painter.Convert.ImageConverter;
 import Painter.Palette.ChangeAdapter;
 import Painter.Palette.Palette;
 import Painter.Palette.PaletteToolPanel;
 
-import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
@@ -14,25 +11,40 @@ import java.awt.event.InputEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.*;
+import java.util.EnumSet;
+import java.util.Iterator;
 
 /**
  * Created by ainozemtsev on 17.11.15.
  */
 
-public  class PainterApp extends JFrame {
+public abstract class PainterApp extends JFrame {
     JLabel statusBar = new JLabel(" ");
 
-    Screen screen = new Screen();
+    Screen screen;
     private final JFileChooser fileChooser = new JFileChooser();
     private InterlacedView interlacedView;
     private JSplitPane splitPane;
     private PaintArea paintArea;
 
-    public static void main(String[] argv) {
-        PainterApp form = new PainterApp();
-        JFrame frame = form.createMainForm();
-        frame.setVisible(true);
+    public static void run(PainterApp app) {
+        SwingUtilities.invokeLater(new Runnable() {
+                                       @Override
+                                       public void run() {
+                                           PainterApp form = app;
+                                           JFrame frame = form.createMainForm();
+                                           frame.setVisible(true);
+                                       }
+                                   }
+        );
     }
+
+    public PainterApp() throws HeadlessException {
+        super();
+        this.screen = createScreen();
+    }
+
+    protected abstract Screen createScreen();
 
     JFrame createMainForm() {
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
@@ -47,7 +59,8 @@ public  class PainterApp extends JFrame {
             @Override
             public void mousePressed(MouseEvent mouseEvent) {
                 super.mousePressed(mouseEvent);
-                paintArea.ScrollInView(mouseEvent.getX() / 2, mouseEvent.getY() / 2);
+                final int scale = interlacedView.getScale();
+                paintArea.ScrollInView(mouseEvent.getX() / scale, mouseEvent.getY() / scale);
             }
         });
         splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
@@ -100,6 +113,9 @@ public  class PainterApp extends JFrame {
         spinner.setPaintLabels(true);
         spinner.setValue(paintArea.getScale());
         spinner.addChangeListener(e -> paintArea.setScale(spinner.getValue()));
+        rootPane.addPropertyChangeListener(evt -> {
+            if (evt.getPropertyName().equals("scale")) spinner.setValue((Integer)evt.getNewValue());
+                });
         toolbar.add(spinner);
 
         //panel.addChangeListener(action);
@@ -117,9 +133,7 @@ public  class PainterApp extends JFrame {
         JMenu file = menuBar.add(new JMenu("File"));
         file.setMnemonic('F');
         JMenu n = new JMenu("New");
-        n.add("256x192").addActionListener(event -> newScreen(256,192));
-        n.add("320x200").addActionListener(event -> newScreen(320,200));
-        n.add("320x240").addActionListener(event -> newScreen(320,240));
+        screen.getResolutions().forEach((s,d)-> n.add(s).addActionListener(e -> newScreen(d.width,d.height)));
         file.add(n);
         file.add("Load ..").addActionListener(event -> this.load());
         file.add("Save as ..").addActionListener(event -> this.saveAs());
@@ -143,52 +157,39 @@ public  class PainterApp extends JFrame {
             getContentPane().repaint();
         });
         edit.addSeparator();
-        /*final int[] revs = {7, 6, 5, 4, 3, 2, 1, 0};
-        edit.add("Reverse ink").addActionListener(e1 -> screen.rearrangeColorTable(Palette.Table.INK, revs));
-        edit.add("Reverse paper").addActionListener(e1 -> screen.rearrangeColorTable(Palette.Table.PAPER, revs));
-*/
-        edit.add("Flip ink").addActionListener(e ->
-                screen.flipColorCell(Palette.Table.INK, paintArea.getColorIndex(Palette.Table.INK)));
-        edit.add("Flip paper").addActionListener(e ->
-                screen.flipColorCell(Palette.Table.PAPER, paintArea.getColorIndex(Palette.Table.PAPER)));
-        edit.add("Flip all inks").addActionListener(e ->  {
-            for (int i =0; i < Palette.SIZE; i++) screen.flipColorCell(Palette.Table.INK, i);
-        } );
-        edit.add("Flip all papers").addActionListener(e ->  {
-            for (int i =0; i < Palette.SIZE; i++) screen.flipColorCell(Palette.Table.PAPER, i);
-        } );
-        edit.add("Inverse palette").addActionListener(e -> screen.inverseColors());
-        edit.add("Swap ink0 <-> paper0").addActionListener(e ->
-                screen.swapInkPaper(paintArea.getColorIndex(Palette.Table.INK),
-                        paintArea.getColorIndex(Palette.Table.PAPER), 0)
-        );
-        edit.add("Swap ink1 <-> paper1").addActionListener(e ->
-                screen.swapInkPaper(paintArea.getColorIndex(Palette.Table.INK),
-                        paintArea.getColorIndex(Palette.Table.PAPER), 1)
-        );
+
+        screen.getSpecialMethods().forEach( (name, biConsumer) -> {
+            edit.add(name).addActionListener(e ->
+                    biConsumer.accept(
+                            paintArea.getColorIndex(Palette.Table.INK),
+                            paintArea.getColorIndex(Palette.Table.PAPER)
+                    )
+            );
+
+        });
         edit.addSeparator();
+
         JMenu sh = new JMenu("Shift");
         sh.add("Left").addActionListener(e -> screen.shift(Screen.Shift.Left));
         sh.add("Right").addActionListener(e -> screen.shift(Screen.Shift.Right));
         sh.add("Up").addActionListener(e -> screen.shift(Screen.Shift.Up));
         sh.add("Down").addActionListener(e -> screen.shift(Screen.Shift.Down));
         edit.add(sh);
-        JMenu options = menuBar.add(new JMenu("Options"));
-        ButtonGroup g = new ButtonGroup();
-        JRadioButtonMenuItem c4 = new JRadioButtonMenuItem("4 colors mode");
-        JRadioButtonMenuItem c6 = new JRadioButtonMenuItem("6 colors mode");
-        JRadioButtonMenuItem c8 = new JRadioButtonMenuItem("8 colors mode");
-        c6.setSelected(true);
-        c4.addActionListener(e -> screen.setMode(Screen.Mode.Color4));
-        c6.addActionListener(e -> screen.setMode(Screen.Mode.Color6));
-        c8.addActionListener(e -> screen.setMode(Screen.Mode.Color8));
-        g.add(c4);
-        g.add(c6);
-        g.add(c8);
-        options.add(c4);
-        options.add(c6);
-        options.add(c8);
 
+        final Enum mode = screen.getMode();
+        if (mode != null) {
+            JMenu options = menuBar.add(new JMenu("Options"));
+            ButtonGroup g = new ButtonGroup();
+            Iterator<Enum> i = EnumSet.allOf(mode.getDeclaringClass()).iterator();
+            while (i.hasNext()) {
+                Enum m = i.next();
+                JRadioButtonMenuItem c = new JRadioButtonMenuItem(m.toString());
+                if (m == mode) c.setSelected(true);
+                c.addActionListener(e -> screen.setMode(m));
+                g.add(c);
+                options.add(c);
+            }
+        }
         return menuBar;
     }
 
@@ -232,10 +233,8 @@ public  class PainterApp extends JFrame {
             File file = fileChooser.getSelectedFile();
             try {
                 final FileInputStream stream = new FileInputStream(file);
-                ImageConverter converter = new ImageConverter(ImageIO.read(stream));
-                ConvertDialog convertDialog = new ConvertDialog(converter);
-                if (!convertDialog.runDialog()) return;
-                DataInputStream is = converter.asTileStream();
+                DataInputStream is = convertPNGStream(stream);
+                if (is == null) return;
                 screen.importImage(is);
                 stream.close();
                 repaint();
@@ -248,6 +247,8 @@ public  class PainterApp extends JFrame {
             repaint();
         }
     }
+
+    protected abstract DataInputStream convertPNGStream(FileInputStream stream) throws IOException;
 
 
     private void saveAs() {
@@ -274,7 +275,7 @@ public  class PainterApp extends JFrame {
 
     private void load() {
         fileChooser.setDialogTitle("Load screen");
-        FileNameExtensionFilter filter = new FileNameExtensionFilter("New screen", "scrn");
+        FileNameExtensionFilter filter = screen.getFileNameExtensionFilter();
         fileChooser.resetChoosableFileFilters();
         fileChooser.addChoosableFileFilter(filter);
         fileChooser.setFileFilter(filter);

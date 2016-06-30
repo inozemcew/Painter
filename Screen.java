@@ -2,42 +2,44 @@ package Painter;
 
 import Painter.Palette.Palette;
 
-import javax.swing.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.io.*;
 import java.util.*;
+import java.util.function.BiConsumer;
 
 /**
  * Created by aleksey on 22.01.16.
  * Screen as virtual device for painting on
  * Unites screen buffer and palette
  */
-public class Screen implements ImageSupplier {
-    private ImageBuffer image = new ImageBuffer();
-    private Palette palette = new Palette();
+public abstract class Screen implements ImageSupplier {
+    protected ImageBuffer image;
+    protected Palette palette = new Palette();
+    protected Enum mode = null;
     private Collection<ImageChangeListener> listeners = new ArrayList<>();
-    private final UndoRedo undo = new UndoRedo();
-    private int enhancedInk = -1, enhancedPaper = -1;
-
-    static int paperFromAttr(byte attr) { return (attr >> 3) & 7; }
-    static int inkFromAttr(byte attr) { return attr & 7; }
-    static int fromAttr(byte attr, Palette.Table table) {
-        return (table == Palette.Table.INK) ? inkFromAttr(attr) : paperFromAttr(attr);
-    }
-    static byte paperToAttr(byte attr, int paper) { return (byte) ((attr & 7) | (paper<<3));}
-    static byte inkToAttr(byte attr, int ink) { return (byte) ((attr & 0x38) | ink);}
-    private static byte toAttr(byte attr, int value, Palette.Table table) {
-        return (table == Palette.Table.INK) ? inkToAttr(attr,value) : paperToAttr(attr,value);
-    }
-
-
-    public enum Mode {
-        Color4, Color6, Color8
-    }
-
-    private Mode mode = Mode.Color6;
+    protected final UndoRedo undo = new UndoRedo();
+    protected int enhancedInk = -1, enhancedPaper = -1;
+    protected int GRID_FACTOR_X = 8, GRID_FACTOR_Y = 8;
 
     private int locked = 0;
+
+    public Screen() {
+        image = createImageBuffer();
+        palette = createPalette();
+    }
+
+    protected ImageBuffer createImageBuffer() {
+        return new ImageBuffer();
+    }
+
+    protected ImageBuffer createImageBuffer(int x, int y) {
+        return new ImageBuffer(x,y);
+    }
+
+    protected Palette createPalette() {
+        return new Palette();
+    }
 
     @Override
     public void addChangeListener(ImageChangeListener listener) {
@@ -46,35 +48,12 @@ public class Screen implements ImageSupplier {
     }
 
     @Override
-    public Color getPixelColor(int x, int y) {
-        int xx = x & 0xfffe;
-        byte attr = image.getAttr(x, y);
-        int pix1 = image.getPixel(xx, y);
-        int pix2 = image.getPixel(xx+1, y);
-
-        if ((pix1 ^ pix2) == 2 && (pix1 & pix2) == 1 && mode != Mode.Color4 )
-                return palette.getInkRBGColor(paperFromAttr(attr), (pix1 & 2) == 2 ? 0 : 1);
-        if ((pix1 ^ pix2) == 3 && (pix1 * pix2) != 0 && mode == Mode.Color8 )
-                return palette.getPaperRGBColor(inkFromAttr(attr), (pix1 & 2) == 2 ? 0 : 1);
-        int pix = (x==xx) ? pix1 : pix2;
-        if (pix < 2)
-            return palette.getPaperRGBColor(paperFromAttr(attr), pix & 1);
-        else
-            return palette.getInkRBGColor(inkFromAttr(attr), pix & 1);
-    }
+    abstract public Color getPixelColor(int x, int y) ;
 
     @Override
-    public Status getStatus(int x, int y) {
-        if (enhancedInk ==-1 && enhancedPaper == -1) return Status.Normal;
-        byte attr = image.getAttr(x,y);
-        int ink = inkFromAttr(attr);
-        int paper = paperFromAttr(attr);
-        int pix = image.getPixel(x,y);
-        if (pix<2)
-            return (paper == enhancedPaper) ? Status.Enhanced : Status.Dimmed;
-        else
-            return (ink == enhancedInk) ? Status.Enhanced : Status.Dimmed;
-    }
+    abstract public ImageSupplier.Status getStatus(int x, int y);
+
+    abstract public Pixel getPixelDescriptor(int x, int y);
 
     public void setEnhanced(int ink, int paper) {
         this.enhancedInk = ink;
@@ -82,21 +61,21 @@ public class Screen implements ImageSupplier {
         fireImageChanged();
     }
 
-    public Mode getMode() {
+    public Enum getMode() {
         return mode;
     }
 
-    public void setMode(Mode mode) {
+    public void setMode(Enum mode) {
         this.mode = mode;
         fireImageChanged();
     }
 
-    @Override
+    @Override // in ImageSupplier
     public int getImageHeight() {
         return image.SIZE_Y;
     }
 
-    @Override
+    @Override // in ImageSupplier
     public int getImageWidth() {
         return image.SIZE_X;
     }
@@ -106,18 +85,8 @@ public class Screen implements ImageSupplier {
     }
 
     void newImageBuffer(int sizeX, int sizeY) {
-        this.image = new ImageBuffer(sizeX,sizeY);
+        this.image = createImageBuffer(sizeX, sizeY);
         fireImageChanged();
-    }
-
-    Palette.Descriptor getPixelDescriptor(int x, int y) {
-        int v = image.getPixel(x, y);
-        byte attr = image.getAttr(x, y);
-        return new Palette.Descriptor((v<2)? Palette.Table.PAPER: Palette.Table.INK,
-                (v < 2) ? paperFromAttr(attr): inkFromAttr(attr),
-                v & 1);
-        //return ((v < 2) ? "Paper" : "Ink") + String.valueOf(v & 1)
-         //       + "=" + String.valueOf( (v < 2) ? paperFromAttr(attr): inkFromAttr(attr));
     }
 
     private boolean isInImage(Point p) {
@@ -125,7 +94,7 @@ public class Screen implements ImageSupplier {
     }
 
     boolean isInImage(int x, int y) {
-        return x >= 0 && x < image.SIZE_X && y >= 0 && y < image.SIZE_Y;
+        return x >= 0 && x < getImageWidth() && y >= 0 && y < getImageHeight();
     }
 
     public void beginDraw() {
@@ -142,7 +111,7 @@ public class Screen implements ImageSupplier {
             ListIterator<UndoElement> i = elements.listIterator(elements.size());
             while (i.hasPrevious()) {
                 UndoElement e = i.previous();
-                image.putPixel(e.x, e.y, e.pixel, e.attr);
+                putPixel(e.x, e.y, e.pixel, e.attr);
             }
         }
     }
@@ -151,32 +120,39 @@ public class Screen implements ImageSupplier {
         Vector<UndoElement> elements = undo.redo();
         if (null != elements) {
             for (UndoElement e : elements) {
-                image.putPixel(e.x, e.y, e.newPixel, e.newAttr);
+                putPixel(e.x, e.y, e.newPixel, e.newAttr);
             }
         }
     }
 
+    abstract protected  byte attrFromDesc(Pixel pixel, byte oldAttr);
+    abstract protected  byte pixelFromDesc(Pixel pixel, byte oldPixel, int x, int y);
 
-    void setPixel(int x, int y, Palette.Descriptor pixel) {
+    protected byte getPixel(int x, int y) {
+        return image.getPixel(x,y);
+    }
+
+    protected byte getAttr(int x, int y) {
+        return image.getAttr(x, y);
+    }
+
+    protected void putPixel(int x, int y, byte pixel, byte attr) {
+        image.putPixel(x, y, pixel, attr);
+    }
+
+    void setPixel(int x, int y, Pixel pixel) {
         if (isInImage(x, y)) {
-            byte a = image.getAttr(x, y);
-            byte s;
-            if (pixel.table == Palette.Table.INK) {
-                if (pixel.index >= 0) a = inkToAttr(a, pixel.index);
-                s = 2;
-            } else {
-                if (pixel.index >= 0) a = paperToAttr(a, pixel.index);
-                s = 0;
-            }
-            s = (byte) (pixel.shift | s);
-
-            undo.add(x, y, image.getPixel(x, y), image.getAttr(x, y), s, a);
-            image.putPixel(x, y, s, a);
-            fireImageChanged(x / 8 * 8, y / 8 * 8, 8, 8);
+            byte a =  getAttr(x, y);
+            if (pixel.index >= 0)
+                a = attrFromDesc(pixel, a);
+            byte b = pixelFromDesc(pixel, getPixel(x, y), x, y);
+            undo.add(x, y, getPixel(x, y), getAttr(x, y), b, a);
+            putPixel(x, y, b, a);
+            fireImageChanged(x / GRID_FACTOR_X * GRID_FACTOR_X, y / GRID_FACTOR_Y * GRID_FACTOR_Y, GRID_FACTOR_X, GRID_FACTOR_Y);
         }
     }
 
-    void drawLine(int ox, int oy, int x, int y, Palette.Descriptor pixel) {
+    void drawLine(int ox, int oy, int x, int y, Pixel pixel) {
         if (isInImage(x, y) && isInImage(ox, oy)) {
             lock();
             float dx = x - ox, dy = y - oy;
@@ -196,42 +172,55 @@ public class Screen implements ImageSupplier {
 
             int sx, sy, w, h;
             if (ox < x) {
-                sx = ox / 8 * 8;
-                w = x / 8 * 8 + 8 - sx;
+                sx = ox / GRID_FACTOR_X * GRID_FACTOR_X;
+                w = x / GRID_FACTOR_X * GRID_FACTOR_X + GRID_FACTOR_X - sx;
             } else {
-                sx = x / 8 * 8;
-                w = ox / 8 * 8 + 8 - sx;
+                sx = x / GRID_FACTOR_X * GRID_FACTOR_X;
+                w = ox / GRID_FACTOR_X * GRID_FACTOR_X + GRID_FACTOR_X - sx;
             }
             if (oy < y) {
-                sy = oy / 8 * 8;
-                h = y / 8 * 8 + 8 - sy;
+                sy = oy / GRID_FACTOR_Y * GRID_FACTOR_Y;
+                h = y / GRID_FACTOR_Y * GRID_FACTOR_Y + GRID_FACTOR_Y - sy;
             } else {
-                sy = y / 8 * 8;
-                h = oy / 8 * 8 + 8 - sy;
+                sy = y / GRID_FACTOR_Y * GRID_FACTOR_Y;
+                h = oy / GRID_FACTOR_Y * GRID_FACTOR_Y + GRID_FACTOR_Y - sy;
             }
             unlock();
             fireImageChanged(sx, sy, w, h);
         }
     }
 
-    void fill(int x, int y, Palette.Descriptor pixel) {
+    protected int getPointSize() {
+        return 1;
+    }
+
+    void fill(int x, int y, Pixel pixel) {
         if (isInImage(x, y)) {
             lock();
             beginDraw();
             Stack<Point> stack = new Stack<>();
+            Pixel[][] pixels = new Pixel[getImageWidth()][getImageHeight()];
+            final int ss = 1; getPointSize();
             stack.push(new Point(x, y));
-            int pix = image.getPixel(x, y);
-            int npix = (pixel.table == Palette.Table.INK) ? (2 | pixel.shift) : pixel.shift;
+            Pixel pix = getPixelDescriptor(x, y);
             while (!stack.empty()) {
                 Point p = stack.pop();
-                int pix2 = image.getPixel(p.x, p.y);
-                if (pix2 == npix || pix2 != pix) continue;
-                setPixel(p.x, p.y, pixel);
-                if (p.x > 0) stack.push(new Point(p.x - 1, p.y));
-                if (p.y > 0) stack.push(new Point(p.x, p.y - 1));
-                if (p.x < image.SIZE_X - 1) stack.push(new Point(p.x + 1, p.y));
-                if (p.y < image.SIZE_Y - 1) stack.push(new Point(p.x, p.y + 1));
+                Pixel pix2 = getPixelDescriptor(p.x, p.y);
+                if (pix2.hasSameColor(pixel,palette) || !pix2.hasSameColor(pix,palette) || pixels[p.x][p.y]!=null)
+                    continue;
+                pixels[p.x][p.y] = pixel;
+                //setPixel(p.x, p.y, pixel);
+                if (p.x > 0) stack.push(new Point(p.x - ss, p.y));
+                if (p.y > 0) stack.push(new Point(p.x, p.y - ss));
+                if (p.x < getImageWidth() - 1) stack.push(new Point(p.x + ss, p.y));
+                if (p.y < getImageHeight() - 1) stack.push(new Point(p.x, p.y + ss));
             }
+            for (int xx = 0; xx < getImageWidth(); xx++)
+                for (int yy = 0; yy < getImageHeight(); yy++) {
+                    if (pixels[xx][yy] != null)
+                        setPixel(xx,yy,pixels[xx][yy]);
+                }
+
             endDraw();
             unlock();
             fireImageChanged();
@@ -244,7 +233,7 @@ public class Screen implements ImageSupplier {
             beginDraw();
             for (int x = 0; x < 8; x++) {
                 for (int y = 0; y < 8; y++) {
-                    Palette.Descriptor p = getPixelDescriptor(fx*8+x, fy*8+y);
+                    Pixel p = getPixelDescriptor(fx*8+x, fy*8+y);
                     setPixel(tx*8+x, ty*8+y, p);
                 }
             }
@@ -252,6 +241,10 @@ public class Screen implements ImageSupplier {
             unlock();
             fireImageChanged(tx*8,ty*8,8,8);
         }
+    }
+
+    protected void rearrangeColorTable(Palette.Table table, int[] order) {
+
     }
 
     boolean isLocked() {
@@ -266,7 +259,7 @@ public class Screen implements ImageSupplier {
         if (isLocked()) locked--;
     }
 
-    private void fireImageChanged() {
+    protected void fireImageChanged() {
         if (isLocked()) return;
         listeners.forEach(ImageChangeListener::imageChanged);
     }
@@ -274,19 +267,6 @@ public class Screen implements ImageSupplier {
     private void fireImageChanged(int x, int y, int w, int h) {
         if (isLocked()) return;
         listeners.forEach(l -> l.imageChanged(x, y, w, h));
-    }
-
-    void rearrangeColorTable(Palette.Table table, int[] order) {
-        image.forEachAttr( (x, y, attr) -> {
-            int a = fromAttr(attr, table);
-            return toAttr(attr, order[a], table);
-        });
-        palette.reorder(table, order);
-        /*final int[] p = this.palette.getPalette(table);
-        int[] cells = Arrays.copyOf(p,p.length);
-        for (int i = 0; i< cells.length; i++)
-            this.palette.setColorCell(cells[i],table,order[i]);*/
-        fireImageChanged();
     }
 
     public void swapColors(Palette.Table table, int from, int to) {
@@ -303,46 +283,6 @@ public class Screen implements ImageSupplier {
         rearrangeColorTable(table, order);
     }
 
-    void flipColorCell(Palette.Table table, int index){
-        image.forEachPixel( (x, y, b, a) -> {
-            if (table == Palette.Table.INK)
-                return (byte) (inkFromAttr(a) == index && b >= 2 ? 5 - b : b);
-            else
-                return (byte) (paperFromAttr(a) == index && b < 2 ? 1 - b : b);
-        });
-        int c = palette.getColorCell(table, index);
-        palette.setColorCell(Palette.combine(Palette.second(c),Palette.first(c)), table,index);
-    }
-
-    void inverseColors() {
-        image.forEachPixel((x, y, b, a) -> (byte) (b ^ 2));
-        image.forEachAttr((x, y, b) -> (byte) (((b & 7) << 3) | ((b >> 3) & 7)));
-        int l = Integer.min(palette.getPalette(Palette.Table.INK).length,
-                palette.getPalette(Palette.Table.PAPER).length);
-        for (int i = 0; i < l; i++) {
-            int ink = palette.getColorCell(Palette.Table.INK,i);
-            int paper = palette.getColorCell(Palette.Table.PAPER,i);
-            palette.setColorCell(ink, Palette.Table.PAPER,i);
-            palette.setColorCell(paper, Palette.Table.INK, i);
-        }
-    }
-
-    void swapInkPaper(int ink, int paper, int shift) {
-        beginDraw();
-        image.forEachPixel((x, y, b, a) -> {
-            final boolean f = (inkFromAttr(a) == ink && paperFromAttr(a) == paper && (b&1) == shift);
-            if (f) undo.add(x, y, b, a, (byte) (b ^ 2), a);
-            return (byte) (f ? b ^ 2 : b);
-        });
-        int i = palette.getColorCell(Palette.Table.INK, ink);
-        int i1 = Palette.split(i, shift);
-        int p = palette.getColorCell(Palette.Table.PAPER, paper);
-        int p1 = Palette.split(p, shift);
-        palette.setColorCell(Palette.replace(i, p1, shift), Palette.Table.INK, ink);
-        palette.setColorCell(Palette.replace(p, i1, shift), Palette.Table.PAPER, paper);
-        endDraw();
-    }
-
     enum Shift {
         Left(-1,0), Right(1,0), Up(0,-1), Down(0,1);
         private int dx, dy;
@@ -357,6 +297,14 @@ public class Screen implements ImageSupplier {
         fireImageChanged();
     }
 
+    public  Map<String, BiConsumer<Integer,Integer>> getSpecialMethods() {
+        return new HashMap<>();
+    }
+
+    abstract public Map<String,Dimension> getResolutions();
+
+    abstract protected FileNameExtensionFilter getFileNameExtensionFilter();
+
     void save(ObjectOutputStream stream) throws IOException {
         stream.writeObject(getPalette().getPalette(Palette.Table.INK));
         stream.writeObject(getPalette().getPalette(Palette.Table.PAPER));
@@ -364,6 +312,7 @@ public class Screen implements ImageSupplier {
         stream.writeInt(image.SIZE_Y);
         image.store(stream);
     }
+
     public void load(ObjectInputStream stream, boolean old) throws IOException, ClassNotFoundException {
         int[] ink;
         int[] paper;
@@ -384,70 +333,41 @@ public class Screen implements ImageSupplier {
         stream.close();
     }
 
-    public void importSCR(InputStream stream) throws IOException {
-        byte[] pix = new byte[2048 * 3];
-        byte[] attr = new byte[768];
-        stream.read(pix);
-        stream.read(attr);
-        ByteArrayOutputStream as = new ByteArrayOutputStream(256 * 192 + 32 * 24);
-        boolean bright;
-        for (int x = 0; x < 256; x++) {
-            byte[] buf = new byte[192];
-            for (int y = 0; y < 192; y++) {
-                byte a = attr[(y & 0xf8) * 4 + x / 8];
-                bright = (a & 0x40) != 0;
-                int b = pix[(x >> 3) + 256 * (y & 7) + 4 * (y & 0x38) + 32 * (y & 0xc0)] >> (7 - (x & 7));
-                byte p = (byte) ((b & 1) * 2 + (bright ? 0 : 1));
-                if ((a & 7) == 0 && p == 3) p = 2;
-                if ((a & 0x38) == 0 && p == 1) p = 0;
-                buf[y] = p;
-            }
-            as.write(buf);
-        }
-        for (int x = 0; x < 32; x++) {
-            byte[] buf = new byte[24];
-            for (int y = 0; y < 24; y++) {
-                byte a = attr[x + 32 * y];
-                buf[y] = (byte) (a & 0x3f);
-            }
-            as.write(buf);
-        }
-        image.load(new ByteArrayInputStream(as.toByteArray()));
-
-        int[] ink = {0x00, 0x14, 0x18, 0x1e, 0x1c, 0x1a, 0x16, 0x12};
-        for (int i = 1; i < 8; i++) ink[i] += (ink[i] + 0x10) << 6;
-        palette.setPalette(ink, ink);
-
-    }
+    public abstract void importSCR(InputStream stream) throws IOException;
 
     public void importImage(DataInputStream is) throws IOException {
         palette.loadPalette(is);
-        int w = is.readInt() / 8;
-        int h = is.readInt() / 8;
+        int w = is.readInt() / image.ATTR_FACTOR_X;
+        int h = is.readInt() / image.ATTR_FACTOR_Y;
         int x = (image.ATTR_SIZE_X - w) / 2;
         int y = (image.ATTR_SIZE_Y - h) / 2;
         image.loadByTiles(is, x, y, w, h);
         is.close();
     }
 
+    public static class Pixel {
+        public final Palette.Table table;
+        public final int index;
+        public final int shift;
+
+        public Pixel(Palette.Table table, int index, int shift) {
+            this.index = index;
+            this.shift = shift;
+            this.table = table;
+        }
+
+        public Pixel clone() {
+            return new Pixel(this.table, this.index,this.shift);
+        }
+
+        public boolean equals(Pixel other) {
+            return (this.table == other.table) && (this.index == other.index) && (this.shift == other.shift);
+        }
+
+        public boolean hasSameColor(Pixel other, Palette palette) {
+            return palette.getRGBColor(table,index,shift).equals(palette.getRGBColor(other.table,other.index,other.shift));
+        }
+
+    }
 }
 
-class Clip implements Icon {
-    byte[] buffer = new byte[65];
-
-    @Override
-    public int getIconHeight() {
-        return 32;
-    }
-
-    @Override
-    public int getIconWidth() {
-        return 32;
-    }
-
-    @Override
-    public void paintIcon(Component c, Graphics g, int x, int y) {
-
-    }
-
-}

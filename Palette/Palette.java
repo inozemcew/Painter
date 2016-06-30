@@ -23,18 +23,6 @@ public class Palette {
 
     private int[][] colorTable = new int[2][SIZE];
 
-    public static class Descriptor {
-        public final Palette.Table table;
-        public final int index;
-        public final int shift;
-
-        public Descriptor(Palette.Table table, int index, int shift) {
-            this.index = index;
-            this.shift = shift;
-            this.table = table;
-        }
-    }
-
 
     public interface PaletteChangeListener {
         void paletteChanged();

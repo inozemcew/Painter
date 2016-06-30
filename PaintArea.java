@@ -4,9 +4,7 @@ import Painter.Palette.Palette;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
-import java.awt.event.MouseMotionListener;
+import java.awt.event.*;
 
 import static javax.swing.SwingUtilities.isMiddleMouseButton;
 
@@ -27,6 +25,7 @@ public class PaintArea extends JComponent implements Scrollable {
         Listener l = new Listener();
         this.addMouseListener(l);
         this.addMouseMotionListener(l);
+        this.addMouseWheelListener(l);
     }
 
     void setScreen(Screen screen) {
@@ -94,8 +93,8 @@ public class PaintArea extends JComponent implements Scrollable {
                 g.fillRect(xx, yy, scale, scale);
                 if (scale > 7) {
                     g.setColor(gridColor);
-                    if (x % 8 == 0) g.drawLine(xx, yy, xx, yy + scale - 1);
-                    if (y % 8 == 0) g.drawLine(xx, yy, xx + scale - 1, yy);
+                    if (x % screen.GRID_FACTOR_X == 0) g.drawLine(xx, yy, xx, yy + scale - 1);
+                    if (y % screen.GRID_FACTOR_Y == 0) g.drawLine(xx, yy, xx + scale - 1, yy);
                 }
             }
         }
@@ -156,7 +155,7 @@ public class PaintArea extends JComponent implements Scrollable {
         }
     }
 
-    class Listener implements MouseListener, MouseMotionListener {
+    class Listener implements MouseListener, MouseMotionListener, MouseWheelListener {
         private int button = 0;
         Point pos = new Point();
 
@@ -175,7 +174,7 @@ public class PaintArea extends JComponent implements Scrollable {
                 byte p;
                 if ((button & MouseEvent.SHIFT_DOWN_MASK) == 0) p = 0; else p = 1;
                 Palette.Table t = (e.getButton() == MouseEvent.BUTTON1) ? Palette.Table.INK : Palette.Table.PAPER;
-                screen.fill(e.getX()/scale,e.getY()/scale,new Palette.Descriptor(t, getColorIndex(t),p));
+                screen.fill(e.getX()/scale,e.getY()/scale,new Screen.Pixel(t, getColorIndex(t),p));
             } else if (isMiddleMouseButton(e)) {
                 final int xx = e.getX() / scale / 8;
                 final int yy = e.getY() / scale / 8;
@@ -204,7 +203,7 @@ public class PaintArea extends JComponent implements Scrollable {
             byte p;
             if ((button & MouseEvent.SHIFT_DOWN_MASK) == 0) p = 0; else p = 1;
             Palette.Table t = (button & MouseEvent.BUTTON1_DOWN_MASK) != 0 ? Palette.Table.INK : Palette.Table.PAPER;
-            screen.setPixel(e.getX()/scale, e.getY()/scale, new Palette.Descriptor(t, getColorIndex(t), p));
+            screen.setPixel(e.getX()/scale, e.getY()/scale, new Screen.Pixel(t, getColorIndex(t), p));
         }
 
         private void doDrawLine(MouseEvent e) {
@@ -212,7 +211,7 @@ public class PaintArea extends JComponent implements Scrollable {
             if ((button & MouseEvent.SHIFT_DOWN_MASK) == 0) p = 0; else p = 1;
             Palette.Table t = (button & MouseEvent.BUTTON1_DOWN_MASK) != 0 ? Palette.Table.INK : Palette.Table.PAPER;
             screen.drawLine(pos.x/scale, pos.y/scale, e.getX()/scale, e.getY()/scale,
-                    new Palette.Descriptor(t, getColorIndex(t), p));
+                    new Screen.Pixel(t, getColorIndex(t), p));
         }
 
         @Override
@@ -245,9 +244,19 @@ public class PaintArea extends JComponent implements Scrollable {
             int x = e.getX() / scale;
             int y = e.getY() / scale;
             if (screen.isInImage(x,y)) {
-                Palette.Descriptor s = screen.getPixelDescriptor(x,y);
+                Screen.Pixel s = screen.getPixelDescriptor(x,y);
                 firePropertyChange("status", "", x + "x" + y + " : " + s.table.name()+s.shift+" = "+s.index);
             }
+        }
+
+        @Override
+        public void mouseWheelMoved(MouseWheelEvent e) {
+            if (e.isControlDown()) {
+                final int s = PaintArea.this.scale;
+                if (e.getWheelRotation()>0 && s >1) setScale(s -1);
+                if (e.getWheelRotation()<0 && s <16) setScale(s +1);
+                getRootPane().firePropertyChange("scale",s,scale);
+            } else getParent().dispatchEvent(e);
         }
     }
 }
