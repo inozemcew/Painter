@@ -16,8 +16,9 @@ public class PaletteToolPanel extends JPanel {
         super();
         setLayout(new BoxLayout(this,BoxLayout.LINE_AXIS));
         this.palette = palette;
-        this.createButtonGroup(Palette.Table.INK);
-        this.createButtonGroup(Palette.Table.PAPER);
+        for (int i = 0; i < palette.getTablesCount(); i++) {
+            this.createButtonGroup(i);
+        }
     }
 
     @Override
@@ -26,7 +27,7 @@ public class PaletteToolPanel extends JPanel {
         else return new Dimension(96,500);
     }
 
-    ButtonGroup createButtonGroup(Palette.Table table) {
+    ButtonGroup createButtonGroup(int table) {
         ButtonGroup group = new ButtonGroup();
         JPanel p = new JPanel();
         p.setLayout(new BoxLayout(p,BoxLayout.LINE_AXIS));
@@ -34,7 +35,7 @@ public class PaletteToolPanel extends JPanel {
         p.setMaximumSize(new Dimension(380,380));
         p.setOpaque(false);
         final DragListener l = new DragListener(p,(f, t) -> fireReorder(table,f,t));
-        for (int i = 0; i < 8; i++) {
+        for (int i = 0; i < palette.getColorsCount(table); i++) {
             PaletteButton b = new PaletteButton(palette, table, i);
             if (i == 0) b.setSelected(true);
             l.addComponent(b);
@@ -53,8 +54,8 @@ public class PaletteToolPanel extends JPanel {
     }
 
     public interface ChangeListener {
-        void colorChanged(Palette.Table table, int index);
-        void reorder(Palette.Table table, int from, int to);
+        void colorChanged(int table, int index);
+        void reorder(int table, int from, int to);
     }
 
     List<ChangeListener> listeners = new ArrayList<>();
@@ -63,11 +64,11 @@ public class PaletteToolPanel extends JPanel {
         listeners.add(listener);
     }
 
-    private void fireColorChange(Palette.Table table, int index) {
+    private void fireColorChange(int table, int index) {
         listeners.forEach(listener -> listener.colorChanged(table, index));
     }
 
-    private void fireReorder(Palette.Table table, Integer from, Integer to) {
+    private void fireReorder(Integer table, Integer from, Integer to) {
         listeners.forEach(listener -> listener.reorder(table, from, to));
     }
 

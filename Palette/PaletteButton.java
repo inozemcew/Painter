@@ -10,20 +10,24 @@ import java.awt.*;
 public class PaletteButton extends JToggleButton
         implements Palette.PaletteChangeListener, PalettePopup.ColorIndexSupplier {
     private final Palette palette;
-    private final Palette.Table table;
+    private final int table;
     private final int index;
 
-    public PaletteButton(Palette palette, Palette.Table table, int index) {
+    public PaletteButton(Palette palette, int table, int index) {
         super();
         this.index = index;
         this.table = table;
         this.palette = palette;
-        setIcon(new PaletteIcon(palette.getColorCell(table, index)));
+        setIcon(createIcon());
         setMinimumSize(new Dimension(32, 32));
         setPreferredSize(new Dimension(42,42));
         setFocusPainted(false);
-        addMouseListener(PalettePopup.createPalettePopup());
+        addMouseListener(PalettePopup.createPalettePopup(palette,table));
         palette.addChangeListener(this, table, index);
+    }
+
+    protected PaletteIcon createIcon() {
+        return new PaletteIcon(palette.getColorCell(table, index), palette.getCellSize(table));
     }
 
     public int getColorCell() {
@@ -34,7 +38,7 @@ public class PaletteButton extends JToggleButton
         return this.index;
     }
 
-    public Palette.Table getTable() {
+    public int getTable() {
         return this.table;
     }
 
@@ -44,7 +48,7 @@ public class PaletteButton extends JToggleButton
 
     @Override
     public void paletteChanged() {
-        setIcon(new PaletteIcon(palette.getColorCell(table, index)));
+        setIcon(createIcon());
     }
 
 /*    @Override
@@ -55,9 +59,10 @@ public class PaletteButton extends JToggleButton
 
 class PaletteIcon implements Icon {
     private final int SIZE = 32;
-    private Color[] colors = new Color[Palette.COLORS_PER_CELL];
+    private Color[] colors;
 
-    public PaletteIcon(int cell) {
+    public PaletteIcon(int cell, int cellSize) {
+        colors = new Color[cellSize];
         for (int i = 0; i < colors.length; i++) {
             this.colors[i] = Palette.toRGB(Palette.split(cell,i));
         }

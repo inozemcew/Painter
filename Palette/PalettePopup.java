@@ -7,6 +7,8 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.stream.IntStream;
 
 /**
@@ -32,18 +34,20 @@ public class PalettePopup extends JPopupMenu {
         }
     };
 
-    private static PalettePopup palettePopup = new PalettePopup();
+    private static Map<int[],PalettePopup> palettePopups = new HashMap<>();
 
-    public static MouseListener createPalettePopup() {
-        return palettePopup.listener;
+    public static MouseListener createPalettePopup(Palette palette, int table) {
+        int[] t = palette.getTable(table);
+        return palettePopups.computeIfAbsent(t, k -> new PalettePopup(palette.getCellSize(table))).listener;
     }
 
     private ColorIndexSupplier button = null;
-    private ButtonGroup[] groups = new ButtonGroup[Palette.COLORS_PER_CELL];
+    private ButtonGroup[] groups;
 
 
-    private PalettePopup() {
+    private PalettePopup(int cellSize) {
         super();
+        groups = new ButtonGroup[cellSize];
         this.setLayout(new GridLayout(5*groups.length-1, 16));
         for (int i = 0; i < groups.length; i++) {
             groups[i] = createButtonGroup();
@@ -69,14 +73,10 @@ public class PalettePopup extends JPopupMenu {
         if (e.isPopupTrigger()) {
             this.button = (ColorIndexSupplier) e.getComponent();
             int colorIndex = button.getColorCell();
-            for (int i =0; i< Palette.COLORS_PER_CELL; i++) {
+            for (int i =0; i< groups.length; i++) {
                 JMenuItem m = (JMenuItem)getSubElements()[Palette.split(colorIndex,i)+64*i];
                 m.setSelected(true);
             }
-//            JMenuItem m1 = (JMenuItem)getSubElements()[Palette.first(colorIndex)];
-//            JMenuItem m2 = (JMenuItem)getSubElements()[Palette.second(colorIndex)+64];
-//            m1.setSelected(true);
-//            m2.setSelected(true);
             show(e.getComponent(), e.getX(), e.getY());
         }
     }

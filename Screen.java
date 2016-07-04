@@ -6,7 +6,7 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.io.*;
 import java.util.*;
-import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 /**
  * Created by aleksey on 22.01.16.
@@ -15,11 +15,11 @@ import java.util.function.BiConsumer;
  */
 public abstract class Screen implements ImageSupplier {
     protected ImageBuffer image;
-    protected Palette palette = new Palette();
+    protected Palette palette;
     protected Enum mode = null;
     private Collection<ImageChangeListener> listeners = new ArrayList<>();
     protected final UndoRedo undo = new UndoRedo();
-    protected int enhancedInk = -1, enhancedPaper = -1;
+    protected int[] enhancedColors;
     protected int GRID_FACTOR_X = 8, GRID_FACTOR_Y = 8;
 
     private int locked = 0;
@@ -27,19 +27,19 @@ public abstract class Screen implements ImageSupplier {
     public Screen() {
         image = createImageBuffer();
         palette = createPalette();
+        enhancedColors = new int[palette.getTablesCount()];
+        resetEnhanced();
     }
 
     protected ImageBuffer createImageBuffer() {
         return new ImageBuffer();
     }
 
-    protected ImageBuffer createImageBuffer(int x, int y) {
-        return new ImageBuffer(x,y);
+    protected ImageBuffer createImageBuffer(int w, int h) {
+        return new ImageBuffer(w,h);
     }
 
-    protected Palette createPalette() {
-        return new Palette();
-    }
+    abstract protected Palette createPalette();
 
     @Override
     public void addChangeListener(ImageChangeListener listener) {
@@ -55,10 +55,17 @@ public abstract class Screen implements ImageSupplier {
 
     abstract public Pixel getPixelDescriptor(int x, int y);
 
-    public void setEnhanced(int ink, int paper) {
-        this.enhancedInk = ink;
-        this.enhancedPaper = paper;
+    abstract public Enum mapColorTable(int table);
+
+    public void setEnhanced(int[] colors) {
+        this.enhancedColors = colors;
         fireImageChanged();
+    }
+
+    public void resetEnhanced() {
+        int[] e = new int[enhancedColors.length];
+        Arrays.fill(e,-1);
+        setEnhanced(e);
     }
 
     public Enum getMode() {
@@ -200,13 +207,13 @@ public abstract class Screen implements ImageSupplier {
             beginDraw();
             Stack<Point> stack = new Stack<>();
             Pixel[][] pixels = new Pixel[getImageWidth()][getImageHeight()];
-            final int ss = 1; getPointSize();
+            final int ss = 1;
             stack.push(new Point(x, y));
             Pixel pix = getPixelDescriptor(x, y);
             while (!stack.empty()) {
                 Point p = stack.pop();
                 Pixel pix2 = getPixelDescriptor(p.x, p.y);
-                if (pix2.hasSameColor(pixel,palette) || !pix2.hasSameColor(pix,palette) || pixels[p.x][p.y]!=null)
+                if (!pix2.hasSameColor(pix,palette) || pixels[p.x][p.y]!=null)
                     continue;
                 pixels[p.x][p.y] = pixel;
                 //setPixel(p.x, p.y, pixel);
@@ -243,7 +250,7 @@ public abstract class Screen implements ImageSupplier {
         }
     }
 
-    protected void rearrangeColorTable(Palette.Table table, int[] order) {
+    protected void rearrangeColorTable(int table, int[] order) {
 
     }
 
@@ -269,8 +276,8 @@ public abstract class Screen implements ImageSupplier {
         listeners.forEach(l -> l.imageChanged(x, y, w, h));
     }
 
-    public void swapColors(Palette.Table table, int from, int to) {
-        final int length = palette.getPalette(table).length;
+    public void swapColors(int table, int from, int to) {
+        final int length = palette.getTable(table).length;
         int[] order = new int[length];
         int j = 0;
         for (int i = 0; i < length; i++) {
@@ -297,7 +304,7 @@ public abstract class Screen implements ImageSupplier {
         fireImageChanged();
     }
 
-    public  Map<String, BiConsumer<Integer,Integer>> getSpecialMethods() {
+    public  Map<String, Consumer<Integer[]>> getSpecialMethods() {
         return new HashMap<>();
     }
 
@@ -306,8 +313,7 @@ public abstract class Screen implements ImageSupplier {
     abstract protected FileNameExtensionFilter getFileNameExtensionFilter();
 
     void save(ObjectOutputStream stream) throws IOException {
-        stream.writeObject(getPalette().getPalette(Palette.Table.INK));
-        stream.writeObject(getPalette().getPalette(Palette.Table.PAPER));
+        palette.savePalette(stream);
         stream.writeInt(image.SIZE_X);
         stream.writeInt(image.SIZE_Y);
         image.store(stream);
@@ -318,18 +324,14 @@ public abstract class Screen implements ImageSupplier {
         int[] paper;
         if (old) {
             image.load(stream);
-            ink = (int[]) stream.readObject();
-            paper = (int[]) stream.readObject();
+            getPalette().loadPalette(stream);
 
         } else {
-            //stream.reset();
-            ink = (int[]) stream.readObject();
-            paper = (int[]) stream.readObject();
+            getPalette().loadPalette(stream);
             int x = stream.readInt();
             int y = stream.readInt();
             image.load(stream,x,y);
         }
-        getPalette().setPalette(ink, paper);
         stream.close();
     }
 
@@ -337,20 +339,16 @@ public abstract class Screen implements ImageSupplier {
 
     public void importImage(DataInputStream is) throws IOException {
         palette.loadPalette(is);
-        int w = is.readInt() / image.ATTR_FACTOR_X;
-        int h = is.readInt() / image.ATTR_FACTOR_Y;
-        int x = (image.ATTR_SIZE_X - w) / 2;
-        int y = (image.ATTR_SIZE_Y - h) / 2;
-        image.loadByTiles(is, x, y, w, h);
+        image.importImage(is);
         is.close();
     }
 
     public static class Pixel {
-        public final Palette.Table table;
+        public final Enum table;
         public final int index;
         public final int shift;
 
-        public Pixel(Palette.Table table, int index, int shift) {
+        public Pixel(Enum table, int index, int shift) {
             this.index = index;
             this.shift = shift;
             this.table = table;

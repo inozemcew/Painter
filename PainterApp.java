@@ -1,7 +1,6 @@
 package Painter;
 
 import Painter.Palette.ChangeAdapter;
-import Painter.Palette.Palette;
 import Painter.Palette.PaletteToolPanel;
 
 import javax.swing.*;
@@ -95,9 +94,9 @@ public abstract class PainterApp extends JFrame {
 
         ChangeAdapter action = new ChangeAdapter(screen){
             @Override
-            public void colorChanged(Palette.Table table, int index) {
+            public void colorChanged(int table, int index) {
                 super.colorChanged(table, index);
-                paintArea.colorChanged(table,index);
+                paintArea.colorChanged(table, index);
             }
         };
 
@@ -158,11 +157,10 @@ public abstract class PainterApp extends JFrame {
         });
         edit.addSeparator();
 
-        screen.getSpecialMethods().forEach( (name, biConsumer) -> {
+        screen.getSpecialMethods().forEach( (name, consumer) -> {
             edit.add(name).addActionListener(e ->
-                    biConsumer.accept(
-                            paintArea.getColorIndex(Palette.Table.INK),
-                            paintArea.getColorIndex(Palette.Table.PAPER)
+                    consumer.accept(
+                            paintArea.getColorIndices()
                     )
             );
 

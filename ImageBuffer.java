@@ -1,5 +1,6 @@
 package Painter;
 
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -12,11 +13,11 @@ public class ImageBuffer {
     public final int SIZE_X;
     public final int SIZE_Y;
 
-    public final int ATTR_SIZE_X;
-    public final int ATTR_SIZE_Y;
+    private final int ATTR_SIZE_X;
+    private final int ATTR_SIZE_Y;
 
-    public final int ATTR_FACTOR_X;
-    public final int ATTR_FACTOR_Y;
+    private final int ATTR_FACTOR_X;
+    private final int ATTR_FACTOR_Y;
 
     private byte pixbuf[][];
     private byte attrbuf[][];
@@ -139,6 +140,16 @@ public class ImageBuffer {
             }
         }
     }
+
+    void importImage(DataInputStream is) throws IOException {
+        int w = is.readInt() / this.ATTR_FACTOR_X;
+        int h = is.readInt() / this.ATTR_FACTOR_Y;
+        int x = (this.ATTR_SIZE_X - w) / 2;
+        int y = (this.ATTR_SIZE_Y - h) / 2;
+        this.loadByTiles(is, x, y, w, h);
+    }
+
+
 
     void loadByTiles(InputStream stream, int sx, int sy, int width, int height) throws IOException {
         for (int x = sx; x < sx + width; x++)

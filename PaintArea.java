@@ -1,10 +1,9 @@
 package Painter;
 
-import Painter.Palette.Palette;
-
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.util.stream.IntStream;
 
 import static javax.swing.SwingUtilities.isMiddleMouseButton;
 
@@ -15,12 +14,13 @@ import static javax.swing.SwingUtilities.isMiddleMouseButton;
 public class PaintArea extends JComponent implements Scrollable {
     private Screen screen;
     private int scale = 2;
-    private int[] ink_paper = {0,0};
+    private int[] currentColors;
     private Point clip = new Point(-1,-1);
     private JLabel clipIcon = new JLabel(new ClipCellIcon());
 
     public PaintArea(Screen screen) {
         super();
+        currentColors = new int[screen.getPalette().getTablesCount()];
         setScreen(screen);
         Listener l = new Listener();
         this.addMouseListener(l);
@@ -116,12 +116,16 @@ public class PaintArea extends JComponent implements Scrollable {
     }
 
     //@Override
-    public void colorChanged(Palette.Table table, int index) {
-        ink_paper[table.ordinal()] = index;
+    public void colorChanged(int table, int index) {
+        currentColors[table] = index;
     }
 
-    int getColorIndex(Palette.Table table) {
-        return ink_paper[table.ordinal()];
+    int getColorIndex(Enum table) {
+        return currentColors[table.ordinal()];
+    }
+
+    Integer[] getColorIndices() {
+        return  IntStream.of(currentColors).boxed().toArray(Integer[]::new);
     }
 
     JComponent getClipIcon() {
@@ -159,22 +163,21 @@ public class PaintArea extends JComponent implements Scrollable {
         private int button = 0;
         Point pos = new Point();
 
-        /*@Override
-        public void propertyChange(PropertyChangeEvent evt) {
-            if (evt.getPropertyName().equals("orientation")) {
-                inkBar.setOrientation((Integer) evt.getNewValue());
-                paperBar.setOrientation((Integer) evt.getNewValue());
-            }
-        }*/
+        private Screen.Pixel getPixelByEvent(int button) {
+            byte p;
+            if ((button & MouseEvent.SHIFT_DOWN_MASK) == 0) p = 0; else p = 1;
+            final int b = button & MouseEvent.BUTTON1_DOWN_MASK;
+            Enum t = screen.mapColorTable((b != 0) ? 0 : 1);
+            return new Screen.Pixel(t, getColorIndex(t), p);
+        }
 
         @Override
         public void mouseClicked(MouseEvent e) {
             int button = e.getModifiersEx();
+            if (e.getButton() == MouseEvent.BUTTON1) button = button | MouseEvent.BUTTON1_DOWN_MASK;
             if ((button & MouseEvent.CTRL_DOWN_MASK) != 0 ) {
-                byte p;
-                if ((button & MouseEvent.SHIFT_DOWN_MASK) == 0) p = 0; else p = 1;
-                Palette.Table t = (e.getButton() == MouseEvent.BUTTON1) ? Palette.Table.INK : Palette.Table.PAPER;
-                screen.fill(e.getX()/scale,e.getY()/scale,new Screen.Pixel(t, getColorIndex(t),p));
+                final Screen.Pixel pixel = getPixelByEvent(button);
+                screen.fill(e.getX()/scale,e.getY()/scale, pixel);
             } else if (isMiddleMouseButton(e)) {
                 final int xx = e.getX() / scale / 8;
                 final int yy = e.getY() / scale / 8;
@@ -200,18 +203,13 @@ public class PaintArea extends JComponent implements Scrollable {
         }
 
         private void doSetPixel(MouseEvent e) {
-            byte p;
-            if ((button & MouseEvent.SHIFT_DOWN_MASK) == 0) p = 0; else p = 1;
-            Palette.Table t = (button & MouseEvent.BUTTON1_DOWN_MASK) != 0 ? Palette.Table.INK : Palette.Table.PAPER;
-            screen.setPixel(e.getX()/scale, e.getY()/scale, new Screen.Pixel(t, getColorIndex(t), p));
+            Screen.Pixel pixel = getPixelByEvent(button);
+            screen.setPixel(e.getX()/scale, e.getY()/scale, pixel);
         }
 
         private void doDrawLine(MouseEvent e) {
-            byte p;
-            if ((button & MouseEvent.SHIFT_DOWN_MASK) == 0) p = 0; else p = 1;
-            Palette.Table t = (button & MouseEvent.BUTTON1_DOWN_MASK) != 0 ? Palette.Table.INK : Palette.Table.PAPER;
-            screen.drawLine(pos.x/scale, pos.y/scale, e.getX()/scale, e.getY()/scale,
-                    new Screen.Pixel(t, getColorIndex(t), p));
+            Screen.Pixel pixel = getPixelByEvent(button);
+            screen.drawLine(pos.x/scale, pos.y/scale, e.getX()/scale, e.getY()/scale, pixel);
         }
 
         @Override
