@@ -277,7 +277,7 @@ public abstract class Screen implements ImageSupplier {
     }
 
     public void swapColors(int table, int from, int to) {
-        final int length = palette.getTable(table).length;
+        final int length = palette.getColorsCount(table);
         int[] order = new int[length];
         int j = 0;
         for (int i = 0; i < length; i++) {
@@ -296,7 +296,7 @@ public abstract class Screen implements ImageSupplier {
         Shift(int x, int y) {
             this.dx = x;
             this.dy = y;
-        };
+        }
     }
 
     void shift(Shift shift) {

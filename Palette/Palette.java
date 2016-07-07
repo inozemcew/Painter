@@ -14,7 +14,7 @@ import java.util.stream.Stream;
  */
 public class Palette {
 
-    private int[][] colorTable;
+    private int[][] colorTables;
     private int[] cellsSizes;
 
     public interface PaletteChangeListener {
@@ -41,20 +41,21 @@ public class Palette {
     private boolean locked = false;
 
     public Palette(int tableCount, int[] tableSizes, int[] cellsSizes ) {
-        this.colorTable = new int[tableCount][];
+        this.colorTables = new int[tableCount][];
         this.cellsSizes = new int[tableCount];
         for (int t = 0; t < tableCount; t++) {
-            this.colorTable[t] = new int[tableSizes[t]];
+            this.colorTables[t] = new int[tableSizes[t]];
             this.cellsSizes[t] = cellsSizes[t];
         }
     }
 
 
-    public static int combine(int... f)     {
+    public static int combine(int... f) {
         int result = 0;
-        for (int i=0; i<f.length;i++)
-            result |= f[i]<<(6*i);
-        return  result; }
+        for (int i = 0; i < f.length; i++)
+            result |= f[i] << (6 * i);
+        return result;
+    }
     public static int split  (int c, int shift) { return (c>>(6*shift)&63); }
     public static int first  (int c)            { return split(c,0); }
     public static int second (int c)            { return split(c,1); }
@@ -64,17 +65,19 @@ public class Palette {
 
 
     public int getTablesCount() {
-        return colorTable.length;
+        return colorTables.length;
     }
 
     public int getColorsCount(Enum table) {
         return getColorsCount(table.ordinal());
     }
-
     public int getColorsCount(int table) {
-        return colorTable[table].length;
+        return colorTables[table].length;
     }
 
+    public int getCellSize(Enum table) {
+        return getCellSize(table.ordinal());
+    }
     public int getCellSize(int table) {
         return cellsSizes[table];
     }
@@ -82,17 +85,15 @@ public class Palette {
     public int getColorCell(Enum table, int index) {
         return getColorCell(table.ordinal(), index);
     }
-
     public int getColorCell(int table, int index) {
-        return colorTable[table][index];
+        return colorTables[table][index];
     }
 
     public void setColorCell(int value, Enum table, int index) {
         setColorCell(value, table.ordinal(), index);
     }
-
     public void setColorCell(int value, int table, int index) {
-        colorTable[table][index] = value;
+        colorTables[table][index] = value;
         fireChangeEvent(table,index);
     }
 
@@ -109,7 +110,6 @@ public class Palette {
     private void fireChangeEvent(Enum table, int index) {
         fireChangeEvent(table.ordinal(), index);
     }
-
     protected void fireChangeEvent(int table, int index) {
         for (PaletteChangeListenerItem i : this.listeners) {
             if (i.table == null) {
@@ -127,137 +127,105 @@ public class Palette {
     }
 
     public void loadPalette(DataInputStream stream) throws IOException {
-        for (int t = 0; t < colorTable.length; t++) {
-            for (int i = 0; i < colorTable[t].length; i++)
-                setColorCell(stream.readInt(), t, i);
+        setLocked(true);
+        try {
+            for (int t = 0; t < colorTables.length; t++) {
+                for (int i = 0; i < colorTables[t].length; i++)
+                    setColorCell(stream.readInt(), t, i);
+            }
+        } finally {
+            setLocked(false);
         }
     }
 
     public void loadPalette(ObjectInputStream stream) throws IOException, ClassNotFoundException {
-        int[][] p = new int[colorTable.length][];
-        for (int t = 0; t < colorTable.length; t++) {
+        int[][] p = new int[colorTables.length][];
+        for (int t = 0; t < colorTables.length; t++) {
             p[t] = (int[]) stream.readObject();
         }
         setPalette(p);
     }
 
     public void savePalette(DataOutputStream stream) throws IOException {
-        for (int t = 0; t < colorTable.length; t++) {
-            for (int i = 0; i < colorTable[t].length; i++)
+        for (int t = 0; t < colorTables.length; t++) {
+            for (int i = 0; i < colorTables[t].length; i++)
                 stream.writeInt(getColorCell(t, i));
         }
     }
 
     public void savePalette(ObjectOutputStream stream) throws IOException {
-        for (int t = 0; t < colorTable.length; t++) {
-            stream.writeObject(colorTable[t]);
+        for (int[] colorTable : colorTables) {
+            stream.writeObject(colorTable);
         }
     }
 
     public void setPalette(int[]... palette) {
         setLocked(true);
-        for (int t = 0; t < colorTable.length; t++) {
-            for (int i = 0; i < colorTable[t].length; i++) {
+        for (int t = 0; t < colorTables.length && t < palette.length; t++) {
+            for (int i = 0; i < colorTables[t].length && t < palette[t].length; i++) {
                 setColorCell(palette[t][i], t, i);
             }
         }
         setLocked(false);
     }
 
-    public int[] getTable(Enum table) {
-        return getTable(table.ordinal());
-    }
-
-    public int[] getTable(int table) {
-        return colorTable[table];
-    }
-
-
     public Color getRGBColor(Enum table, int index, int fs) {
         return toRGB(split(getColorCell(table, index),fs));
     }
 
-    public byte findAttr(Integer[] s) {
+    public int[] findAttr(Integer[] s) {
         double bestN = Integer.MAX_VALUE;
-        byte best = 0;
 
-        int[] i = new int[colorTable.length];
-        int j = 0;
-        while (j<i.length) {
-            j = 0;
+        int[] i = new int[colorTables.length];
+        int[] best = Arrays.copyOf(i,i.length);
+        int j;
+        do {
             double n = 0;
             for (int k : s) {
                 if (k != -2) {
                     double f = Integer.MAX_VALUE;
-                    for (int l = 0; l < i.length; l++) {
-                        for (int m = 0; m < colorTable[l].length; m++) {
-                            f = Double.min(f, getColorDiff(k, split(colorTable[l][i[l]], m)));
+                    for (int t = 0; t < i.length; t++) {
+                        for (int m = 0; m < cellsSizes[t]; m++) {
+                            final int color = split(colorTables[t][i[t]], m);
+                            f = Double.min(f, getColorDiff(k, color));
                         }
-                        n += f;
                     }
+                    n += f;
                 }
             }
-            byte b = 0;
-            for (int l = 0; l < i.length; l++) {
-                b = (byte) (b | (colorTable[l][i[l]] << (3*l)));
-            }
+            int[] b = Arrays.copyOf(i,i.length); //new int[i.length];
+            /*for (int t = 0; t < i.length; t++) {
+                b[t] = i[t];
+            }*/
             if (n == 0) return b;
             if (n < bestN) {
                 bestN = n;
                 best = b;
             }
-            do {
-                j++;
-                i[j]++;
-                if (i[j]>= colorTable[j].length){
-                    i[j] = 0;
-                }
-            } while (j < i.length && i[j] == 0);
-        }
 
-/*            final int[] ink = colorTable[Table.INK.ordinal()], paper = colorTable[Table.PAPER.ordinal()];
-        for (int i = 0; i < SIZE; i++) {
-            for (int p = 0; p < SIZE; p++) {
-                double n = 0;
-                for (int k : s) {
-                    if (k != -2) {
-                        double f = Integer.MAX_VALUE;
-                        for (int m = 0; m < COLORS_PER_CELL; m++) {
-                            f = Double.min(f, getColorDiff(k, split(ink[i], m)));
-                            f = Double.min(f, getColorDiff(k, split(paper[p], m)));
-                        }
-                        n += f;
-                    }
-                }
-                final byte b = (byte) (i + (p << 3));
-                if (n == 0) return b;
-                if (n < bestN) {
-                    bestN = n;
-                    best = b;
-                }
+            for (j = 0; j < i.length; j++) {
+                i[j]++;
+                if (i[j] < colorTables[j].length) break;
+                i[j] = 0;
             }
-        }*/
+
+        } while (j<i.length);
+
         return best;
     }
 
     public void reorder (Enum table, int[] order) {
-        final int[] p = colorTable[table.ordinal()];
-        int[] cells = Arrays.copyOf(p,p.length);
+        reorder(table.ordinal(), order);
+    }
+    public void reorder(int table, int[] order) {
+        final int[] p = colorTables[table];
+        int[] cells = Arrays.copyOf(p, p.length);
         setLocked(true);
-        for (int i = 0; i< cells.length; i++)
-            setColorCell(cells[i],table,order[i]);
+        for (int i = 0; i < cells.length; i++)
+            setColorCell(cells[i], table, order[i]);
         setLocked(false);
-
     }
 
-    /*public Color getInkRBGColor(int index, int shift) {
-        return getRGBColor(Table.INK, index, shift);
-    }
-
-    public Color getPaperRGBColor(int index, int shift) {
-        return getRGBColor(Table.PAPER,index, shift);
-    }
-*/
     static Color toRGB2(int index) {
         float x=1,y=0,z=0,r,g,b;
         if ((index & 1) != 0) y = 0.5f;

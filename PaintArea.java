@@ -110,7 +110,7 @@ public class PaintArea extends JComponent implements Scrollable {
         repaint();
     }
 
-    private void updatePreferredSize() {
+    void updatePreferredSize() {
         this.setPreferredSize(new Dimension(screen.getImageWidth() * scale, screen.getImageHeight() * scale));
         this.revalidate();
     }

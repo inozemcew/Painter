@@ -197,6 +197,7 @@ public abstract class PainterApp extends JFrame {
         Dimension preferredSize = interlacedView.getPreferredSize();
         preferredSize.setSize(preferredSize.getWidth()+3,preferredSize.getHeight()+3);
         interlacedView.getParent().getParent().setPreferredSize(preferredSize);
+        paintArea.updatePreferredSize();
         splitPane.resetToPreferredSizes();
     }
 

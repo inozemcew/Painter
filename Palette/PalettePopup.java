@@ -34,11 +34,10 @@ public class PalettePopup extends JPopupMenu {
         }
     };
 
-    private static Map<int[],PalettePopup> palettePopups = new HashMap<>();
+    private static Map<Integer, PalettePopup> palettePopups = new HashMap<>();
 
     public static MouseListener createPalettePopup(Palette palette, int table) {
-        int[] t = palette.getTable(table);
-        return palettePopups.computeIfAbsent(t, k -> new PalettePopup(palette.getCellSize(table))).listener;
+        return palettePopups.computeIfAbsent(table, k -> new PalettePopup(palette.getCellSize(table))).listener;
     }
 
     private ColorIndexSupplier button = null;
