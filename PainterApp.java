@@ -24,7 +24,7 @@ public abstract class PainterApp extends JFrame {
     private final JFileChooser fileChooser = new JFileChooser();
     private InterlacedView interlacedView;
     private JSplitPane splitPane;
-    private PaintArea paintArea;
+    protected PaintArea paintArea;
 
     public static void run(PainterApp app) {
         SwingUtilities.invokeLater(new Runnable() {
@@ -45,7 +45,7 @@ public abstract class PainterApp extends JFrame {
 
     protected abstract Screen createScreen();
 
-    JFrame createMainForm() {
+    protected JFrame createMainForm() {
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         setTitle("Painter for new screen");
 
@@ -122,7 +122,7 @@ public abstract class PainterApp extends JFrame {
         toolbar.add(button);
 
         toolbar.add(Box.createGlue()); //  Separator();
-        toolbar.add(paintArea.getClipIcon());
+        toolbar.add(paintArea.getClipCell().getClipComponent());
         return toolbar;
     }
 

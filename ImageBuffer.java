@@ -22,14 +22,6 @@ public class ImageBuffer {
     private byte pixbuf[][];
     private byte attrbuf[][];
 
-    public ImageBuffer() {
-        this(320,240);
-    }
-
-    public ImageBuffer(int sizeX, int sizeY) {
-        this(sizeX, sizeY, 8,8);
-    }
-
     public ImageBuffer(int sizeX, int sizeY, int factorX, int factorY) {
         this.SIZE_X = sizeX;
         this.SIZE_Y = sizeY;

@@ -20,23 +20,29 @@ public abstract class Screen implements ImageSupplier {
     private Collection<ImageChangeListener> listeners = new ArrayList<>();
     protected final UndoRedo undo = new UndoRedo();
     protected int[] enhancedColors;
-    protected int GRID_FACTOR_X = 8, GRID_FACTOR_Y = 8;
+    protected int GRID_FACTOR_X, GRID_FACTOR_Y;
 
     private int locked = 0;
 
     public Screen() {
-        image = createImageBuffer();
+        this(320,240);
+    }
+
+    public Screen(int w, int h) {
+        setGridFactor();
+        image = createImageBuffer(w,h);
         palette = createPalette();
         enhancedColors = new int[palette.getTablesCount()];
         resetEnhanced();
     }
 
-    protected ImageBuffer createImageBuffer() {
-        return new ImageBuffer();
+    protected ImageBuffer createImageBuffer(int w, int h) {
+        return new ImageBuffer(w,h,8,8);
     }
 
-    protected ImageBuffer createImageBuffer(int w, int h) {
-        return new ImageBuffer(w,h);
+    protected void setGridFactor() {
+        GRID_FACTOR_X = 8;
+        GRID_FACTOR_Y = 8;
     }
 
     abstract protected Palette createPalette();
@@ -118,7 +124,7 @@ public abstract class Screen implements ImageSupplier {
             ListIterator<UndoElement> i = elements.listIterator(elements.size());
             while (i.hasPrevious()) {
                 UndoElement e = i.previous();
-                putPixel(e.x, e.y, e.pixel, e.attr);
+                putPixelData(e.x, e.y, e.pixel, e.attr);
             }
         }
     }
@@ -127,7 +133,7 @@ public abstract class Screen implements ImageSupplier {
         Vector<UndoElement> elements = undo.redo();
         if (null != elements) {
             for (UndoElement e : elements) {
-                putPixel(e.x, e.y, e.newPixel, e.newAttr);
+                putPixelData(e.x, e.y, e.newPixel, e.newAttr);
             }
         }
     }
@@ -135,7 +141,7 @@ public abstract class Screen implements ImageSupplier {
     abstract protected  byte attrFromDesc(Pixel pixel, byte oldAttr);
     abstract protected  byte pixelFromDesc(Pixel pixel, byte oldPixel, int x, int y);
 
-    protected byte getPixel(int x, int y) {
+    protected byte getPixelData(int x, int y) {
         return image.getPixel(x,y);
     }
 
@@ -143,7 +149,7 @@ public abstract class Screen implements ImageSupplier {
         return image.getAttr(x, y);
     }
 
-    protected void putPixel(int x, int y, byte pixel, byte attr) {
+    protected void putPixelData(int x, int y, byte pixel, byte attr) {
         image.putPixel(x, y, pixel, attr);
     }
 
@@ -152,10 +158,10 @@ public abstract class Screen implements ImageSupplier {
             byte a =  getAttr(x, y);
             if (pixel.index >= 0)
                 a = attrFromDesc(pixel, a);
-            byte b = pixelFromDesc(pixel, getPixel(x, y), x, y);
-            undo.add(x, y, getPixel(x, y), getAttr(x, y), b, a);
-            putPixel(x, y, b, a);
-            fireImageChanged(x / GRID_FACTOR_X * GRID_FACTOR_X, y / GRID_FACTOR_Y * GRID_FACTOR_Y, GRID_FACTOR_X, GRID_FACTOR_Y);
+            byte b = pixelFromDesc(pixel, getPixelData(x, y), x, y);
+            undo.add(x, y, getPixelData(x, y), getAttr(x, y), b, a);
+            putPixelData(x, y, b, a);
+            fireImageChanged(alignX(x), alignY(y), GRID_FACTOR_X, GRID_FACTOR_Y);
         }
     }
 
@@ -179,18 +185,18 @@ public abstract class Screen implements ImageSupplier {
 
             int sx, sy, w, h;
             if (ox < x) {
-                sx = ox / GRID_FACTOR_X * GRID_FACTOR_X;
-                w = x / GRID_FACTOR_X * GRID_FACTOR_X + GRID_FACTOR_X - sx;
+                sx = alignX(ox);
+                w = alignX(x) + GRID_FACTOR_X - sx;
             } else {
-                sx = x / GRID_FACTOR_X * GRID_FACTOR_X;
-                w = ox / GRID_FACTOR_X * GRID_FACTOR_X + GRID_FACTOR_X - sx;
+                sx = alignX(x);
+                w = alignX(ox) + GRID_FACTOR_X - sx;
             }
             if (oy < y) {
-                sy = oy / GRID_FACTOR_Y * GRID_FACTOR_Y;
-                h = y / GRID_FACTOR_Y * GRID_FACTOR_Y + GRID_FACTOR_Y - sy;
+                sy = alignY(oy);
+                h = alignY(y) + GRID_FACTOR_Y - sy;
             } else {
-                sy = y / GRID_FACTOR_Y * GRID_FACTOR_Y;
-                h = oy / GRID_FACTOR_Y * GRID_FACTOR_Y + GRID_FACTOR_Y - sy;
+                sy = alignY(y);
+                h = alignY(oy) + GRID_FACTOR_Y - sy;
             }
             unlock();
             fireImageChanged(sx, sy, w, h);
@@ -234,35 +240,55 @@ public abstract class Screen implements ImageSupplier {
         }
     }
 
-    void copyCell(int fx, int fy, int tx, int ty) {
-        if (isInImage(fx*8, fy*8) && isInImage(tx*8,ty*8)) {
+    public void copyCell(int fx, int fy, int tx, int ty) {
+        copyCell(this,fx,fy,tx,ty);
+    }
+
+
+    public void copyCell(Screen source, int fx, int fy, int tx, int ty) {
+        int fxx = alignX(fx);
+        int fyy = alignY(fy);
+        int txx = alignX(tx);
+        int tyy = alignY(ty);
+
+        if (source.isInImage(fxx, fyy) && isInImage(txx, tyy)) {
             lock();
             beginDraw();
-            for (int x = 0; x < 8; x++) {
-                for (int y = 0; y < 8; y++) {
-                    Pixel p = getPixelDescriptor(fx*8+x, fy*8+y);
-                    setPixel(tx*8+x, ty*8+y, p);
+            byte a = source.getAttr(fxx, fyy);
+            for (int x = 0; x < GRID_FACTOR_X; x++) {
+                for (int y = 0; y < GRID_FACTOR_Y; y++) {
+                    byte b = source.getPixelData(fxx + x, fyy + y);
+                    undo.add(txx + x, tyy + y,getPixelData(txx + x, tyy + y),getAttr(txx + x, tyy + y),b,a);
+                    putPixelData(txx + x, tyy + y, b, a);
                 }
             }
             endDraw();
             unlock();
-            fireImageChanged(tx*8,ty*8,8,8);
+            fireImageChanged(txx, tyy, GRID_FACTOR_X, GRID_FACTOR_Y);
         }
+    }
+
+    public int alignX(int x) {
+        return x / GRID_FACTOR_X * GRID_FACTOR_X;
+    }
+
+    public int alignY(int y) {
+        return y / GRID_FACTOR_Y * GRID_FACTOR_Y;
     }
 
     protected void rearrangeColorTable(int table, int[] order) {
 
     }
 
-    boolean isLocked() {
+    private boolean isLocked() {
         return locked !=0;
     }
 
-    void lock() {
+    private void lock() {
         locked++;
     }
 
-    void unlock() {
+    private void unlock() {
         if (isLocked()) locked--;
     }
 

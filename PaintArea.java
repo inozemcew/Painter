@@ -11,17 +11,18 @@ import static javax.swing.SwingUtilities.isMiddleMouseButton;
  * Created by ainozemtsev on 17.11.15.
  * Component for screen editing
  */
+
 public class PaintArea extends JComponent implements Scrollable {
     private Screen screen;
     private int scale = 2;
     private int[] currentColors;
-    private Point clip = new Point(-1,-1);
-    private JLabel clipIcon = new JLabel(new ClipCellIcon());
+    private ClipCell clipCell;
 
     public PaintArea(Screen screen) {
         super();
         currentColors = new int[screen.getPalette().getTablesCount()];
         setScreen(screen);
+        this.clipCell = new ClipCell(screen);
         Listener l = new Listener();
         this.addMouseListener(l);
         this.addMouseMotionListener(l);
@@ -120,7 +121,7 @@ public class PaintArea extends JComponent implements Scrollable {
         currentColors[table] = index;
     }
 
-    int getColorIndex(Enum table) {
+    public int getColorIndex(Enum table) {
         return currentColors[table.ordinal()];
     }
 
@@ -128,35 +129,8 @@ public class PaintArea extends JComponent implements Scrollable {
         return  IntStream.of(currentColors).boxed().toArray(Integer[]::new);
     }
 
-    JComponent getClipIcon() {
-        return clipIcon;
-    }
-
-    class ClipCellIcon implements Icon {
-        @Override
-        public int getIconWidth() {
-            return 32;
-        }
-
-        @Override
-        public int getIconHeight() {
-            return 32;
-        }
-
-        @Override
-        public void paintIcon(Component c, Graphics g, int x, int y) {
-            if (screen.isInImage(clip.x*8, clip.y*8)) {
-                for (int xx = 0; xx < 8; xx++) {
-                    for (int yy = 0; yy < 8; yy++) {
-                        g.setColor(screen.getPixelColor(clip.x*8+xx,clip.y*8+yy));
-                        g.fillRect(x+xx*4, y+yy*4,4,4);
-                    }
-                }
-            } else {
-                g.setColor(Color.BLACK);
-                g.fillRect(0,0,32,32);
-            }
-        }
+    public ClipCell getClipCell() {
+        return clipCell;
     }
 
     class Listener implements MouseListener, MouseMotionListener, MouseWheelListener {
@@ -179,13 +153,13 @@ public class PaintArea extends JComponent implements Scrollable {
                 final Screen.Pixel pixel = getPixelByEvent(button);
                 screen.fill(e.getX()/scale,e.getY()/scale, pixel);
             } else if (isMiddleMouseButton(e)) {
-                final int xx = e.getX() / scale / 8;
-                final int yy = e.getY() / scale / 8;
+                final int xx = e.getX() / scale ;
+                final int yy = e.getY() / scale ;
                 if ((button & MouseEvent.SHIFT_DOWN_MASK) == 0) {
-                    screen.copyCell(clip.x,clip.y, xx, yy);
+                    screen.copyCell(clipCell.getScreen(),clipCell.getX(),clipCell.getY(), xx, yy);
                 } else {
-                    clip.setLocation(xx, yy);
-                    clipIcon.repaint();
+                    clipCell.setLocation(screen, xx, yy);
+                    clipCell.repaint();
                 }
             }
         }
@@ -216,7 +190,7 @@ public class PaintArea extends JComponent implements Scrollable {
         public void mouseDragged(MouseEvent e) {
             if ((e.getModifiersEx() & MouseEvent.CTRL_DOWN_MASK) != 0) return;
             if (e.getModifiersEx() == 0 && isMiddleMouseButton(e))
-                screen.copyCell(clip.x, clip.y, e.getX() / scale / 8, e.getY() / scale / 8);
+                screen.copyCell(clipCell.getX(), clipCell.getY(), e.getX() / scale , e.getY() / scale );
             if (pos.equals(e.getPoint())) return;
             doDrawLine(e);
             pos.setLocation(e.getPoint());
