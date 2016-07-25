@@ -9,8 +9,8 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.*;
-import java.util.function.BiConsumer;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Consumer;
 
 /**
@@ -18,11 +18,18 @@ import java.util.function.Consumer;
  */
 public class NScreen extends Screen {
 
-    public enum Table {INK, PAPER}
 
+
+    public enum Table {INK, PAPER;}
     @Override
     protected Palette createPalette() {
         return new NPalette();
+    }
+
+    @Override
+    final protected void setGridFactor() {
+        GRID_FACTOR_Y = 8;
+        GRID_FACTOR_X = 8;
     }
 
     @Override
