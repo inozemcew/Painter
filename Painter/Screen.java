@@ -40,12 +40,9 @@ public abstract class Screen implements ImageSupplier {
         return new ImageBuffer(w,h,8,8);
     }
 
-    protected void setGridFactor() {
-        GRID_FACTOR_X = 8;
-        GRID_FACTOR_Y = 8;
-    }
-
     abstract protected Palette createPalette();
+
+    abstract protected void setGridFactor();
 
     @Override
     public void addChangeListener(ImageChangeListener listener) {

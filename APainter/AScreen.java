@@ -32,7 +32,7 @@ public class AScreen extends Screen {
     }
 
     @Override
-    protected void setGridFactor() {
+    final protected void setGridFactor() {
         GRID_FACTOR_X = 6;
         GRID_FACTOR_Y = 4;
     }
