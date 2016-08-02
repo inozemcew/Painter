@@ -20,7 +20,7 @@ import java.util.Iterator;
 public abstract class PainterApp extends JFrame {
     JLabel statusBar = new JLabel(" ");
 
-    Screen screen;
+    protected Screen screen;
     private final JFileChooser fileChooser = new JFileChooser();
     private InterlacedView interlacedView;
     private JSplitPane splitPane;

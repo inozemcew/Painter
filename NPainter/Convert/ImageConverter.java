@@ -3,7 +3,7 @@ package NPainter.Convert;
 import NPainter.NPalette;
 import NPainter.NScreen;
 import Painter.ImageSupplier;
-import Painter.Palette.ColorConverting;
+import Painter.Palette.ColorConverter;
 import Painter.Palette.Palette;
 
 import java.awt.*;
@@ -436,22 +436,3 @@ class Combinator {
     }
 }
 
-class ColorConverter implements ColorConverting {
-    private HashMap<Color,Integer> cache = new HashMap<>();
-
-    @Override
-    public int fromRGB(Color color) {
-        return cache.computeIfAbsent(color, Palette::fromRGB);
-    }
-    Color remap (Color color) {
-        return Palette.toRGB(fromRGB(color));
-    }
-
-    void replace (Color color, int index) {
-        cache.replace(color,index);
-    }
-
-    Map<Color,Integer> getColorMap() {
-        return cache;
-    }
-}

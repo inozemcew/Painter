@@ -16,19 +16,21 @@ import java.util.Map;
  * Created by ainozemtsev on 21.06.16.
  */
 public class AScreen extends Screen {
-    enum Table { Fore, Back}
+    enum Table {Fore, Back}
+
     private Font font;
     private int fontHeight = 4;
+    final static int colors[] = {0x00, 0x24, 0x28, 0x2e, 0x2c, 0x2a, 0x26, 0x22};
 
     public AScreen() {
         this(384, 208);
     }
+
     public AScreen(int w, int h) {
         super(w, h);
         font = Font.getFont();
-        int i[] = {0x00, 0x24, 0x28, 0x2e, 0x2c, 0x2a, 0x26, 0x22};
-        int p[] = {0,0,0,0,0,0,0,0};
-        palette.setPalette(i,p);
+        int p[] = {0, 0, 0, 0, 0, 0, 0, 0};
+        palette.setPalette(colors, p);
     }
 
     @Override
@@ -47,45 +49,45 @@ public class AScreen extends Screen {
 
     @Override
     protected ImageBuffer createImageBuffer(int x, int h) {
-        return new ImageBuffer(x/GRID_FACTOR_X, h /GRID_FACTOR_Y,1,1);
+        return new ImageBuffer(x / GRID_FACTOR_X, h / GRID_FACTOR_Y, 1, 1);
     }
 
     @Override
     public int getImageHeight() {
-        return super.getImageHeight()*GRID_FACTOR_Y;
+        return super.getImageHeight() * GRID_FACTOR_Y;
     }
 
     @Override
     public int getImageWidth() {
-        return super.getImageWidth()*GRID_FACTOR_X;
+        return super.getImageWidth() * GRID_FACTOR_X;
     }
 
     @Override
     protected byte attrFromDesc(Pixel pixel, byte oldAttr) {
-        return (pixel.table == Table.Fore) ? (byte)pixel.index : oldAttr;
+        return (pixel.table == Table.Fore) ? (byte) pixel.index : oldAttr;
     }
 
     @Override
     public Color getPixelColor(int x, int y) {
         Pixel p = getPixelDescriptor(x, y);
-        return (p.table == Table.Back) ? Color.BLACK : palette.getRGBColor(Table.Fore,p.index,0);
+        return (p.table == Table.Back) ? Color.BLACK : palette.getRGBColor(Table.Fore, p.index, 0);
     }
 
     @Override
     protected void putPixelData(int x, int y, byte pixel, byte attr) {
-        int xx = x/GRID_FACTOR_X;
-        int yy = y/GRID_FACTOR_Y;
-        image.putPixel(xx,yy,pixel,attr);
+        int xx = x / GRID_FACTOR_X;
+        int yy = y / GRID_FACTOR_Y;
+        image.putPixel(xx, yy, pixel, attr);
     }
 
     @Override
     protected byte getPixelData(int x, int y) {
-        return super.getPixelData(x / GRID_FACTOR_X , y /GRID_FACTOR_Y);
+        return super.getPixelData(x / GRID_FACTOR_X, y / GRID_FACTOR_Y);
     }
 
     @Override
     protected byte getAttr(int x, int y) {
-        return super.getAttr(x / GRID_FACTOR_X , y /GRID_FACTOR_Y);
+        return super.getAttr(x / GRID_FACTOR_X, y / GRID_FACTOR_Y);
     }
 
     @Override
@@ -97,12 +99,12 @@ public class AScreen extends Screen {
     public Pixel getPixelDescriptor(int x, int y) {
         final int xx = x / GRID_FACTOR_X;
         final int yy = y / GRID_FACTOR_Y;
-        byte b = image.getPixel(xx,yy);
+        byte b = image.getPixel(xx, yy);
         byte c = font.getRasterLine(b, y % fontHeight);
         byte attr = image.getAttr(xx, yy);
-        boolean isPaper = ((c & (32>>(x%6))) == 0);
-        if (isPaper) return new Pixel(Table.Back, 0,0);
-        return new Pixel(Table.Fore,attr,0);
+        boolean isPaper = ((c & (32 >> (x % 6))) == 0);
+        if (isPaper) return new Pixel(Table.Back, 0, 0);
+        return new Pixel(Table.Fore, attr, 0);
     }
 
     @Override
@@ -111,8 +113,8 @@ public class AScreen extends Screen {
         if (oldPixel >= 64) b = 0;
         final int m = 1 << (x / 2 % 3 + y / 2 % 2 * 3);
         if (pixel.table == Table.Fore) b = b | m;
-        else b = b & (255-m);
-        return (byte)b;
+        else b = b & (255 - m);
+        return (byte) b;
     }
 
     @Override
@@ -128,8 +130,8 @@ public class AScreen extends Screen {
     @Override
     public Map<String, Dimension> getResolutions() {
         HashMap<String, Dimension> m = new HashMap<>();
-        m.put("192x104", new Dimension(384,208));
-        m.put("256x192", new Dimension(512,384));
+        m.put("192x104", new Dimension(384, 208));
+        m.put("256x192", new Dimension(512, 384));
         return m;
     }
 
@@ -139,12 +141,12 @@ public class AScreen extends Screen {
     }
 
     void importSCR(SpectrumScreen scr) throws IOException {
-        byte rev[] = {0,4,2,6,1,5,3,7};
+        byte rev[] = {0, 4, 2, 6, 1, 5, 3, 7};
         int[] bs = new int[6];
         //scr.setOffset(8,8);
         for (int y = 0; y < image.SIZE_Y; y++) {
             for (int x = 0; x < image.SIZE_X; x++) {
-                for (int yy = 0; yy<2; yy++)
+                for (int yy = 0; yy < 2; yy++)
                     for (int xx = 0; xx < 3; xx++) {
                         final SpectrumScreen.Pixel p = scr.getPixel(x * 3 + xx, y * 2 + yy);
                         final int v = (p.value == 0) ? p.paper : p.ink;
@@ -153,9 +155,9 @@ public class AScreen extends Screen {
                 int max = Arrays.stream(bs).max().getAsInt();
                 int b = 0;
                 for (int i = 0; i < 6; i++) {
-                    b = (b<<1) | (bs[5-i] > 0 ? 1 : 0);
+                    b = (b << 1) | (bs[5 - i] > 0 ? 1 : 0);
                 }
-                image.putPixel(x,y,(byte) b,(byte) max);
+                image.putPixel(x, y, (byte) b, (byte) max);
             }
         }
     }

@@ -6,8 +6,10 @@ import Painter.Palette.Palette;
  * Created by ainozemtsev on 04.07.16.
  */
 public class NPalette extends Palette {
-        static final int[] tSize = {8, 8};
-        static final int[] cSize = {2, 2};
+
+    private static final int[] tSize = {8, 8};
+    private static final int[] cSize = {2, 2};
+
     public NPalette() {
         super(2, tSize, cSize);
         int[] ink = new int[8], paper = new int[8];
@@ -17,4 +19,5 @@ public class NPalette extends Palette {
         }
         setPalette(ink,paper);
     }
+
 }
