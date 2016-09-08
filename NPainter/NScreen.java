@@ -76,6 +76,7 @@ public class NScreen extends Screen {
 
     public enum Mode {
         Color4("4 colors mode"),
+        Color5("5+1 colors mode"),
         Color6("6 colors mode"),
         Color8("8 colors mode");
 
@@ -130,12 +131,22 @@ public class NScreen extends Screen {
         byte attr = image.getAttr(x, y);
         int pix1 = image.getPixel(xx, y);
         int pix2 = image.getPixel(xx+1, y);
+        int pix = (x==xx) ? pix1 : pix2;
+
+        if (mode == Mode.Color5) {
+            if ((pix1 ^ pix2) == 1 && (pix1 & pix2)>1)
+                return getInkRBGColor(paperFromAttr(attr), pix2 & 1);
+            if ((pix1==1 || pix2==1) && (pix1>1 || pix2>1)) {
+                if (pix > 1) return getInkRBGColor(paperFromAttr(attr), pix & 1);
+                else return getPaperRGBColor(paperFromAttr(attr), 0);
+            }
+        }
 
         if ((pix1 ^ pix2) == 2 && (pix1 & pix2) == 1 && mode != Mode.Color4 )
                 return getInkRBGColor(paperFromAttr(attr), (pix1 & 2) == 2 ? 0 : 1);
         if ((pix1 ^ pix2) == 3 && (pix1 * pix2) != 0 && mode == Mode.Color8 )
                 return getPaperRGBColor(inkFromAttr(attr), (pix1 & 2) == 2 ? 0 : 1);
-        int pix = (x==xx) ? pix1 : pix2;
+
         if (pix < 2)
             return getPaperRGBColor(paperFromAttr(attr), pix & 1);
         else
