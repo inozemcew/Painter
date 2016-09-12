@@ -78,7 +78,8 @@ public class NScreen extends Screen {
         Color4("4 colors mode"),
         Color5("5+1 colors mode"),
         Color6("6 colors mode"),
-        Color8("8 colors mode");
+        Color8("8 colors mode"),
+        ColorX("X mode");
 
         String name;
         Mode(String name) {
@@ -140,6 +141,16 @@ public class NScreen extends Screen {
                 if (pix > 1) return getInkRBGColor(paperFromAttr(attr), pix & 1);
                 else return getPaperRGBColor(paperFromAttr(attr), 0);
             }
+        }
+
+        if ( (pix1 ^ pix2) >1 && (pix1 * pix2) != 0 && mode == Mode.ColorX ) {
+            if (pix==2)
+                return getInkRBGColor(paperFromAttr(attr), 0);
+            if (pix1 ==3 || pix2 == 3)
+                return getInkRBGColor(paperFromAttr(attr), pix1>1 ? 0 : 1);
+            //if ((pix1 | pix2)>1)
+                return getPaperRGBColor(paperFromAttr(attr), 0);
+
         }
 
         if ((pix1 ^ pix2) == 2 && (pix1 & pix2) == 1 && mode != Mode.Color4 )
