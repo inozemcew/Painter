@@ -10,17 +10,10 @@ import java.io.OutputStream;
  * Image buffer for 2 bitplanes
  */
 public class ImageBuffer {
-    public final int SIZE_X;
-    public final int SIZE_Y;
-
-    private final int ATTR_SIZE_X;
-    private final int ATTR_SIZE_Y;
-
-    private final int ATTR_FACTOR_X;
-    private final int ATTR_FACTOR_Y;
-
-    private byte pixbuf[][];
-    private byte attrbuf[][];
+    public final int SIZE_X, SIZE_Y;
+    private final int ATTR_SIZE_X, ATTR_SIZE_Y;
+    private final int ATTR_FACTOR_X, ATTR_FACTOR_Y;
+    private byte pixbuf[][], attrbuf[][];
 
     public ImageBuffer(int sizeX, int sizeY, int factorX, int factorY) {
         this.SIZE_X = sizeX;
@@ -29,8 +22,12 @@ public class ImageBuffer {
         this.ATTR_FACTOR_Y = factorY;
         this.ATTR_SIZE_X = SIZE_X / factorX;
         this.ATTR_SIZE_Y = SIZE_Y / factorY;
-        this.pixbuf = new byte[SIZE_X][SIZE_Y];
+        this.pixbuf = createPixbuf();
         this.attrbuf = new byte[ATTR_SIZE_X][ATTR_SIZE_Y];
+    }
+
+    protected byte[][] createPixbuf() {
+        return new byte[SIZE_X][SIZE_Y];
     }
 
     public byte getPixel(int x, int y) {
@@ -47,7 +44,7 @@ public class ImageBuffer {
     }
 
     void shift (int dx, int dy) {
-        byte newPixBuf[][] = new byte[SIZE_X][SIZE_Y];
+        byte newPixBuf[][] = createPixbuf();
         for (int x = 0; x < SIZE_X; x++) {
             for (int y = 0; y < SIZE_Y; y++) {
                 int nx = x + dx, ny = y + dy;

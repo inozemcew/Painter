@@ -30,22 +30,25 @@ public class PaintArea extends JComponent implements Scrollable {
     }
 
     void setScreen(Screen screen) {
-        this.screen = screen;
-        this.updatePreferredSize();
-        this.screen.addChangeListener(new ImageSupplier.ImageChangeListener() {
+        class ScreenChangeListener implements ImageSupplier.ImageChangeListener {
             @Override
             public void imageChanged(int x, int y, int w, int h) {
                 repaint(x*scale,y*scale,w*scale,h*scale);
             }
+
             @Override
             public void imageChanged() {
                 repaint();
             }
+
             @Override
             public void paletteChanged() {
                 repaint();
             }
-        });
+        }
+        this.screen = screen;
+        this.updatePreferredSize();
+        this.screen.addChangeListener(new ScreenChangeListener());
     }
 
     @Override
@@ -133,7 +136,7 @@ public class PaintArea extends JComponent implements Scrollable {
         return clipCell;
     }
 
-    class Listener implements MouseListener, MouseMotionListener, MouseWheelListener {
+    private class Listener implements MouseListener, MouseMotionListener, MouseWheelListener {
         private int button = 0;
         Point pos = new Point();
 
@@ -145,6 +148,14 @@ public class PaintArea extends JComponent implements Scrollable {
             return new Screen.Pixel(t, getColorIndex(t), p);
         }
 
+        private boolean isInSameCell(Point p) {
+            int fx = scale * screen.GRID_FACTOR_X;
+            int fy = scale * screen.GRID_FACTOR_Y;
+            return (pos.x/fx == p.x/fx) && (pos.y/fy == p.y/fy);
+        }
+
+
+
         @Override
         public void mouseClicked(MouseEvent e) {
             int button = e.getModifiersEx();
@@ -155,9 +166,7 @@ public class PaintArea extends JComponent implements Scrollable {
             } else if (isMiddleMouseButton(e)) {
                 final int xx = e.getX() / scale ;
                 final int yy = e.getY() / scale ;
-                if ((button & MouseEvent.SHIFT_DOWN_MASK) == 0) {
-                    screen.copyCell(clipCell.getScreen(),clipCell.getX(),clipCell.getY(), xx, yy);
-                } else {
+                if ((button & MouseEvent.SHIFT_DOWN_MASK) != 0) {
                     clipCell.setLocation(screen, xx, yy);
                     clipCell.repaint();
                 }
@@ -167,13 +176,21 @@ public class PaintArea extends JComponent implements Scrollable {
         @Override
         public void mousePressed(MouseEvent e) {
             pos.setLocation(e.getPoint());
-            if ((e.getModifiersEx() & MouseEvent.CTRL_DOWN_MASK) != 0 || isMiddleMouseButton(e) ) return;
-            button = e.getModifiersEx()
-                    & (MouseEvent.SHIFT_DOWN_MASK
-                    | MouseEvent.BUTTON1_DOWN_MASK
-                    | MouseEvent.BUTTON3_DOWN_MASK);
+            if ((e.getModifiersEx() & MouseEvent.CTRL_DOWN_MASK) != 0 ) return;
             screen.beginDraw();
-            doSetPixel(e);
+            if (isMiddleMouseButton(e)) {
+                if ((e.getModifiersEx() & MouseEvent.SHIFT_DOWN_MASK) == 0) {
+                    final int xx = e.getX() / scale;
+                    final int yy = e.getY() / scale;
+                    screen.copyCell(clipCell.getScreen(), clipCell.getX(), clipCell.getY(), xx, yy);
+                }
+            } else {
+                button = e.getModifiersEx()
+                        & (MouseEvent.SHIFT_DOWN_MASK
+                        | MouseEvent.BUTTON1_DOWN_MASK
+                        | MouseEvent.BUTTON3_DOWN_MASK);
+                doSetPixel(e);
+            }
         }
 
         private void doSetPixel(MouseEvent e) {
@@ -188,11 +205,12 @@ public class PaintArea extends JComponent implements Scrollable {
 
         @Override
         public void mouseDragged(MouseEvent e) {
-            if ((e.getModifiersEx() & MouseEvent.CTRL_DOWN_MASK) != 0) return;
-            if (e.getModifiersEx() == 0 && isMiddleMouseButton(e))
-                screen.copyCell(clipCell.getX(), clipCell.getY(), e.getX() / scale , e.getY() / scale );
-            if (pos.equals(e.getPoint())) return;
-            doDrawLine(e);
+            if ((e.getModifiersEx() & MouseEvent.CTRL_DOWN_MASK) == 0) {
+                if ((e.getModifiersEx() & MouseEvent.SHIFT_DOWN_MASK) == 0 && isMiddleMouseButton(e)) {
+                    if (!isInSameCell(e.getPoint()))
+                        screen.copyCell(clipCell.getX(), clipCell.getY(), e.getX() / scale, e.getY() / scale);
+                } else if (!pos.equals(e.getPoint())) doDrawLine(e);
+            }
             pos.setLocation(e.getPoint());
         }
 
@@ -231,5 +249,6 @@ public class PaintArea extends JComponent implements Scrollable {
             } else getParent().dispatchEvent(e);
         }
     }
+
 }
 
