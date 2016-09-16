@@ -10,6 +10,8 @@ import java.awt.event.MouseEvent;
  */
 public class TestPalette {
     static int luma = 128;
+    static boolean clamp = false;
+
     public static void main(String[] argv) {
         JFrame frame = new JFrame("Palette test");
         frame.setLayout(new BorderLayout());
@@ -24,6 +26,14 @@ public class TestPalette {
         YUVPane yuv = new YUVPane();
         frame.add(yuv,BorderLayout.CENTER);
         slider.addChangeListener(e -> yuv.setLuma(slider.getValue()));
+
+        JCheckBox clampCheckBox = new JCheckBox("Clamp");
+        clampCheckBox.setSelected(clamp);
+        frame.add(clampCheckBox, BorderLayout.PAGE_START);
+        clampCheckBox.addChangeListener(e -> {
+            clamp = clampCheckBox.isSelected();
+            yuv.repaint();
+        });
 
         JComponent c = new Selected();
         c.setPreferredSize(new Dimension(64*9,512));
@@ -41,17 +51,20 @@ public class TestPalette {
         //r =r/2+64;
         //b = b/2+64;
         //g = g/2+64;
-        /*int lo=0, hi=255;
-        if (r<0) r = lo;
-        if (r>255) r= hi;
-        if (g<0) g=lo;
-        if (g>255) g=hi;
-        if (b<0) b=lo;
-        if (b>255) b=hi;*/
-        if ((r<0) || (r>255) || (g<0) || (g>255) || (b<0) || (b>255)) {
-            r=0;
-            b=0;
-            g=0;
+        if (clamp) {
+            int lo = 0, hi = 255;
+            if (r < 0) r = lo;
+            if (r > 255) r = hi;
+            if (g < 0) g = lo;
+            if (g > 255) g = hi;
+            if (b < 0) b = lo;
+            if (b > 255) b = hi;
+        } else {
+            if ((r < 0) || (r > 255) || (g < 0) || (g > 255) || (b < 0) || (b > 255)) {
+                r = 0;
+                b = 0;
+                g = 0;
+            }
         }
         return new Color(Math.round(r),Math.round(g),Math.round(b));
     }

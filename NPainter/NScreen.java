@@ -125,7 +125,28 @@ public class NScreen extends Screen {
     private Color getPaperRGBColor(int index, int shift) {
         return palette.getRGBColor(Table.PAPER, index, shift);
     }
+/*
+    @Override
+    public Color getPixelColor(int x, int y) {
+        byte attr = image.getAttr(x, y);
+        int pix = image.getPixel(x, y);
+        int pix1 = image.getPixel(x-1, y);
+        int pix2 = image.getPixel(x+1, y);
 
+        if (mode != Mode.Color4) {
+            if ((pix1 ^ pix) == 2 && (pix1 & pix) == 1)
+                return getPixelColor(x-1,y);
+            if ((pix2 ^ pix) == 2 && (pix2 & pix) == 1)
+                return getInkRBGColor(paperFromAttr(attr), (pix & 2) == 2 ? 0 : 1);
+        }
+        if ((pix1 ^ pix2) == 3 && (pix1 * pix2) != 0 && mode == Mode.Color8 )
+                return getPaperRGBColor(inkFromAttr(attr), (pix1 & 2) == 2 ? 0 : 1);
+        if (pix < 2)
+            return getPaperRGBColor(paperFromAttr(attr), pix & 1);
+        else
+            return getInkRBGColor(inkFromAttr(attr), pix & 1);
+    }
+*/
     @Override
     public Color getPixelColor(int x, int y) {
         int xx = x & 0xfffe;
@@ -145,6 +166,8 @@ public class NScreen extends Screen {
 
         if ( (pix1 ^ pix2) >1 && (pix1 * pix2) != 0 && mode == Mode.ColorX ) {
             if (pix==2)
+                return getPaperRGBColor(paperFromAttr(attr), 0);
+            if (pix1 == 2 || pix2 == 2)
                 return getInkRBGColor(paperFromAttr(attr), 0);
             if (pix1 ==3 || pix2 == 3)
                 return getInkRBGColor(paperFromAttr(attr), pix1>1 ? 0 : 1);
@@ -245,6 +268,7 @@ public class NScreen extends Screen {
         m.put("Inverse palette", (dummy) -> inverseColors());
         m.put("Swap ink0 <-> paper0", (c) -> swapInkPaper(c[ink], c[paper], 0));
         m.put("Swap ink1 <-> paper1", (c) -> swapInkPaper(c[ink], c[paper], 1));
+        m.put("Correct X mode", (dummy) -> correctXMode());
         return m;
     }
 
@@ -287,4 +311,20 @@ public class NScreen extends Screen {
         endDraw();
     }
 
+    private void correctXMode() {
+        beginDraw();
+        for (int y = 0; y < getImageHeight(); y++) {
+            for (int x = 0; x < getImageWidth(); x+=2) {
+                byte b1 = image.getPixel(x,y);
+                byte b2 = image.getPixel(x+1,y);
+                if ((b1==2 && b2==1) || (b1==1 && b2==2)) {
+                    image.putPixel(x, y, b2);
+                    image.putPixel(x + 1, y, b1);
+                }
+            }
+
+        }
+        endDraw();
+        fireImageChanged();
+    }
 }

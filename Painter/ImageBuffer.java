@@ -38,8 +38,12 @@ public class ImageBuffer {
         return attrbuf[x / ATTR_FACTOR_X][y / ATTR_FACTOR_Y];
     }
 
-    public void putPixel(int x, int y, byte pixel, byte attr) {
+    public void putPixel(int x, int y, byte pixel) {
         this.pixbuf[x][y] = pixel;
+    }
+
+    public void putPixel(int x, int y, byte pixel, byte attr) {
+        putPixel(x, y, pixel);
         this.attrbuf[x / ATTR_FACTOR_X][y / ATTR_FACTOR_Y] = attr;
     }
 

@@ -208,7 +208,7 @@ public class PaintArea extends JComponent implements Scrollable {
             if ((e.getModifiersEx() & MouseEvent.CTRL_DOWN_MASK) == 0) {
                 if ((e.getModifiersEx() & MouseEvent.SHIFT_DOWN_MASK) == 0 && isMiddleMouseButton(e)) {
                     if (!isInSameCell(e.getPoint()))
-                        screen.copyCell(clipCell.getX(), clipCell.getY(), e.getX() / scale, e.getY() / scale);
+                        screen.copyCell(clipCell.getScreen(), clipCell.getX(), clipCell.getY(), e.getX() / scale, e.getY() / scale);
                 } else if (!pos.equals(e.getPoint())) doDrawLine(e);
             }
             pos.setLocation(e.getPoint());
