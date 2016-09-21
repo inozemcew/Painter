@@ -6,12 +6,17 @@ import Painter.Palette.PaletteToolPanel;
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
+import java.awt.event.ActionEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.beans.PropertyChangeListener;
 import java.io.*;
+import java.util.ArrayList;
 import java.util.EnumSet;
-import java.util.Iterator;
+import java.util.HashMap;
+
+import static javax.swing.Action.SELECTED_KEY;
 
 /**
  * Created by ainozemtsev on 17.11.15.
@@ -20,11 +25,21 @@ import java.util.Iterator;
 public abstract class PainterApp extends JFrame {
     JLabel statusBar = new JLabel(" ");
 
-    protected Screen screen;
+    protected Screen screen = createScreen();
     private final JFileChooser fileChooser = new JFileChooser();
     private InterlacedView interlacedView;
     private JSplitPane splitPane;
+    private JSlider scaleSlider;
+
     protected PaintArea paintArea;
+
+    private Actions actions;
+    private HashMap<String,PropertyChangeListener> propertyChangeListeners = new HashMap<>();
+    {
+        propertyChangeListeners.put(PaintArea.OP_STATUS, evt -> statusBar.setText(evt.getNewValue().toString()));
+        propertyChangeListeners.put(PaintArea.OP_SCALE, evt -> scaleSlider.setValue((Integer)evt.getNewValue()));
+        propertyChangeListeners.put(PaintArea.OP_FILL, evt ->  actions.editModes.reset());
+    }
 
     public static void run(PainterApp app) {
         SwingUtilities.invokeLater(new Runnable() {
@@ -40,7 +55,7 @@ public abstract class PainterApp extends JFrame {
 
     public PainterApp() throws HeadlessException {
         super();
-        this.screen = createScreen();
+//        this.screen = createScreen();
     }
 
     protected abstract Screen createScreen();
@@ -52,6 +67,9 @@ public abstract class PainterApp extends JFrame {
         JPanel form = new JPanel(new BorderLayout());
 
         paintArea = new PaintArea(screen);
+        propertyChangeListeners.forEach( (name, listener) -> paintArea.addPropertyChangeListener(name, listener));
+
+        actions = new Actions();
 
         interlacedView = new InterlacedView(screen);
         interlacedView.addMouseListener(new MouseAdapter() {
@@ -81,7 +99,6 @@ public abstract class PainterApp extends JFrame {
         setJMenuBar(menuBar);
 
         form.add(statusBar, BorderLayout.PAGE_END);
-        paintArea.addPropertyChangeListener("status", evt -> statusBar.setText(evt.getNewValue().toString()));
 
         add(form);
         pack();
@@ -90,35 +107,32 @@ public abstract class PainterApp extends JFrame {
 
     private JToolBar createToolBar() {
         JToolBar toolbar = new JToolBar();
+
+        ButtonGroup modeGroup = new ButtonGroup();
+        actions.editModes.forEach(action -> {
+            final AbstractButton b = new JToggleButton(action);
+            toolbar.add(b);
+            modeGroup.add(b);
+        });
+
         final PaletteToolPanel panel = new PaletteToolPanel(screen.getPalette());
 
-        ChangeAdapter action = new ChangeAdapter(screen){
-            @Override
-            public void colorChanged(int table, int index) {
-                super.colorChanged(table, index);
-                paintArea.colorChanged(table, index);
-            }
-        };
-
-        panel.addChangeListener(action);
+        panel.addChangeListener(actions.changeAdapter);
 
         toolbar.addPropertyChangeListener("orientation", evt -> panel.setOrientation((Integer)evt.getNewValue()));
         toolbar.add(panel);
 
-        JSlider spinner = new JSlider(1, 16, 2);
-        spinner.setPreferredSize(new Dimension(96, 36));
-        spinner.setMajorTickSpacing(1);
-        spinner.setPaintTicks(true);
-        spinner.setPaintLabels(true);
-        spinner.setValue(paintArea.getScale());
-        spinner.addChangeListener(e -> paintArea.setScale(spinner.getValue()));
-        rootPane.addPropertyChangeListener(evt -> {
-            if (evt.getPropertyName().equals("scale")) spinner.setValue((Integer)evt.getNewValue());
-                });
-        toolbar.add(spinner);
+        scaleSlider = new JSlider(1, 16, 2);
+        scaleSlider.setPreferredSize(new Dimension(96, 36));
+        scaleSlider.setMajorTickSpacing(1);
+        scaleSlider.setPaintTicks(true);
+        scaleSlider.setPaintLabels(true);
+        scaleSlider.setValue(paintArea.getScale());
+        scaleSlider.addChangeListener(e -> paintArea.setScale(scaleSlider.getValue()));
+        toolbar.add(scaleSlider);
 
         //panel.addChangeListener(action);
-        JToggleButton button = new JToggleButton(action);
+        JToggleButton button = new JToggleButton(actions.viewEnhance);
         toolbar.add(button);
 
         toolbar.add(Box.createGlue()); //  Separator();
@@ -134,37 +148,25 @@ public abstract class PainterApp extends JFrame {
         JMenu n = new JMenu("New");
         screen.getResolutions().forEach((s,d)-> n.add(s).addActionListener(e -> newScreen(d.width,d.height)));
         file.add(n);
-        file.add("Load ..").addActionListener(event -> this.load());
-        file.add("Save as ..").addActionListener(event -> this.saveAs());
-        file.add("Import SCR..").addActionListener(event -> this.importSCR());
-        file.add("Import PNG..").addActionListener(event -> this.importPNG());
+        file.add(actions.fileLoad);
+        file.add(actions.fileSaveAs);
+        file.add(actions.fileImportSCR);
+        file.add(actions.fileImportPNG);
         file.addSeparator();
-        file.add("Exit").addActionListener(event -> System.exit(0));
+        file.add(actions.fileExit);
 
         JMenu edit = menuBar.add(new JMenu("Edit"));
         edit.setMnemonic('E');
-        JMenuItem undo = edit.add("Undo");
-        undo.setAccelerator(KeyStroke.getKeyStroke('Z', InputEvent.CTRL_DOWN_MASK));
-        undo.addActionListener(event -> {
-            screen.undoDraw();
-            getContentPane().repaint();
-        });
-        JMenuItem redo = edit.add("Redo");
-        redo.setAccelerator(KeyStroke.getKeyStroke('Y', InputEvent.CTRL_DOWN_MASK));
-        redo.addActionListener(event -> {
-            screen.redoDraw();
-            getContentPane().repaint();
-        });
+        edit.add(actions.editUndo);
+        edit.add(actions.editRedo);
         edit.addSeparator();
 
-        screen.getSpecialMethods().forEach( (name, consumer) -> {
-            edit.add(name).addActionListener(e ->
-                    consumer.accept(
-                            paintArea.getColorIndices()
-                    )
-            );
+        ButtonGroup group = new ButtonGroup();
+        actions.editModes.forEach(action -> group.add(edit.add(new JRadioButtonMenuItem(action))));
 
-        });
+        edit.addSeparator();
+
+        actions.specialMethods.forEach(edit::add);
         edit.addSeparator();
 
         JMenu sh = new JMenu("Shift");
@@ -174,19 +176,10 @@ public abstract class PainterApp extends JFrame {
         sh.add("Down").addActionListener(e -> screen.shift(Screen.Shift.Down));
         edit.add(sh);
 
-        final Enum mode = screen.getMode();
-        if (mode != null) {
+        if (!actions.screenModes.isEmpty()) {
             JMenu options = menuBar.add(new JMenu("Options"));
             ButtonGroup g = new ButtonGroup();
-            Iterator<Enum> i = EnumSet.allOf(mode.getDeclaringClass()).iterator();
-            while (i.hasNext()) {
-                Enum m = i.next();
-                JRadioButtonMenuItem c = new JRadioButtonMenuItem(m.toString());
-                if (m == mode) c.setSelected(true);
-                c.addActionListener(e -> screen.setMode(m));
-                g.add(c);
-                options.add(c);
-            }
+            actions.screenModes.forEach(action -> g.add(options.add(new JRadioButtonMenuItem(action))));
         }
         return menuBar;
     }
@@ -294,4 +287,160 @@ public abstract class PainterApp extends JFrame {
         }
     }
 
+    class Actions {
+        final ChangeAdapter changeAdapter = new ColorChangeAdapter();
+        Action fileExit = new AbstractAction("Exit") {
+            {
+                putValue(ACCELERATOR_KEY, KeyStroke.getKeyStroke('Q', InputEvent.CTRL_DOWN_MASK));
+            }
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                System.exit(0);
+            }
+        };
+        Action fileLoad = new AbstractAction("Load ..") {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                load();
+            }
+        };
+        Action fileSaveAs = new AbstractAction("Save as..") {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                saveAs();
+            }
+        };
+        Action fileImportSCR = new AbstractAction("Import SCR..") {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                importSCR();
+            }
+        };
+        Action fileImportPNG = new AbstractAction("Import PNG..") {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                importPNG();
+            }
+        };
+
+        Action editUndo = new AbstractAction("Undo") {
+            {
+                putValue(ACCELERATOR_KEY, KeyStroke.getKeyStroke('Z', InputEvent.CTRL_DOWN_MASK));
+            }
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                screen.undoDraw();
+                getContentPane().repaint();
+            }
+        };
+        Action editRedo = new AbstractAction("Redo") {
+            {
+                putValue(ACCELERATOR_KEY, KeyStroke.getKeyStroke('Y', InputEvent.CTRL_DOWN_MASK));
+            }
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                screen.redoDraw();
+                getContentPane().repaint();
+            }
+        };
+
+
+        EditModeActionList editModes = new EditModeActionList(paintArea);
+        {
+            editModes.addAction("Paint", PaintArea.Mode.Paint);
+            editModes.addAction("Fill", PaintArea.Mode.Fill, "Z");
+        }
+
+
+        Action viewEnhance = changeAdapter.createAction();
+
+        ArrayList<Action> specialMethods = new ArrayList<>();
+        {
+            screen.getSpecialMethods().forEach( (name, consumer) -> specialMethods.add(new AbstractAction(name) {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    consumer.accept(paintArea.getColorIndices());
+                }
+            }) );
+        }
+
+        ArrayList<Action> screenModes = new ArrayList<>();
+        {
+            final Enum mode = screen.getMode();
+            if (mode != null)
+                for( Enum m: (EnumSet<? extends Enum>) EnumSet.allOf(mode.getDeclaringClass())) {
+                    Action c = new AbstractAction(m.toString()) {
+                        @Override
+                        public void actionPerformed(ActionEvent e) {
+                            screen.setMode(m);
+                        }
+                    };
+                    c.putValue(SELECTED_KEY, (m == mode));
+                    screenModes.add(c);
+            }
+
+        }
+
+    }
+
+
+
+    private class ColorChangeAdapter extends ChangeAdapter {
+        public ColorChangeAdapter() {
+            super(screen);
+        }
+
+        @Override
+        public void colorChanged(int table, int index) {
+            super.colorChanged(table, index);
+            paintArea.colorChanged(table, index);
+        }
+    }
+}
+
+class EditModeActionList extends ArrayList<EditModeActionList.Action> {
+    PaintArea paintArea;
+
+    class Action extends AbstractAction {
+        PaintArea.Mode mode;
+
+        Action(String name, PaintArea.Mode mode) {
+            super(name);
+            this.mode = mode;
+            putValue(SELECTED_KEY, Boolean.TRUE);
+        }
+
+        Action(String name, PaintArea.Mode mode, String acc) {
+            this(name, mode);
+            putValue(SELECTED_KEY, Boolean.FALSE);
+            putValue(ACCELERATOR_KEY, KeyStroke.getKeyStroke(acc));
+        }
+
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            if (paintArea.getMode() == mode) {
+                reset();
+            } else
+                paintArea.setMode(mode);
+        }
+
+    }
+
+    public EditModeActionList(PaintArea paintArea) {
+        this.paintArea = paintArea;
+    }
+
+    void addAction(String name, PaintArea.Mode mode) {
+        add(new Action(name,mode));
+    }
+
+    void addAction(String name, PaintArea.Mode mode, String acc) {
+        add(new Action(name,mode,acc));
+    }
+
+    public void reset() {
+        final EditModeActionList.Action paintAction = get(0);
+        paintAction.putValue(SELECTED_KEY, Boolean.TRUE);
+        paintArea.setMode(paintAction.mode);
+    }
 }

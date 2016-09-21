@@ -17,6 +17,9 @@ public class PaintArea extends JComponent implements Scrollable {
     private int scale = 2;
     private int[] currentColors;
     private ClipCell clipCell;
+    public enum Mode {Paint, Fill}
+
+    private Mode mode = Mode.Paint;
 
     public PaintArea(Screen screen) {
         super();
@@ -81,7 +84,7 @@ public class PaintArea extends JComponent implements Scrollable {
         PaintArea.this.scrollRectToVisible(r);
     }
 
-    private static Color gridColor = new Color(128,128,255);
+    private static final Color gridColor = new Color(128,128,255);
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -136,9 +139,21 @@ public class PaintArea extends JComponent implements Scrollable {
         return clipCell;
     }
 
+    public void setMode(Mode mode) {
+        this.mode = mode;
+    }
+
+    public Mode getMode() {
+        return mode;
+    }
+
+    final static String OP_FILL = "fill";
+    final static String OP_STATUS = "status";
+    final static String OP_SCALE = "scale";
+
     private class Listener implements MouseListener, MouseMotionListener, MouseWheelListener {
         private int button = 0;
-        Point pos = new Point();
+        final Point pos = new Point();
 
         private Screen.Pixel getPixelByEvent(int button) {
             byte p;
@@ -160,9 +175,10 @@ public class PaintArea extends JComponent implements Scrollable {
         public void mouseClicked(MouseEvent e) {
             int button = e.getModifiersEx();
             if (e.getButton() == MouseEvent.BUTTON1) button = button | MouseEvent.BUTTON1_DOWN_MASK;
-            if ((button & MouseEvent.CTRL_DOWN_MASK) != 0 ) {
+            if (isFillMode(e.getButton())) {
                 final Screen.Pixel pixel = getPixelByEvent(button);
                 screen.fill(e.getX()/scale,e.getY()/scale, pixel);
+                firePropertyChange(OP_FILL,"0","1");
             } else if (isMiddleMouseButton(e)) {
                 final int xx = e.getX() / scale ;
                 final int yy = e.getY() / scale ;
@@ -173,10 +189,14 @@ public class PaintArea extends JComponent implements Scrollable {
             }
         }
 
+        protected boolean isFillMode(int button) {
+            return mode == Mode.Fill && (button == MouseEvent.BUTTON1 || button == MouseEvent.BUTTON3);
+        }
+
         @Override
         public void mousePressed(MouseEvent e) {
             pos.setLocation(e.getPoint());
-            if ((e.getModifiersEx() & MouseEvent.CTRL_DOWN_MASK) != 0 ) return;
+            if (isFillMode(e.getButton())) return;
             screen.beginDraw();
             if (isMiddleMouseButton(e)) {
                 if ((e.getModifiersEx() & MouseEvent.SHIFT_DOWN_MASK) == 0) {
@@ -235,7 +255,7 @@ public class PaintArea extends JComponent implements Scrollable {
             int y = e.getY() / scale;
             if (screen.isInImage(x,y)) {
                 Screen.Pixel s = screen.getPixelDescriptor(x,y);
-                firePropertyChange("status", "", x + "x" + y + " : " + s.table.name()+s.shift+" = "+s.index);
+                firePropertyChange(OP_STATUS, "", x + "x" + y + " : " + s.table.name()+s.shift+" = "+s.index);
             }
         }
 
@@ -245,7 +265,7 @@ public class PaintArea extends JComponent implements Scrollable {
                 final int s = PaintArea.this.scale;
                 if (e.getWheelRotation()>0 && s >1) setScale(s -1);
                 if (e.getWheelRotation()<0 && s <16) setScale(s +1);
-                getRootPane().firePropertyChange("scale",s,scale);
+                firePropertyChange(OP_SCALE,s,scale);
             } else getParent().dispatchEvent(e);
         }
     }

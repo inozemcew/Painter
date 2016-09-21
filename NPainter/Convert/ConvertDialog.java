@@ -1,10 +1,10 @@
 package NPainter.Convert;
 
+import NPainter.NScreen;
 import Painter.InterlacedView;
 import Painter.Palette.ChangeAdapter;
 import Painter.Palette.Palette;
 import Painter.Palette.PaletteToolPanel;
-import NPainter.NScreen;
 import Painter.Screen;
 
 import javax.swing.*;
@@ -214,10 +214,10 @@ public class ConvertDialog {
                 JToolBar toolBar = new JToolBar();
                 PaletteToolPanel panel = new PaletteToolPanel(screen.getPalette());
 
-                ChangeAdapter action = new ChangeAdapter(screen);
-                panel.addChangeListener(action);
+                ChangeAdapter changeAdapter = new ChangeAdapter(screen);
+                panel.addChangeListener(changeAdapter);
 
-                JToggleButton b = new JToggleButton(action);
+                JToggleButton b = new JToggleButton(changeAdapter.createAction());
                 panel.add(b);
 
                 toolBar.add(panel);
