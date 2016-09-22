@@ -2,6 +2,7 @@ package Painter;
 
 import Painter.Palette.ChangeAdapter;
 import Painter.Palette.PaletteToolPanel;
+import Painter.Screen.Screen;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -45,8 +46,7 @@ public abstract class PainterApp extends JFrame {
         SwingUtilities.invokeLater(new Runnable() {
                                        @Override
                                        public void run() {
-                                           PainterApp form = app;
-                                           JFrame frame = form.createMainForm();
+                                           JFrame frame = app.createMainForm();
                                            frame.setVisible(true);
                                        }
                                    }

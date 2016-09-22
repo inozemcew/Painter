@@ -1,6 +1,6 @@
 package Painter.Palette;
 
-import Painter.Screen;
+import Painter.Screen.Screen;
 
 import javax.swing.*;
 import java.awt.event.ActionEvent;

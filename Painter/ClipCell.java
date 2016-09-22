@@ -1,5 +1,7 @@
 package Painter;
 
+import Painter.Screen.Screen;
+
 import javax.swing.*;
 import java.awt.*;
 

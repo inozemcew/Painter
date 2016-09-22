@@ -1,4 +1,4 @@
-package Painter;
+package Painter.Screen;
 
 import Painter.Palette.Palette;
 
@@ -20,7 +20,7 @@ public abstract class Screen implements ImageSupplier {
     private Collection<ImageChangeListener> listeners = new ArrayList<>();
     protected final UndoRedo undo = new UndoRedo();
     protected int[] enhancedColors;
-    protected int GRID_FACTOR_X, GRID_FACTOR_Y;
+    public int GRID_FACTOR_X, GRID_FACTOR_Y;
 
     private int locked = 0;
 
@@ -36,9 +36,7 @@ public abstract class Screen implements ImageSupplier {
         resetEnhanced();
     }
 
-    protected ImageBuffer createImageBuffer(int w, int h) {
-        return new ImageBuffer(w,h,8,8);
-    }
+    protected abstract ImageBuffer createImageBuffer(int w, int h);
 
     abstract protected Palette createPalette();
 
@@ -94,7 +92,7 @@ public abstract class Screen implements ImageSupplier {
         return palette;
     }
 
-    void newImageBuffer(int sizeX, int sizeY) {
+    public void newImageBuffer(int sizeX, int sizeY) {
         this.image = createImageBuffer(sizeX, sizeY);
         fireImageChanged();
     }
@@ -103,7 +101,7 @@ public abstract class Screen implements ImageSupplier {
         return isInImage(p.x, p.y);
     }
 
-    boolean isInImage(int x, int y) {
+    public boolean isInImage(int x, int y) {
         return x >= 0 && x < getImageWidth() && y >= 0 && y < getImageHeight();
     }
 
@@ -150,7 +148,7 @@ public abstract class Screen implements ImageSupplier {
         image.putPixel(x, y, pixel, attr);
     }
 
-    void setPixel(int x, int y, Pixel pixel) {
+    public void setPixel(int x, int y, Pixel pixel) {
         if (isInImage(x, y)) {
             byte a =  getAttr(x, y);
             if (pixel.index >= 0)
@@ -162,7 +160,7 @@ public abstract class Screen implements ImageSupplier {
         }
     }
 
-    void drawLine(int ox, int oy, int x, int y, Pixel pixel) {
+    public void drawLine(int ox, int oy, int x, int y, Pixel pixel) {
         if (isInImage(x, y) && isInImage(ox, oy)) {
             lock();
             float dx = x - ox, dy = y - oy;
@@ -204,7 +202,7 @@ public abstract class Screen implements ImageSupplier {
         return 1;
     }
 
-    void fill(int x, int y, Pixel pixel) {
+    public void fill(int x, int y, Pixel pixel) {
         if (isInImage(x, y)) {
             lock();
             beginDraw();
@@ -313,7 +311,7 @@ public abstract class Screen implements ImageSupplier {
         rearrangeColorTable(table, order);
     }
 
-    enum Shift {
+    public enum Shift {
         Left(-1,0), Right(1,0), Up(0,-1), Down(0,1);
         private int dx, dy;
         Shift(int x, int y) {
@@ -322,7 +320,7 @@ public abstract class Screen implements ImageSupplier {
         }
     }
 
-    void shift(Shift shift) {
+    public void shift(Shift shift) {
         image.shift(shift.dx, shift.dy);
         fireImageChanged();
     }
@@ -333,9 +331,9 @@ public abstract class Screen implements ImageSupplier {
 
     abstract public Map<String,Dimension> getResolutions();
 
-    abstract protected FileNameExtensionFilter getFileNameExtensionFilter();
+    abstract public FileNameExtensionFilter getFileNameExtensionFilter();
 
-    void save(ObjectOutputStream stream) throws IOException {
+    public void save(ObjectOutputStream stream) throws IOException {
         palette.savePalette(stream);
         stream.writeInt(image.SIZE_X);
         stream.writeInt(image.SIZE_Y);

@@ -2,9 +2,9 @@ package NPainter.Convert;
 
 import NPainter.NPalette;
 import NPainter.NScreen;
-import Painter.ImageSupplier;
 import Painter.Palette.ColorConverter;
 import Painter.Palette.Palette;
+import Painter.Screen.ImageSupplier;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;

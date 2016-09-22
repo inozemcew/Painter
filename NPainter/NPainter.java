@@ -3,7 +3,7 @@ package NPainter;
 import NPainter.Convert.ConvertDialog;
 import NPainter.Convert.ImageConverter;
 import Painter.PainterApp;
-import Painter.Screen;
+import Painter.Screen.Screen;
 
 import javax.imageio.ImageIO;
 import java.io.DataInputStream;

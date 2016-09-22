@@ -1,8 +1,8 @@
 package APainter;
 
-import Painter.ImageBuffer;
 import Painter.Palette.Palette;
-import Painter.Screen;
+import Painter.Screen.ImageBuffer;
+import Painter.Screen.Screen;
 import Painter.SpectrumScreen;
 
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -22,11 +22,11 @@ public class AScreen extends Screen {
     private int fontHeight = 4;
     final static int colors[] = {0x00, 0x24, 0x28, 0x2e, 0x2c, 0x2a, 0x26, 0x22};
 
-    public AScreen() {
+    AScreen() {
         this(384, 208);
     }
 
-    public AScreen(int w, int h) {
+    AScreen(int w, int h) {
         super(w, h);
         font = Font.getFont();
         int p[] = {0, 0, 0, 0, 0, 0, 0, 0};
@@ -43,8 +43,7 @@ public class AScreen extends Screen {
     protected Palette createPalette() {
         final int[] tSize = {8, 1};
         final int[] cSize = {1, 1};
-        Palette p = new Palette(2, tSize, cSize);
-        return p;
+        return new Palette(2, tSize, cSize);
     }
 
     @Override
@@ -136,11 +135,12 @@ public class AScreen extends Screen {
     }
 
     @Override
-    protected FileNameExtensionFilter getFileNameExtensionFilter() {
+    public FileNameExtensionFilter getFileNameExtensionFilter() {
         return new FileNameExtensionFilter("Apogee screen", "scra");
     }
 
-    void importSCR(SpectrumScreen scr) throws IOException {
+
+    private void importSCR(SpectrumScreen scr) throws IOException {
         byte rev[] = {0, 4, 2, 6, 1, 5, 3, 7};
         int[] bs = new int[6];
         //scr.setOffset(8,8);
@@ -178,7 +178,7 @@ class Font {
         return font[(((chr + offset) & 255) << 3) + line];
     }
 
-    static Font loadFont(InputStream is) {
+    private static Font loadFont(InputStream is) {
         Font font = new Font();
         try {
             is.read(font.font);
@@ -203,7 +203,7 @@ class Font {
 
     }
 
-    public static Font getFont() {
+    static Font getFont() {
         return singleton;
     }
 }

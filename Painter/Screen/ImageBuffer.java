@@ -1,4 +1,4 @@
-package Painter;
+package Painter.Screen;
 
 import java.io.DataInputStream;
 import java.io.IOException;

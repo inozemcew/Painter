@@ -1,4 +1,4 @@
-package Painter;
+package Painter.Screen;
 
 import Painter.Palette.Palette;
 

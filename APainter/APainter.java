@@ -3,7 +3,7 @@ package APainter;
 import Painter.InterlacedView;
 import Painter.PainterApp;
 import Painter.Palette.ColorConverter;
-import Painter.Screen;
+import Painter.Screen.Screen;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -33,7 +33,7 @@ public class APainter extends PainterApp {
         view.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                screen.setAttr(paintArea.getColorIndex(AScreen.Table.Fore));
+                screen.setAttr(paintArea.getCurrentColorIndex(AScreen.Table.Fore));
                 paintArea.getClipCell().setLocation(screen,e.getX()/view.getScale(),e.getY()/view.getScale());
             }
         });

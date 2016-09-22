@@ -1,7 +1,8 @@
 package NPainter;
 
 import Painter.Palette.Palette;
-import Painter.Screen;
+import Painter.Screen.ImageBuffer;
+import Painter.Screen.Screen;
 
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
@@ -19,12 +20,7 @@ import java.util.function.Consumer;
 public class NScreen extends Screen {
 
 
-
-    public enum Table {INK, PAPER;}
-    @Override
-    protected Palette createPalette() {
-        return new NPalette();
-    }
+    public enum Table {INK, PAPER}
 
     @Override
     final protected void setGridFactor() {
@@ -38,40 +34,13 @@ public class NScreen extends Screen {
     }
 
     @Override
-    public void importSCR(InputStream stream) throws IOException {
-        byte[] pix = new byte[2048 * 3];
-        byte[] attr = new byte[768];
-        stream.read(pix);
-        stream.read(attr);
-        ByteArrayOutputStream as = new ByteArrayOutputStream(256 * 192 + 32 * 24);
-        boolean bright;
-        for (int x = 0; x < 256; x++) {
-            byte[] buf = new byte[192];
-            for (int y = 0; y < 192; y++) {
-                byte a = attr[(y & 0xf8) * 4 + x / 8];
-                bright = (a & 0x40) != 0;
-                int b = pix[(x >> 3) + 256 * (y & 7) + 4 * (y & 0x38) + 32 * (y & 0xc0)] >> (7 - (x & 7));
-                byte p = (byte) ((b & 1) * 2 + (bright ? 0 : 1));
-                if ((a & 7) == 0 && p == 3) p = 2;
-                if ((a & 0x38) == 0 && p == 1) p = 0;
-                buf[y] = p;
-            }
-            as.write(buf);
-        }
-        for (int x = 0; x < 32; x++) {
-            byte[] buf = new byte[24];
-            for (int y = 0; y < 24; y++) {
-                byte a = attr[x + 32 * y];
-                buf[y] = (byte) (a & 0x3f);
-            }
-            as.write(buf);
-        }
-        image.load(new ByteArrayInputStream(as.toByteArray()));
+    protected ImageBuffer createImageBuffer(int w, int h) {
+        return new ImageBuffer(w,h,8,8);
+    }
 
-        int[] ink = {0x00, 0x14, 0x18, 0x1e, 0x1c, 0x1a, 0x16, 0x12};
-        for (int i = 1; i < 8; i++) ink[i] += (ink[i] + 0x10) << 6;
-        palette.setPalette(ink, ink);
-
+    @Override
+    protected Palette createPalette() {
+        return new NPalette();
     }
 
     public enum Mode {
@@ -94,7 +63,7 @@ public class NScreen extends Screen {
 
     public NScreen() {
         super();
-        mode = Mode.Color6;
+        mode = Mode.ColorX;
     }
 
     public static int paperFromAttr(byte attr) { return (attr >> 3) & 7; }
@@ -220,11 +189,71 @@ public class NScreen extends Screen {
 
     @Override
     protected byte pixelFromDesc(Pixel pixel, byte oldPixel, int x, int y) {
-        byte s;
-        if (pixel.table == Table.INK) s = 2;
-        else s = 0;
-        s = (byte) (pixel.shift | s);
-        return s;
+        return  (byte) (pixel.shift | ((pixel.table == Table.INK) ? 2 : 0) );
+    }
+
+    @Override
+    public void setPixel(int x, int y, Pixel pixel) {
+        Pixel p = pixel;
+        if (mode == Mode.ColorX) {
+            int xx = x ^ 1;
+            if (isInImage(x, y)) {
+                byte a =  getAttr(x, y);
+                if (pixel.index >= 0)
+                    a = attrFromDesc(pixel, a);
+
+                byte b = -1;
+                final byte sibling = getPixelData(xx, y);
+                final byte oldPixel = getPixelData(x, y);
+                if (pixel.table == Table.PAPER && pixel.shift == 3) {
+                    if ((x & 1) == 0) {
+                        p = new Pixel(Table.PAPER, p.index, 1);
+                        b = 3;
+                    } else {
+                        p = new Pixel(Table.INK, -1, 1);
+                        b = 1;
+                    }
+                } else if (pixel.table == Table.PAPER && pixel.shift == 2 ) {
+                    if (sibling == 0 // s.paper=0
+                            || (oldPixel==1 && sibling == 2 ) // o.paper=1 & s.ink=0
+                            )  {
+                        p = new Pixel(Table.PAPER, p.index, 1); //n.paper = 1
+                        b = 2;                                  //s.ink = 0
+                    } else {
+                        if ((x & 1) == 1) {
+                            p = new Pixel(Table.PAPER, p.index, 1);
+                            b = 3;
+                        } else {
+                            p = new Pixel(Table.INK, -1, 1);
+                            b = 1;
+                        }
+                    }
+                } else if (oldPixel==2 && sibling==1) {
+                    if (p.table == Table.PAPER && p.shift == 0) {
+                        b=1;
+                        p=new Pixel(Table.INK, -1,0);
+                    } else {
+                        b=pixelFromDesc(p,b,x,y);
+                    }
+                } else if (oldPixel==1 && sibling==2) {
+                        b=0;
+                } else if ((oldPixel==1 && sibling==3) || (oldPixel==3 && sibling==1)) {
+                    if (p.table == Table.PAPER && p.shift == 0) {
+                        b = 1;
+                        p = new Pixel(Table.INK,-1,0);
+                    } else {
+                        b = pixelFromDesc(p, b, x, y);
+                    }
+                }
+
+                if (b>=0) {
+                    //byte b = pixelFromDesc(pixel, getPixelData(x, y), x, y);
+                    undo.add(xx, y, sibling, getAttr(xx, y), b, a);
+                    putPixelData(xx, y, b, a);
+                }
+            }
+        }
+        super.setPixel(x, y, p);
     }
 
     @Override
@@ -248,7 +277,7 @@ public class NScreen extends Screen {
     }
 
     @Override
-    protected FileNameExtensionFilter getFileNameExtensionFilter() {
+    public FileNameExtensionFilter getFileNameExtensionFilter() {
         return new FileNameExtensionFilter("New screen", "scrn");
     }
 
@@ -327,4 +356,42 @@ public class NScreen extends Screen {
         endDraw();
         fireImageChanged();
     }
+
+    @Override
+    public void importSCR(InputStream stream) throws IOException {
+        byte[] pix = new byte[2048 * 3];
+        byte[] attr = new byte[768];
+        stream.read(pix);
+        stream.read(attr);
+        ByteArrayOutputStream as = new ByteArrayOutputStream(256 * 192 + 32 * 24);
+        boolean bright;
+        for (int x = 0; x < 256; x++) {
+            byte[] buf = new byte[192];
+            for (int y = 0; y < 192; y++) {
+                byte a = attr[(y & 0xf8) * 4 + x / 8];
+                bright = (a & 0x40) != 0;
+                int b = pix[(x >> 3) + 256 * (y & 7) + 4 * (y & 0x38) + 32 * (y & 0xc0)] >> (7 - (x & 7));
+                byte p = (byte) ((b & 1) * 2 + (bright ? 0 : 1));
+                if ((a & 7) == 0 && p == 3) p = 2;
+                if ((a & 0x38) == 0 && p == 1) p = 0;
+                buf[y] = p;
+            }
+            as.write(buf);
+        }
+        for (int x = 0; x < 32; x++) {
+            byte[] buf = new byte[24];
+            for (int y = 0; y < 24; y++) {
+                byte a = attr[x + 32 * y];
+                buf[y] = (byte) (a & 0x3f);
+            }
+            as.write(buf);
+        }
+        image.load(new ByteArrayInputStream(as.toByteArray()));
+
+        int[] ink = {0x00, 0x14, 0x18, 0x1e, 0x1c, 0x1a, 0x16, 0x12};
+        for (int i = 1; i < 8; i++) ink[i] += (ink[i] + 0x10) << 6;
+        palette.setPalette(ink, ink);
+
+    }
+
 }

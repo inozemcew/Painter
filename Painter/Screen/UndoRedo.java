@@ -1,4 +1,4 @@
-package Painter;
+package Painter.Screen;
 import java.util.LinkedList;
 import java.util.Vector;
 

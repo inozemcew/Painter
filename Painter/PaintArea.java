@@ -1,5 +1,8 @@
 package Painter;
 
+import Painter.Screen.ImageSupplier;
+import Painter.Screen.Screen;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -127,7 +130,7 @@ public class PaintArea extends JComponent implements Scrollable {
         currentColors[table] = index;
     }
 
-    public int getColorIndex(Enum table) {
+    public int getCurrentColorIndex(Enum table) {
         return currentColors[table.ordinal()];
     }
 
@@ -158,9 +161,10 @@ public class PaintArea extends JComponent implements Scrollable {
         private Screen.Pixel getPixelByEvent(int button) {
             byte p;
             if ((button & MouseEvent.SHIFT_DOWN_MASK) == 0) p = 0; else p = 1;
+            if ((button & MouseEvent.CTRL_DOWN_MASK) != 0) p += 2;
             final int b = button & MouseEvent.BUTTON1_DOWN_MASK;
             Enum t = screen.mapColorTable((b != 0) ? 0 : 1);
-            return new Screen.Pixel(t, getColorIndex(t), p);
+            return new Screen.Pixel(t, getCurrentColorIndex(t), p);
         }
 
         private boolean isInSameCell(Point p) {
@@ -189,7 +193,7 @@ public class PaintArea extends JComponent implements Scrollable {
             }
         }
 
-        protected boolean isFillMode(int button) {
+        boolean isFillMode(int button) {
             return mode == Mode.Fill && (button == MouseEvent.BUTTON1 || button == MouseEvent.BUTTON3);
         }
 
@@ -207,6 +211,7 @@ public class PaintArea extends JComponent implements Scrollable {
             } else {
                 button = e.getModifiersEx()
                         & (MouseEvent.SHIFT_DOWN_MASK
+                        | MouseEvent.CTRL_DOWN_MASK
                         | MouseEvent.BUTTON1_DOWN_MASK
                         | MouseEvent.BUTTON3_DOWN_MASK);
                 doSetPixel(e);
@@ -225,12 +230,10 @@ public class PaintArea extends JComponent implements Scrollable {
 
         @Override
         public void mouseDragged(MouseEvent e) {
-            if ((e.getModifiersEx() & MouseEvent.CTRL_DOWN_MASK) == 0) {
-                if ((e.getModifiersEx() & MouseEvent.SHIFT_DOWN_MASK) == 0 && isMiddleMouseButton(e)) {
-                    if (!isInSameCell(e.getPoint()))
-                        screen.copyCell(clipCell.getScreen(), clipCell.getX(), clipCell.getY(), e.getX() / scale, e.getY() / scale);
-                } else if (!pos.equals(e.getPoint())) doDrawLine(e);
-            }
+            if ((e.getModifiersEx() & MouseEvent.SHIFT_DOWN_MASK) == 0 && isMiddleMouseButton(e)) {
+                if (!isInSameCell(e.getPoint()))
+                    screen.copyCell(clipCell.getScreen(), clipCell.getX(), clipCell.getY(), e.getX() / scale, e.getY() / scale);
+            } else if (!pos.equals(e.getPoint())) doDrawLine(e);
             pos.setLocation(e.getPoint());
         }
 

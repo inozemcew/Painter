@@ -5,7 +5,7 @@ import Painter.InterlacedView;
 import Painter.Palette.ChangeAdapter;
 import Painter.Palette.Palette;
 import Painter.Palette.PaletteToolPanel;
-import Painter.Screen;
+import Painter.Screen.Screen;
 
 import javax.swing.*;
 import javax.swing.table.AbstractTableModel;

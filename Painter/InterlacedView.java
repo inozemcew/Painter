@@ -1,5 +1,7 @@
 package Painter;
 
+import Painter.Screen.ImageSupplier;
+
 import javax.swing.*;
 import java.awt.*;
 
