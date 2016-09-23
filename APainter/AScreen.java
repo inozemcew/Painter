@@ -35,8 +35,8 @@ public class AScreen extends Screen {
     @Override
     final protected void setFactors() {
         GRID_FACTOR.setSize(6,4);
-        PIXEL_FACTOR.setSize(6,4);
-        ATTR_FACTOR.setSize(6,4);
+        pixelFactor.setSize(6,4);
+        attrFactor.setSize(6,4);
     }
 
     @Override
@@ -64,9 +64,12 @@ public class AScreen extends Screen {
 
     @Override
     public Pixel getPixelDescriptor(int x, int y) {
-        byte b = image.getPixel(x, y);
+        final int xx = x / pixelFactor.width;
+        final int yy = y / pixelFactor.height;
+
+        byte b = getPixelData(xx, yy);
         byte c = font.getRasterLine(b, y % fontHeight);
-        byte attr = image.getAttr(x, y);
+        byte attr = getAttr(xx, yy);
         boolean isPaper = ((c & (32 >> (x % 6))) == 0);
         if (isPaper) return new Pixel(Table.Back, 0, 0);
         return new Pixel(Table.Fore, attr, 0);

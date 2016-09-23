@@ -21,8 +21,8 @@ public abstract class Screen implements ImageSupplier {
     protected final UndoRedo undo = new UndoRedo();
     protected int[] enhancedColors;
     protected Dimension GRID_FACTOR = new Dimension();
-    protected Dimension PIXEL_FACTOR = new Dimension();
-    protected Dimension ATTR_FACTOR = new Dimension();
+    protected Dimension pixelFactor = new Dimension();
+    protected Dimension attrFactor = new Dimension();
 
     private int locked = 0;
 
@@ -39,7 +39,7 @@ public abstract class Screen implements ImageSupplier {
     }
 
     protected ImageBuffer createImageBuffer(int w, int h) {
-        return new ImageBuffer(w, h, PIXEL_FACTOR, ATTR_FACTOR);
+        return new ImageBuffer(w, h, pixelFactor, attrFactor);
     }
 
     abstract protected Palette createPalette();
@@ -48,7 +48,7 @@ public abstract class Screen implements ImageSupplier {
 
     public Dimension getGridFactor() {
         return GRID_FACTOR;
-    };
+    }
 
     @Override
     public void addChangeListener(ImageChangeListener listener) {
@@ -58,12 +58,12 @@ public abstract class Screen implements ImageSupplier {
 
     @Override // in ImageSupplier
     public int getImageHeight() {
-        return image.SIZE_Y * PIXEL_FACTOR.height;
+        return image.SIZE_Y * pixelFactor.height;
     }
 
     @Override // in ImageSupplier
     public int getImageWidth() {
-        return image.SIZE_X * PIXEL_FACTOR.width;
+        return image.SIZE_X * pixelFactor.width;
     }
 
     @Override
@@ -145,16 +145,29 @@ public abstract class Screen implements ImageSupplier {
     abstract protected  byte pixelFromDesc(Pixel pixel, byte oldPixel, int x, int y);
 
     protected byte getPixelData(int x, int y) {
-        return image.getPixel(x,y);
+        final int xx = x / pixelFactor.width;
+        final int yy = y / pixelFactor.height;
+        return image.getPixel(xx,yy);
     }
 
     protected byte getAttr(int x, int y) {
-        return image.getAttr(x, y);
+        final int xx = x / pixelFactor.width;
+        final int yy = y / pixelFactor.height;
+        return image.getAttr(xx, yy);
     }
 
     protected void putPixelData(int x, int y, byte pixel, byte attr) {
-        image.putPixel(x, y, pixel, attr);
+        final int xx = x / pixelFactor.width;
+        final int yy = y / pixelFactor.height;
+        image.putPixel(xx, yy, pixel, attr);
     }
+
+    protected void putPixelData(int x, int y, byte pixel) {
+        final int xx = x / pixelFactor.width;
+        final int yy = y / pixelFactor.height;
+        image.putPixel(xx, yy, pixel);
+    }
+
 
     public void setPixel(int x, int y, Pixel pixel) {
         if (isInImage(x, y)) {

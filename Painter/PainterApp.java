@@ -245,7 +245,7 @@ public abstract class PainterApp extends JFrame {
 
     private void saveAs() {
         fileChooser.setDialogTitle("Save As");
-        FileNameExtensionFilter filter = new FileNameExtensionFilter("New screen", "scrn");
+        FileNameExtensionFilter filter = screen.getFileNameExtensionFilter();
         fileChooser.resetChoosableFileFilters();
         fileChooser.addChoosableFileFilter(filter);
         fileChooser.setFileFilter(filter);

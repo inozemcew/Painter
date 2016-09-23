@@ -12,15 +12,15 @@ import java.io.OutputStream;
  */
 public class ImageBuffer {
     public final int SIZE_X, SIZE_Y;
-    private final Dimension pixelFactor;
+    //private final Dimension pixelFactor;
     private final int ATTR_SIZE_X, ATTR_SIZE_Y;
     private final int ATTR_FACTOR_X, ATTR_FACTOR_Y;
     private byte pixbuf[][], attrbuf[][];
 
     public ImageBuffer(int sizeX, int sizeY, Dimension pixelFactor, Dimension attrFactor) {
-        this.pixelFactor = new Dimension(pixelFactor);
-        this.SIZE_X = sizeX / this.pixelFactor.width;
-        this.SIZE_Y = sizeY / this.pixelFactor.height;
+        //this.pixelFactor = new Dimension(pixelFactor);
+        this.SIZE_X = sizeX / pixelFactor.width;
+        this.SIZE_Y = sizeY / pixelFactor.height;
         this.ATTR_FACTOR_X = attrFactor.width / pixelFactor.width;
         this.ATTR_FACTOR_Y = attrFactor.height / pixelFactor.height;
         this.ATTR_SIZE_X = SIZE_X / ATTR_FACTOR_X;
@@ -34,28 +34,20 @@ public class ImageBuffer {
     }
 
     public byte getPixel(int x, int y) {
-        final int xx = x / pixelFactor.width;
-        final int yy = y / pixelFactor.height;
-        return (xx >= 0 && xx < SIZE_X && yy >= 0 && yy < SIZE_Y) ? pixbuf[xx][yy] : -1;
+        return (x >= 0 && x < SIZE_X && y >= 0 && y < SIZE_Y) ? pixbuf[x][y] : -1;
     }
 
     public byte getAttr(int x, int y) {
-        final int xx = x / pixelFactor.width;
-        final int yy = y / pixelFactor.height;
-        return attrbuf[xx / ATTR_FACTOR_X][yy / ATTR_FACTOR_Y];
+        return attrbuf[x / ATTR_FACTOR_X][y / ATTR_FACTOR_Y];
     }
 
     public void putPixel(int x, int y, byte pixel) {
-        final int xx = x / pixelFactor.width;
-        final int yy = y / pixelFactor.height;
-        this.pixbuf[xx][yy] = pixel;
+        this.pixbuf[x][y] = pixel;
     }
 
     public void putPixel(int x, int y, byte pixel, byte attr) {
         putPixel(x, y, pixel);
-        final int xx = x / pixelFactor.width;
-        final int yy = y / pixelFactor.height;
-        this.attrbuf[xx / ATTR_FACTOR_X][yy / ATTR_FACTOR_Y] = attr;
+        this.attrbuf[x / ATTR_FACTOR_X][y / ATTR_FACTOR_Y] = attr;
     }
 
     void shift (int dx, int dy) {

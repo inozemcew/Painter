@@ -24,8 +24,8 @@ public class NScreen extends Screen {
     @Override
     final protected void setFactors() {
         GRID_FACTOR.setSize(8,8);
-        PIXEL_FACTOR.setSize(1,1);
-        ATTR_FACTOR.setSize(8,8);
+        pixelFactor.setSize(1,1);
+        attrFactor.setSize(8,8);
     }
 
     @Override
@@ -113,11 +113,11 @@ public class NScreen extends Screen {
 */
     @Override
     public Color getPixelColor(int x, int y) {
-        int xx = x & 0xfffe;
-        byte attr = image.getAttr(x, y);
-        int pix1 = image.getPixel(xx, y);
-        int pix2 = image.getPixel(xx+1, y);
-        int pix = (x==xx) ? pix1 : pix2;
+        int x1 = x & 0xfffe;
+        byte attr = getAttr(x, y);
+        int pix1 = getPixelData(x1, y);
+        int pix2 = getPixelData(x1+1, y);
+        int pix = (x==x1) ? pix1 : pix2;
 
         if (mode == Mode.Color5) {
             if ((pix1 ^ pix2) == 1 && (pix1 & pix2)>1)
@@ -154,10 +154,10 @@ public class NScreen extends Screen {
     @Override
     public Status getStatus(int x, int y) {
         if (enhancedColors[0] ==-1 && enhancedColors[1] == -1) return Status.Normal;
-        byte attr = image.getAttr(x,y);
+        byte attr = getAttr(x,y);
         int ink = inkFromAttr(attr);
         int paper = paperFromAttr(attr);
-        int pix = image.getPixel(x,y);
+        int pix = getPixelData(x,y);
         if (pix<2)
             return (paper == enhancedColors[Table.PAPER.ordinal()]) ? Status.Enhanced : Status.Dimmed;
         else
@@ -166,8 +166,8 @@ public class NScreen extends Screen {
 
     @Override
     public Pixel getPixelDescriptor(int x, int y) {
-        int v = image.getPixel(x, y);
-        byte attr = image.getAttr(x, y);
+        int v = getPixelData(x, y);
+        byte attr = getAttr(x, y);
         return new Pixel((v<2)? Table.PAPER: Table.INK,
                 (v < 2) ? paperFromAttr(attr): inkFromAttr(attr),
                 v & 1);
@@ -383,11 +383,11 @@ public class NScreen extends Screen {
             beginDraw();
             for (int y = 0; y < getImageHeight(); y++) {
                 for (int x = 0; x < getImageWidth(); x += 2) {
-                    byte b1 = image.getPixel(x, y);
-                    byte b2 = image.getPixel(x + 1, y);
+                    byte b1 = getPixelData(x, y);
+                    byte b2 = getPixelData(x + 1, y);
                     if ((b1 == 2 && b2 == 1) || (b1 == 1 && b2 == 2)) {
-                        image.putPixel(x, y, b2);
-                        image.putPixel(x + 1, y, b1);
+                        putPixelData(x, y, b2);
+                        putPixelData(x + 1, y, b1);
                     }
                 }
 
