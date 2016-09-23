@@ -92,6 +92,7 @@ public class PaintArea extends JComponent implements Scrollable {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         Rectangle c = g.getClipBounds();
+        Dimension gf = screen.getGridFactor();
 
         final int mx = Integer.min((c.x + c.width) / scale, screen.getImageWidth());
         final int my = Integer.min((c.y + c.height) / scale, screen.getImageHeight());
@@ -103,8 +104,8 @@ public class PaintArea extends JComponent implements Scrollable {
                 g.fillRect(xx, yy, scale, scale);
                 if (scale > 7) {
                     g.setColor(gridColor);
-                    if (x % screen.GRID_FACTOR_X == 0) g.drawLine(xx, yy, xx, yy + scale - 1);
-                    if (y % screen.GRID_FACTOR_Y == 0) g.drawLine(xx, yy, xx + scale - 1, yy);
+                    if (x % gf.width == 0) g.drawLine(xx, yy, xx, yy + scale - 1);
+                    if (y % gf.height == 0) g.drawLine(xx, yy, xx + scale - 1, yy);
                 }
             }
         }
@@ -168,8 +169,9 @@ public class PaintArea extends JComponent implements Scrollable {
         }
 
         private boolean isInSameCell(Point p) {
-            int fx = scale * screen.GRID_FACTOR_X;
-            int fy = scale * screen.GRID_FACTOR_Y;
+            Dimension gf = screen.getGridFactor();
+            int fx = scale * gf.width;
+            int fy = scale * gf.height;
             return (pos.x/fx == p.x/fx) && (pos.y/fy == p.y/fy);
         }
 

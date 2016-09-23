@@ -15,12 +15,12 @@ public class CharScreen extends AScreen {
         final byte bAttr = 1;
         final byte bChr = 63;
         byte i = 0;
-        for (int y = 0; y < SIZE_Y; y += GRID_FACTOR_Y*2) {
-            for (int x = 0; x < SIZE_X; x += GRID_FACTOR_X*2) {
+        for (int y = 0; y < SIZE_Y; y += GRID_FACTOR.height*2) {
+            for (int x = 0; x < SIZE_X; x += GRID_FACTOR.width*2) {
                 putPixelData(x, y, i++, attr);
-                putPixelData(x+GRID_FACTOR_X, y, bChr, bAttr);
-                putPixelData(x, y+GRID_FACTOR_Y, bChr, bAttr);
-                putPixelData(x+GRID_FACTOR_X, y+GRID_FACTOR_Y, bChr, bAttr);
+                putPixelData(x+GRID_FACTOR.width, y, bChr, bAttr);
+                putPixelData(x, y+GRID_FACTOR.height, bChr, bAttr);
+                putPixelData(x+GRID_FACTOR.width, y+GRID_FACTOR.height, bChr, bAttr);
             }
         }
     }

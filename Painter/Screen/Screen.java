@@ -20,7 +20,9 @@ public abstract class Screen implements ImageSupplier {
     private Collection<ImageChangeListener> listeners = new ArrayList<>();
     protected final UndoRedo undo = new UndoRedo();
     protected int[] enhancedColors;
-    public int GRID_FACTOR_X, GRID_FACTOR_Y;
+    protected Dimension GRID_FACTOR = new Dimension();
+    protected Dimension PIXEL_FACTOR = new Dimension();
+    protected Dimension ATTR_FACTOR = new Dimension();
 
     private int locked = 0;
 
@@ -29,23 +31,39 @@ public abstract class Screen implements ImageSupplier {
     }
 
     public Screen(int w, int h) {
-        setGridFactor();
+        setFactors();
         image = createImageBuffer(w,h);
         palette = createPalette();
         enhancedColors = new int[palette.getTablesCount()];
         resetEnhanced();
     }
 
-    protected abstract ImageBuffer createImageBuffer(int w, int h);
+    protected ImageBuffer createImageBuffer(int w, int h) {
+        return new ImageBuffer(w, h, PIXEL_FACTOR, ATTR_FACTOR);
+    }
 
     abstract protected Palette createPalette();
 
-    abstract protected void setGridFactor();
+    abstract protected void setFactors();
+
+    public Dimension getGridFactor() {
+        return GRID_FACTOR;
+    };
 
     @Override
     public void addChangeListener(ImageChangeListener listener) {
         this.listeners.add(listener);
         palette.addChangeListener(listener);
+    }
+
+    @Override // in ImageSupplier
+    public int getImageHeight() {
+        return image.SIZE_Y * PIXEL_FACTOR.height;
+    }
+
+    @Override // in ImageSupplier
+    public int getImageWidth() {
+        return image.SIZE_X * PIXEL_FACTOR.width;
     }
 
     @Override
@@ -76,16 +94,6 @@ public abstract class Screen implements ImageSupplier {
     public void setMode(Enum mode) {
         this.mode = mode;
         fireImageChanged();
-    }
-
-    @Override // in ImageSupplier
-    public int getImageHeight() {
-        return image.SIZE_Y;
-    }
-
-    @Override // in ImageSupplier
-    public int getImageWidth() {
-        return image.SIZE_X;
     }
 
     public Palette getPalette() {
@@ -156,7 +164,7 @@ public abstract class Screen implements ImageSupplier {
             byte b = pixelFromDesc(pixel, getPixelData(x, y), x, y);
             undo.add(x, y, getPixelData(x, y), getAttr(x, y), b, a);
             putPixelData(x, y, b, a);
-            fireImageChanged(alignX(x), alignY(y), GRID_FACTOR_X, GRID_FACTOR_Y);
+            fireImageChanged(alignX(x), alignY(y), GRID_FACTOR.width, GRID_FACTOR.height);
         }
     }
 
@@ -181,17 +189,17 @@ public abstract class Screen implements ImageSupplier {
             int sx, sy, w, h;
             if (ox < x) {
                 sx = alignX(ox);
-                w = alignX(x) + GRID_FACTOR_X - sx;
+                w = alignX(x) + GRID_FACTOR.width - sx;
             } else {
                 sx = alignX(x);
-                w = alignX(ox) + GRID_FACTOR_X - sx;
+                w = alignX(ox) + GRID_FACTOR.width - sx;
             }
             if (oy < y) {
                 sy = alignY(oy);
-                h = alignY(y) + GRID_FACTOR_Y - sy;
+                h = alignY(y) + GRID_FACTOR.height - sy;
             } else {
                 sy = alignY(y);
-                h = alignY(oy) + GRID_FACTOR_Y - sy;
+                h = alignY(oy) + GRID_FACTOR.height - sy;
             }
             unlock();
             fireImageChanged(sx, sy, w, h);
@@ -250,8 +258,8 @@ public abstract class Screen implements ImageSupplier {
             lock();
             beginDraw();
             byte a = source.getAttr(fxx, fyy);
-            for (int x = 0; x < GRID_FACTOR_X; x++) {
-                for (int y = 0; y < GRID_FACTOR_Y; y++) {
+            for (int x = 0; x < GRID_FACTOR.width; x++) {
+                for (int y = 0; y < GRID_FACTOR.height; y++) {
                     byte b = source.getPixelData(fxx + x, fyy + y);
                     undo.add(txx + x, tyy + y,getPixelData(txx + x, tyy + y),getAttr(txx + x, tyy + y),b,a);
                     putPixelData(txx + x, tyy + y, b, a);
@@ -259,16 +267,16 @@ public abstract class Screen implements ImageSupplier {
             }
             endDraw();
             unlock();
-            fireImageChanged(txx, tyy, GRID_FACTOR_X, GRID_FACTOR_Y);
+            fireImageChanged(txx, tyy, GRID_FACTOR.width, GRID_FACTOR.height);
         }
     }
 
     public int alignX(int x) {
-        return x / GRID_FACTOR_X * GRID_FACTOR_X;
+        return x / GRID_FACTOR.width * GRID_FACTOR.width;
     }
 
     public int alignY(int y) {
-        return y / GRID_FACTOR_Y * GRID_FACTOR_Y;
+        return y / GRID_FACTOR.height * GRID_FACTOR.height;
     }
 
     protected void rearrangeColorTable(int table, int[] order) {
@@ -388,5 +396,6 @@ public abstract class Screen implements ImageSupplier {
         }
 
     }
+
 }
 

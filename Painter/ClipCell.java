@@ -31,12 +31,12 @@ public class ClipCell {
 
     public void setLocation(int x, int y) {
         clip.setLocation(x, y);
+        repaint();
     }
 
     public void setLocation(Screen s,int x, int y) {
         setSource(s);
-        clip.setLocation(x, y);
-        repaint();
+        setLocation(x, y);
     }
 
     public int getX() {
@@ -65,8 +65,9 @@ public class ClipCell {
         @Override
         public void paintIcon(Component c, Graphics g, int x, int y) {
             if (screen.isInImage(clip.x, clip.y)) {
-                for (int xx = 0; xx < screen.GRID_FACTOR_X; xx++) {
-                    for (int yy = 0; yy < screen.GRID_FACTOR_Y; yy++) {
+                Dimension gf = screen.getGridFactor();
+                for (int xx = 0; xx < gf.width; xx++) {
+                    for (int yy = 0; yy < gf.height; yy++) {
                         g.setColor(screen.getPixelColor(screen.alignX(clip.x) + xx, screen.alignY(clip.y) + yy));
                         g.fillRect(x + xx * 4, y + yy * 4, 4, 4);
                     }

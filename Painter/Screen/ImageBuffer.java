@@ -1,5 +1,6 @@
 package Painter.Screen;
 
+import java.awt.*;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -11,17 +12,19 @@ import java.io.OutputStream;
  */
 public class ImageBuffer {
     public final int SIZE_X, SIZE_Y;
+    private final Dimension pixelFactor;
     private final int ATTR_SIZE_X, ATTR_SIZE_Y;
     private final int ATTR_FACTOR_X, ATTR_FACTOR_Y;
     private byte pixbuf[][], attrbuf[][];
 
-    public ImageBuffer(int sizeX, int sizeY, int factorX, int factorY) {
-        this.SIZE_X = sizeX;
-        this.SIZE_Y = sizeY;
-        this.ATTR_FACTOR_X = factorX;
-        this.ATTR_FACTOR_Y = factorY;
-        this.ATTR_SIZE_X = SIZE_X / factorX;
-        this.ATTR_SIZE_Y = SIZE_Y / factorY;
+    public ImageBuffer(int sizeX, int sizeY, Dimension pixelFactor, Dimension attrFactor) {
+        this.pixelFactor = new Dimension(pixelFactor);
+        this.SIZE_X = sizeX / this.pixelFactor.width;
+        this.SIZE_Y = sizeY / this.pixelFactor.height;
+        this.ATTR_FACTOR_X = attrFactor.width / pixelFactor.width;
+        this.ATTR_FACTOR_Y = attrFactor.height / pixelFactor.height;
+        this.ATTR_SIZE_X = SIZE_X / ATTR_FACTOR_X;
+        this.ATTR_SIZE_Y = SIZE_Y / ATTR_FACTOR_Y;
         this.pixbuf = createPixbuf();
         this.attrbuf = new byte[ATTR_SIZE_X][ATTR_SIZE_Y];
     }
@@ -31,20 +34,28 @@ public class ImageBuffer {
     }
 
     public byte getPixel(int x, int y) {
-        return (x >= 0 && x < SIZE_X && y >= 0 && y < SIZE_Y) ? pixbuf[x][y] : -1;
+        final int xx = x / pixelFactor.width;
+        final int yy = y / pixelFactor.height;
+        return (xx >= 0 && xx < SIZE_X && yy >= 0 && yy < SIZE_Y) ? pixbuf[xx][yy] : -1;
     }
 
     public byte getAttr(int x, int y) {
-        return attrbuf[x / ATTR_FACTOR_X][y / ATTR_FACTOR_Y];
+        final int xx = x / pixelFactor.width;
+        final int yy = y / pixelFactor.height;
+        return attrbuf[xx / ATTR_FACTOR_X][yy / ATTR_FACTOR_Y];
     }
 
     public void putPixel(int x, int y, byte pixel) {
-        this.pixbuf[x][y] = pixel;
+        final int xx = x / pixelFactor.width;
+        final int yy = y / pixelFactor.height;
+        this.pixbuf[xx][yy] = pixel;
     }
 
     public void putPixel(int x, int y, byte pixel, byte attr) {
         putPixel(x, y, pixel);
-        this.attrbuf[x / ATTR_FACTOR_X][y / ATTR_FACTOR_Y] = attr;
+        final int xx = x / pixelFactor.width;
+        final int yy = y / pixelFactor.height;
+        this.attrbuf[xx / ATTR_FACTOR_X][yy / ATTR_FACTOR_Y] = attr;
     }
 
     void shift (int dx, int dy) {

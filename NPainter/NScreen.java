@@ -1,7 +1,6 @@
 package NPainter;
 
 import Painter.Palette.Palette;
-import Painter.Screen.ImageBuffer;
 import Painter.Screen.Screen;
 
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -23,19 +22,15 @@ public class NScreen extends Screen {
     public enum Table {INK, PAPER}
 
     @Override
-    final protected void setGridFactor() {
-        GRID_FACTOR_Y = 8;
-        GRID_FACTOR_X = 8;
+    final protected void setFactors() {
+        GRID_FACTOR.setSize(8,8);
+        PIXEL_FACTOR.setSize(1,1);
+        ATTR_FACTOR.setSize(8,8);
     }
 
     @Override
     public Table mapColorTable(int table) {
         return Table.values()[table];
-    }
-
-    @Override
-    protected ImageBuffer createImageBuffer(int w, int h) {
-        return new ImageBuffer(w,h,8,8);
     }
 
     @Override
@@ -282,82 +277,6 @@ public class NScreen extends Screen {
     }
 
     @Override
-    public  Map<String, Consumer<Integer[]>> getSpecialMethods() {
-        Map<String, Consumer<Integer[]>> m = new HashMap<>();
-        final int ink = Table.INK.ordinal();
-        final int paper = Table.PAPER.ordinal();
-        m.put("Flip ink",   (i) -> flipColorCell(Table.INK,     i[ink]));
-        m.put("Flip paper", (i) -> flipColorCell(Table.PAPER,   i[paper]));
-        m.put("Flip all inks", (dummy) -> {
-            for (int i =0; i < palette.getColorsCount(Table.INK); i++) flipColorCell(Table.INK, i);
-        });
-        m.put("Flip all papers",(dummy) -> {
-            for (int i =0; i < palette.getColorsCount(Table.PAPER); i++) flipColorCell(Table.PAPER, i);
-        });
-        m.put("Inverse palette", (dummy) -> inverseColors());
-        m.put("Swap ink0 <-> paper0", (c) -> swapInkPaper(c[ink], c[paper], 0));
-        m.put("Swap ink1 <-> paper1", (c) -> swapInkPaper(c[ink], c[paper], 1));
-        m.put("Correct X mode", (dummy) -> correctXMode());
-        return m;
-    }
-
-    private void flipColorCell(Table table, int index){
-        image.forEachPixel( (x, y, b, a) -> {
-            if (table == Table.INK)
-                return (byte) (inkFromAttr(a) == index && b >= 2 ? 5 - b : b);
-            else
-                return (byte) (paperFromAttr(a) == index && b < 2 ? 1 - b : b);
-        });
-        int c = palette.getColorCell(table, index);
-        palette.setColorCell(Palette.combine(Palette.second(c),Palette.first(c)), table,index);
-    }
-
-    private void inverseColors() {
-        image.forEachPixel((x, y, b, a) -> (byte) (b ^ 2));
-        image.forEachAttr((x, y, b) -> (byte) (((b & 7) << 3) | ((b >> 3) & 7)));
-        int l = Integer.min(palette.getColorsCount(Table.INK), palette.getColorsCount(Table.PAPER));
-        for (int i = 0; i < l; i++) {
-            int ink = palette.getColorCell(Table.INK,i);
-            int paper = palette.getColorCell(Table.PAPER,i);
-            palette.setColorCell(ink, Table.PAPER,i);
-            palette.setColorCell(paper, Table.INK, i);
-        }
-    }
-
-    private void swapInkPaper(int ink, int paper, int shift) {
-        beginDraw();
-        image.forEachPixel((x, y, b, a) -> {
-            final boolean f = (inkFromAttr(a) == ink && paperFromAttr(a) == paper && (b&1) == shift);
-            if (f) undo.add(x, y, b, a, (byte) (b ^ 2), a);
-            return (byte) (f ? b ^ 2 : b);
-        });
-        int i = palette.getColorCell(Table.INK, ink);
-        int i1 = Palette.split(i, shift);
-        int p = palette.getColorCell(Table.PAPER, paper);
-        int p1 = Palette.split(p, shift);
-        palette.setColorCell(Palette.replace(i, p1, shift), Table.INK, ink);
-        palette.setColorCell(Palette.replace(p, i1, shift), Table.PAPER, paper);
-        endDraw();
-    }
-
-    private void correctXMode() {
-        beginDraw();
-        for (int y = 0; y < getImageHeight(); y++) {
-            for (int x = 0; x < getImageWidth(); x+=2) {
-                byte b1 = image.getPixel(x,y);
-                byte b2 = image.getPixel(x+1,y);
-                if ((b1==2 && b2==1) || (b1==1 && b2==2)) {
-                    image.putPixel(x, y, b2);
-                    image.putPixel(x + 1, y, b1);
-                }
-            }
-
-        }
-        endDraw();
-        fireImageChanged();
-    }
-
-    @Override
     public void importSCR(InputStream stream) throws IOException {
         byte[] pix = new byte[2048 * 3];
         byte[] attr = new byte[768];
@@ -391,6 +310,91 @@ public class NScreen extends Screen {
         int[] ink = {0x00, 0x14, 0x18, 0x1e, 0x1c, 0x1a, 0x16, 0x12};
         for (int i = 1; i < 8; i++) ink[i] += (ink[i] + 0x10) << 6;
         palette.setPalette(ink, ink);
+
+    }
+
+    SpecialMethods specialMethods = new SpecialMethods();
+
+    @Override
+    public Map<String, Consumer<Integer[]>> getSpecialMethods() {
+        return specialMethods.getList();
+    }
+
+    private class SpecialMethods {
+
+        Map<String, Consumer<Integer[]>> getList() {
+            Map<String, Consumer<Integer[]>> m = new HashMap<>();
+            final int ink = Table.INK.ordinal();
+            final int paper = Table.PAPER.ordinal();
+            m.put("Flip ink", (i) -> flipColorCell(Table.INK, i[ink]));
+            m.put("Flip paper", (i) -> flipColorCell(Table.PAPER, i[paper]));
+            m.put("Flip all inks", (dummy) -> {
+                for (int i = 0; i < palette.getColorsCount(Table.INK); i++) flipColorCell(Table.INK, i);
+            });
+            m.put("Flip all papers", (dummy) -> {
+                for (int i = 0; i < palette.getColorsCount(Table.PAPER); i++) flipColorCell(Table.PAPER, i);
+            });
+            m.put("Inverse palette", (dummy) -> inverseColors());
+            m.put("Swap ink0 <-> paper0", (c) -> swapInkPaper(c[ink], c[paper], 0));
+            m.put("Swap ink1 <-> paper1", (c) -> swapInkPaper(c[ink], c[paper], 1));
+            m.put("Correct X mode", (dummy) -> correctXMode());
+            return m;
+        }
+
+        private void flipColorCell(Table table, int index) {
+            image.forEachPixel((x, y, b, a) -> {
+                if (table == Table.INK)
+                    return (byte) (inkFromAttr(a) == index && b >= 2 ? 5 - b : b);
+                else
+                    return (byte) (paperFromAttr(a) == index && b < 2 ? 1 - b : b);
+            });
+            int c = palette.getColorCell(table, index);
+            palette.setColorCell(Palette.combine(Palette.second(c), Palette.first(c)), table, index);
+        }
+
+        private void inverseColors() {
+            image.forEachPixel((x, y, b, a) -> (byte) (b ^ 2));
+            image.forEachAttr((x, y, b) -> (byte) (((b & 7) << 3) | ((b >> 3) & 7)));
+            int l = Integer.min(palette.getColorsCount(Table.INK), palette.getColorsCount(Table.PAPER));
+            for (int i = 0; i < l; i++) {
+                int ink = palette.getColorCell(Table.INK, i);
+                int paper = palette.getColorCell(Table.PAPER, i);
+                palette.setColorCell(ink, Table.PAPER, i);
+                palette.setColorCell(paper, Table.INK, i);
+            }
+        }
+
+        private void swapInkPaper(int ink, int paper, int shift) {
+            beginDraw();
+            image.forEachPixel((x, y, b, a) -> {
+                final boolean f = (inkFromAttr(a) == ink && paperFromAttr(a) == paper && (b & 1) == shift);
+                if (f) undo.add(x, y, b, a, (byte) (b ^ 2), a);
+                return (byte) (f ? b ^ 2 : b);
+            });
+            int i = palette.getColorCell(Table.INK, ink);
+            int i1 = Palette.split(i, shift);
+            int p = palette.getColorCell(Table.PAPER, paper);
+            int p1 = Palette.split(p, shift);
+            palette.setColorCell(Palette.replace(i, p1, shift), Table.INK, ink);
+            palette.setColorCell(Palette.replace(p, i1, shift), Table.PAPER, paper);
+            endDraw();
+        }
+        private void correctXMode() {
+            beginDraw();
+            for (int y = 0; y < getImageHeight(); y++) {
+                for (int x = 0; x < getImageWidth(); x += 2) {
+                    byte b1 = image.getPixel(x, y);
+                    byte b2 = image.getPixel(x + 1, y);
+                    if ((b1 == 2 && b2 == 1) || (b1 == 1 && b2 == 2)) {
+                        image.putPixel(x, y, b2);
+                        image.putPixel(x + 1, y, b1);
+                    }
+                }
+
+            }
+            endDraw();
+            fireImageChanged();
+        }
 
     }
 

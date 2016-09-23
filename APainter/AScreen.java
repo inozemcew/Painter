@@ -1,7 +1,6 @@
 package APainter;
 
 import Painter.Palette.Palette;
-import Painter.Screen.ImageBuffer;
 import Painter.Screen.Screen;
 import Painter.SpectrumScreen;
 
@@ -34,9 +33,10 @@ public class AScreen extends Screen {
     }
 
     @Override
-    final protected void setGridFactor() {
-        GRID_FACTOR_X = 6;
-        GRID_FACTOR_Y = 4;
+    final protected void setFactors() {
+        GRID_FACTOR.setSize(6,4);
+        PIXEL_FACTOR.setSize(6,4);
+        ATTR_FACTOR.setSize(6,4);
     }
 
     @Override
@@ -44,21 +44,6 @@ public class AScreen extends Screen {
         final int[] tSize = {8, 1};
         final int[] cSize = {1, 1};
         return new Palette(2, tSize, cSize);
-    }
-
-    @Override
-    protected ImageBuffer createImageBuffer(int x, int h) {
-        return new ImageBuffer(x / GRID_FACTOR_X, h / GRID_FACTOR_Y, 1, 1);
-    }
-
-    @Override
-    public int getImageHeight() {
-        return super.getImageHeight() * GRID_FACTOR_Y;
-    }
-
-    @Override
-    public int getImageWidth() {
-        return super.getImageWidth() * GRID_FACTOR_X;
     }
 
     @Override
@@ -73,34 +58,15 @@ public class AScreen extends Screen {
     }
 
     @Override
-    protected void putPixelData(int x, int y, byte pixel, byte attr) {
-        int xx = x / GRID_FACTOR_X;
-        int yy = y / GRID_FACTOR_Y;
-        image.putPixel(xx, yy, pixel, attr);
-    }
-
-    @Override
-    protected byte getPixelData(int x, int y) {
-        return super.getPixelData(x / GRID_FACTOR_X, y / GRID_FACTOR_Y);
-    }
-
-    @Override
-    protected byte getAttr(int x, int y) {
-        return super.getAttr(x / GRID_FACTOR_X, y / GRID_FACTOR_Y);
-    }
-
-    @Override
     public Status getStatus(int x, int y) {
         return Status.Normal;
     }
 
     @Override
     public Pixel getPixelDescriptor(int x, int y) {
-        final int xx = x / GRID_FACTOR_X;
-        final int yy = y / GRID_FACTOR_Y;
-        byte b = image.getPixel(xx, yy);
+        byte b = image.getPixel(x, y);
         byte c = font.getRasterLine(b, y % fontHeight);
-        byte attr = image.getAttr(xx, yy);
+        byte attr = image.getAttr(x, y);
         boolean isPaper = ((c & (32 >> (x % 6))) == 0);
         if (isPaper) return new Pixel(Table.Back, 0, 0);
         return new Pixel(Table.Fore, attr, 0);
