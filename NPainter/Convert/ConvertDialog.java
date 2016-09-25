@@ -1,6 +1,7 @@
 package NPainter.Convert;
 
 import NPainter.NScreen;
+import NPainter.PixelProcessor;
 import Painter.InterlacedView;
 import Painter.Palette.ChangeAdapter;
 import Painter.Palette.Palette;
@@ -206,7 +207,7 @@ public class ConvertDialog {
             super();
             setTitle("Image conversion - phase 2");
             setModal(true);
-            screen.setMode(NScreen.Mode.Color4);
+            screen.setPixelProcessing(PixelProcessor.MODE4);
             final InterlacedView interlacedView = new InterlacedView(screen);
             //reloadScreen();
             add(interlacedView);

@@ -47,6 +47,10 @@ public class ClipCell {
         return clip.y;
     }
 
+    public Point getPosition() {
+        return clip;
+    }
+
     public void repaint() {
         clipComponent.repaint();
     }
@@ -66,9 +70,11 @@ public class ClipCell {
         public void paintIcon(Component c, Graphics g, int x, int y) {
             if (screen.isInImage(clip.x, clip.y)) {
                 Dimension gf = screen.getGridFactor();
+                Point p = new Point();
                 for (int xx = 0; xx < gf.width; xx++) {
                     for (int yy = 0; yy < gf.height; yy++) {
-                        g.setColor(screen.getPixelColor(screen.alignX(clip.x) + xx, screen.alignY(clip.y) + yy));
+                        p.setLocation(screen.alignX(clip.x) + xx, screen.alignY(clip.y) + yy);
+                        g.setColor(screen.getPixelColor(p));
                         g.fillRect(x + xx * 4, y + yy * 4, 4, 4);
                     }
                 }

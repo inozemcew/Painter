@@ -1,6 +1,8 @@
 package APainter;
 
 import Painter.Palette.Palette;
+import Painter.Screen.Pixel;
+import Painter.Screen.PixelProcessing;
 import Painter.Screen.Screen;
 import Painter.SpectrumScreen;
 
@@ -47,21 +49,27 @@ public class AScreen extends Screen {
     }
 
     @Override
-    protected byte attrFromDesc(Pixel pixel, byte oldAttr) {
-        return (pixel.table == Table.Fore) ? (byte) pixel.index : oldAttr;
+    protected PixelProcessing createPixelProcessor() {
+        return PixelProcessor.createPixelProcessor();
     }
 
-    @Override
-    public Color getPixelColor(int x, int y) {
-        Pixel p = getPixelDescriptor(x, y);
-        return (p.table == Table.Back) ? Color.BLACK : palette.getRGBColor(Table.Fore, p.index, 0);
-    }
+    /*
+        @Override
+        protected byte attrFromDesc(Pixel pixel, byte oldAttr) {
+            return (pixel.table == Table.Fore) ? (byte) pixel.index : oldAttr;
+        }
 
+        @Override
+        public Color getPixelColor(int x, int y) {
+            Pixel p = getPixelDescriptor(x, y);
+            return (p.table == Table.Back) ? Color.BLACK : palette.getRGBColor(Table.Fore, p.index, 0);
+        }
+    */
     @Override
-    public Status getStatus(int x, int y) {
+    public Status getStatus(Point pos) {
         return Status.Normal;
     }
-
+/*
     @Override
     public Pixel getPixelDescriptor(int x, int y) {
         final int xx = x / pixelFactor.width;
@@ -74,7 +82,8 @@ public class AScreen extends Screen {
         if (isPaper) return new Pixel(Table.Back, 0, 0);
         return new Pixel(Table.Fore, attr, 0);
     }
-
+*/
+/*
     @Override
     protected byte pixelFromDesc(Pixel pixel, byte oldPixel, int x, int y) {
         int b = oldPixel;
@@ -84,7 +93,7 @@ public class AScreen extends Screen {
         else b = b & (255 - m);
         return (byte) b;
     }
-
+*/
     @Override
     public Enum mapColorTable(int table) {
         return (table == 0) ? Table.Fore : Table.Back;
@@ -135,45 +144,6 @@ public class AScreen extends Screen {
     public void importSCR(InputStream stream) throws IOException {
         SpectrumScreen scr = new SpectrumScreen(stream);
         importSCR(scr);
-    }
-}
-
-class Font {
-    private byte[] font = new byte[2048];
-    private int offset = 128;
-    private final static Font singleton = loadFont(Font.class.getResourceAsStream("/resource/Font.bin"));
-
-    byte getRasterLine(int chr, int line) {
-        return font[(((chr + offset) & 255) << 3) + line];
-    }
-
-    private static Font loadFont(InputStream is) {
-        Font font = new Font();
-        try {
-            is.read(font.font);
-        } catch (IOException e) {
-            System.err.printf("Cannot load font file %s", e.getMessage());
-        }
-        return font;
-    }
-
-    static Font loadFont(String fname) {
-        return loadFont(new File(fname));
-    }
-
-    static Font loadFont(File file) {
-        InputStream is;
-        try {
-            return loadFont(new FileInputStream(file));
-        } catch (FileNotFoundException e) {
-            System.err.printf("Font file %s is not found.", e.getMessage());
-            return new Font();
-        }
-
-    }
-
-    static Font getFont() {
-        return singleton;
     }
 }
 

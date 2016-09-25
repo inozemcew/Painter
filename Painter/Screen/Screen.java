@@ -2,6 +2,7 @@ package Painter.Screen;
 
 import Painter.Palette.Palette;
 
+import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.io.*;
@@ -16,7 +17,7 @@ import java.util.function.Consumer;
 public abstract class Screen implements ImageSupplier {
     protected ImageBuffer image;
     protected Palette palette;
-    protected Enum mode = null;
+    protected PixelProcessing pixelProcessor = null;
     private Collection<ImageChangeListener> listeners = new ArrayList<>();
     protected final UndoRedo undo = new UndoRedo();
     protected int[] enhancedColors;
@@ -34,6 +35,7 @@ public abstract class Screen implements ImageSupplier {
         setFactors();
         image = createImageBuffer(w,h);
         palette = createPalette();
+        pixelProcessor = createPixelProcessor();
         enhancedColors = new int[palette.getTablesCount()];
         resetEnhanced();
     }
@@ -45,6 +47,8 @@ public abstract class Screen implements ImageSupplier {
     abstract protected Palette createPalette();
 
     abstract protected void setFactors();
+
+    abstract protected PixelProcessing createPixelProcessor();
 
     public Dimension getGridFactor() {
         return GRID_FACTOR;
@@ -67,12 +71,21 @@ public abstract class Screen implements ImageSupplier {
     }
 
     @Override
-    abstract public Color getPixelColor(int x, int y) ;
+    public Color getPixelColor(Point pos){
+        Pixel pixel = getPixel(pos);
+        return pixelProcessor.getPixelColor(pixel, pos, palette);
+    }
+
+    public Pixel getPixel(Point pos) {
+        byte data = getPixelData(pos);
+        byte attr = getAttr(pos);
+        return pixelProcessor.unpackPixel(data, attr, pos);
+    }
 
     @Override
-    abstract public ImageSupplier.Status getStatus(int x, int y);
+    abstract public ImageSupplier.Status getStatus(Point pos);
 
-    abstract public Pixel getPixelDescriptor(int x, int y);
+    //abstract public Pixel getPixelDescriptor(Point pos);
 
     abstract public Enum mapColorTable(int table);
 
@@ -87,12 +100,12 @@ public abstract class Screen implements ImageSupplier {
         setEnhanced(e);
     }
 
-    public Enum getMode() {
-        return mode;
+    public PixelProcessing getPixelProcessor() {
+        return pixelProcessor;
     }
 
-    public void setMode(Enum mode) {
-        this.mode = mode;
+    public void setPixelProcessing(PixelProcessing processor) {
+        this.pixelProcessor = processor;
         fireImageChanged();
     }
 
@@ -105,7 +118,7 @@ public abstract class Screen implements ImageSupplier {
         fireImageChanged();
     }
 
-    private boolean isInImage(Point p) {
+    public boolean isInImage(Point p) {
         return isInImage(p.x, p.y);
     }
 
@@ -127,7 +140,7 @@ public abstract class Screen implements ImageSupplier {
             ListIterator<UndoElement> i = elements.listIterator(elements.size());
             while (i.hasPrevious()) {
                 UndoElement e = i.previous();
-                putPixelData(e.x, e.y, e.pixel, e.attr);
+                putPixelData(e.pos, e.pixel, e.attr);
             }
         }
     }
@@ -136,48 +149,49 @@ public abstract class Screen implements ImageSupplier {
         Vector<UndoElement> elements = undo.redo();
         if (null != elements) {
             for (UndoElement e : elements) {
-                putPixelData(e.x, e.y, e.newPixel, e.newAttr);
+                putPixelData(e.pos, e.newPixel, e.newAttr);
             }
         }
     }
 
-    abstract protected  byte attrFromDesc(Pixel pixel, byte oldAttr);
-    abstract protected  byte pixelFromDesc(Pixel pixel, byte oldPixel, int x, int y);
+    //abstract protected  byte attrFromDesc(Pixel pixel, byte oldAttr);
+    //abstract protected  byte pixelFromDesc(Pixel pixel, byte oldPixel, int x, int y);
 
-    protected byte getPixelData(int x, int y) {
-        final int xx = x / pixelFactor.width;
-        final int yy = y / pixelFactor.height;
+    protected byte getPixelData(Point pos) {
+        final int xx = pos.x / pixelFactor.width;
+        final int yy = pos.y / pixelFactor.height;
         return image.getPixel(xx,yy);
     }
 
-    protected byte getAttr(int x, int y) {
-        final int xx = x / pixelFactor.width;
-        final int yy = y / pixelFactor.height;
+    protected byte getAttr(Point pos) {
+        final int xx = pos.x / pixelFactor.width;
+        final int yy = pos.y / pixelFactor.height;
         return image.getAttr(xx, yy);
     }
 
-    protected void putPixelData(int x, int y, byte pixel, byte attr) {
-        final int xx = x / pixelFactor.width;
-        final int yy = y / pixelFactor.height;
+    protected void putPixelData(Point pos, byte pixel, byte attr) {
+        final int xx = pos.x / pixelFactor.width;
+        final int yy = pos.y / pixelFactor.height;
         image.putPixel(xx, yy, pixel, attr);
     }
 
-    protected void putPixelData(int x, int y, byte pixel) {
-        final int xx = x / pixelFactor.width;
-        final int yy = y / pixelFactor.height;
+    protected void putPixelData(Point pos, byte pixel) {
+        final int xx = pos.x / pixelFactor.width;
+        final int yy = pos.y / pixelFactor.height;
         image.putPixel(xx, yy, pixel);
     }
 
 
-    public void setPixel(int x, int y, Pixel pixel) {
-        if (isInImage(x, y)) {
-            byte a =  getAttr(x, y);
+    public void setPixel(Pixel pixel, Point pos) {
+        if (isInImage(pos)) {
+            byte a =  getAttr(pos);
             if (pixel.index >= 0)
-                a = attrFromDesc(pixel, a);
-            byte b = pixelFromDesc(pixel, getPixelData(x, y), x, y);
-            undo.add(x, y, getPixelData(x, y), getAttr(x, y), b, a);
-            putPixelData(x, y, b, a);
-            fireImageChanged(alignX(x), alignY(y), GRID_FACTOR.width, GRID_FACTOR.height);
+                a = pixelProcessor.packAttr(pixel, a,pos);
+            byte oldPixelData = getPixelData(pos);
+            byte b = pixelProcessor.packPixel(pixel, oldPixelData,pos);
+            undo.add(pos.x, pos.y, oldPixelData, getAttr(pos), b, a);
+            putPixelData(pos, b, a);
+            fireImageChanged(alignX(pos.x), alignY(pos.y), GRID_FACTOR.width, GRID_FACTOR.height);
         }
     }
 
@@ -193,10 +207,12 @@ public abstract class Screen implements ImageSupplier {
                 dx = Math.signum(dx);
             }
             float xi = ox, yi = oy;
+            Point pos = new Point();
             while (Math.round(xi) != x || Math.round(yi) != y) {
                 xi += dx;
                 yi += dy;
-                setPixel((int) xi, (int) yi, pixel);
+                pos.setLocation(xi, yi);
+                setPixel(pixel, pos);
             }
 
             int sx, sy, w, h;
@@ -230,11 +246,12 @@ public abstract class Screen implements ImageSupplier {
             Stack<Point> stack = new Stack<>();
             Pixel[][] pixels = new Pixel[getImageWidth()][getImageHeight()];
             final int ss = 1;
-            stack.push(new Point(x, y));
-            Pixel pix = getPixelDescriptor(x, y);
+            Point pos = new Point(x, y);
+            stack.push(pos);
+            Pixel pix = getPixel(pos);
             while (!stack.empty()) {
                 Point p = stack.pop();
-                Pixel pix2 = getPixelDescriptor(p.x, p.y);
+                Pixel pix2 = getPixel(p);
                 if (!pix2.hasSameColor(pix,palette) || pixels[p.x][p.y]!=null)
                     continue;
                 pixels[p.x][p.y] = pixel;
@@ -246,8 +263,10 @@ public abstract class Screen implements ImageSupplier {
             }
             for (int xx = 0; xx < getImageWidth(); xx++)
                 for (int yy = 0; yy < getImageHeight(); yy++) {
-                    if (pixels[xx][yy] != null)
-                        setPixel(xx,yy,pixels[xx][yy]);
+                    if (pixels[xx][yy] != null) {
+                        pos.setLocation(xx,yy);
+                        setPixel(pixels[xx][yy],pos);
+                    }
                 }
 
             endDraw();
@@ -256,31 +275,33 @@ public abstract class Screen implements ImageSupplier {
         }
     }
 
-    public void copyCell(int fx, int fy, int tx, int ty) {
-        copyCell(this,fx,fy,tx,ty);
+    public void copyCell(Point from, Point to) {
+        copyCell(this,from, to);
     }
 
 
-    public void copyCell(Screen source, int fx, int fy, int tx, int ty) {
-        int fxx = alignX(fx);
-        int fyy = alignY(fy);
-        int txx = alignX(tx);
-        int tyy = alignY(ty);
+    public void copyCell(Screen source, Point from, Point to) {
+        Point f = align(from);
+        Point t = align(to);
 
-        if (source.isInImage(fxx, fyy) && isInImage(txx, tyy)) {
+        if (source.isInImage(f) && isInImage(t)) {
             lock();
             beginDraw();
-            byte a = source.getAttr(fxx, fyy);
+            byte a = source.getAttr(f);
+            Point ff = new Point();
+            Point tt = new Point();
             for (int x = 0; x < GRID_FACTOR.width; x++) {
                 for (int y = 0; y < GRID_FACTOR.height; y++) {
-                    byte b = source.getPixelData(fxx + x, fyy + y);
-                    undo.add(txx + x, tyy + y,getPixelData(txx + x, tyy + y),getAttr(txx + x, tyy + y),b,a);
-                    putPixelData(txx + x, tyy + y, b, a);
+                    ff.setLocation(f.x + x, f.y + y);
+                    tt.setLocation(t.x + x, t.y + y);
+                    byte b = source.getPixelData(ff);
+                    undo.add(tt.x, tt.y, getPixelData(tt),getAttr(tt),b,a);
+                    putPixelData(tt,b, a);
                 }
             }
             endDraw();
             unlock();
-            fireImageChanged(txx, tyy, GRID_FACTOR.width, GRID_FACTOR.height);
+            fireImageChanged(t.x, t.y, GRID_FACTOR.width, GRID_FACTOR.height);
         }
     }
 
@@ -290,6 +311,10 @@ public abstract class Screen implements ImageSupplier {
 
     public int alignY(int y) {
         return y / GRID_FACTOR.height * GRID_FACTOR.height;
+    }
+
+    public Point align(Point pos) {
+        return new Point(alignX(pos.x), alignY(pos.y));
     }
 
     protected void rearrangeColorTable(int table, int[] order) {
@@ -383,31 +408,6 @@ public abstract class Screen implements ImageSupplier {
         palette.loadPalette(is);
         image.importImage(is);
         is.close();
-    }
-
-    public static class Pixel {
-        public final Enum table;
-        public final int index;
-        public final int shift;
-
-        public Pixel(Enum table, int index, int shift) {
-            this.index = index;
-            this.shift = shift;
-            this.table = table;
-        }
-
-        public Pixel clone() {
-            return new Pixel(this.table, this.index,this.shift);
-        }
-
-        public boolean equals(Pixel other) {
-            return (this.table == other.table) && (this.index == other.index) && (this.shift == other.shift);
-        }
-
-        public boolean hasSameColor(Pixel other, Palette palette) {
-            return palette.getRGBColor(table,index,shift).equals(palette.getRGBColor(other.table,other.index,other.shift));
-        }
-
     }
 
 }

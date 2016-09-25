@@ -20,10 +20,10 @@ public interface ImageSupplier {
 
     int getImageWidth();
     int getImageHeight();
-    Color getPixelColor(int x, int y);
+    Color getPixelColor(Point pos);
     void  addChangeListener(ImageChangeListener listener);
     //void ScrollInView(int x, int y);
-    default Status getStatus(int x, int y) {
+    default Status getStatus(Point pos) {
         return Status.Normal;
     }
 }

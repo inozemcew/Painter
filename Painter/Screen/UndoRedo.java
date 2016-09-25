@@ -1,4 +1,5 @@
 package Painter.Screen;
+import java.awt.*;
 import java.util.LinkedList;
 import java.util.Vector;
 
@@ -50,13 +51,12 @@ public class UndoRedo {
 }
 
 class UndoElement {
-    int x,y;
+    Point pos;
     byte pixel,attr;
     byte newPixel,newAttr;
 
     public UndoElement(int x, int y, byte pixel, byte attr, byte newPixel, byte newAttr) {
-        this.x = x;
-        this.y = y;
+        this.pos = new Point(x,y);
         this.pixel = pixel;
         this.attr = attr;
         this.newPixel = newPixel;

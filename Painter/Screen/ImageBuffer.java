@@ -64,16 +64,16 @@ public class ImageBuffer {
     }
 
     @FunctionalInterface
-    public interface PixelProcessor {
+    public interface PixelDataProcessor {
         byte process(int x, int y, byte b, byte a);
     }
 
     @FunctionalInterface
-    public interface AttrProcessor {
+    public interface AttrDataProcessor {
         byte process(int x, int y, byte b);
     }
 
-    public void forEachPixel(PixelProcessor proc) {
+    public void forEachPixel(PixelDataProcessor proc) {
         for (int x = 0; x < SIZE_X; x++) {
             int xx = x / ATTR_FACTOR_X;
             for (int y = 0; y < SIZE_Y; y++){
@@ -83,7 +83,7 @@ public class ImageBuffer {
         }
     }
 
-    public void forEachAttr(AttrProcessor proc) {
+    public void forEachAttr(AttrDataProcessor proc) {
         for (int x = 0; x < ATTR_SIZE_X; x++)
             for (int y = 0; y < ATTR_SIZE_Y; y++)
                 attrbuf[x][y] = proc.process(x, y, attrbuf[x][y]);

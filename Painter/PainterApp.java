@@ -2,6 +2,7 @@ package Painter;
 
 import Painter.Palette.ChangeAdapter;
 import Painter.Palette.PaletteToolPanel;
+import Painter.Screen.PixelProcessing;
 import Painter.Screen.Screen;
 
 import javax.swing.*;
@@ -16,6 +17,7 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.Set;
 
 import static javax.swing.Action.SELECTED_KEY;
 
@@ -366,13 +368,13 @@ public abstract class PainterApp extends JFrame {
 
         ArrayList<Action> screenModes = new ArrayList<>();
         {
-            final Enum mode = screen.getMode();
+            final Set<? extends PixelProcessing> mode = screen.getPixelProcessor().enumPixelModes();
             if (mode != null)
-                for( Enum m: (EnumSet<? extends Enum>) EnumSet.allOf(mode.getDeclaringClass())) {
+                for (PixelProcessing m: mode ) {
                     Action c = new AbstractAction(m.toString()) {
                         @Override
                         public void actionPerformed(ActionEvent e) {
-                            screen.setMode(m);
+                            screen.setPixelProcessing(m);
                         }
                     };
                     c.putValue(SELECTED_KEY, (m == mode));

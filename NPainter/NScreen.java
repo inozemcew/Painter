@@ -1,6 +1,8 @@
 package NPainter;
 
 import Painter.Palette.Palette;
+import Painter.Screen.Pixel;
+import Painter.Screen.PixelProcessing;
 import Painter.Screen.Screen;
 
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -38,6 +40,11 @@ public class NScreen extends Screen {
         return new NPalette();
     }
 
+    @Override
+    protected PixelProcessing createPixelProcessor() {
+        return PixelProcessor.MODE4;
+    }
+
     public enum Mode {
         Color4("4 colors mode"),
         Color5("5+1 colors mode"),
@@ -54,32 +61,6 @@ public class NScreen extends Screen {
         public String toString() {
             return name;
         }
-    }
-
-    public NScreen() {
-        super();
-        mode = Mode.ColorX;
-    }
-
-    public static int paperFromAttr(byte attr) { return (attr >> 3) & 7; }
-
-    public static int inkFromAttr(byte attr) { return attr & 7; }
-
-    private static int fromAttr(byte attr, Table table) {
-        return (table == Table.INK) ? inkFromAttr(attr) : paperFromAttr(attr);
-    }
-
-    public static byte packAttr(int ink, int paper) {
-        byte b = 0;
-        return  inkToAttr(paperToAttr(b,paper),ink);
-    }
-
-    private static byte paperToAttr(byte attr, int paper) { return (byte) ((attr & 7) | (paper<<3));}
-
-    private static byte inkToAttr(byte attr, int ink) { return (byte) ((attr & 0x38) | ink);}
-
-    private static byte toAttr(byte attr, int value, Table table) {
-        return (table == Table.INK) ? inkToAttr(attr,value) : paperToAttr(attr,value);
     }
 
     private Color getInkRBGColor(int index, int shift) {
@@ -111,7 +92,7 @@ public class NScreen extends Screen {
             return getInkRBGColor(inkFromAttr(attr), pix & 1);
     }
 */
-    @Override
+/*    @Override
     public Color getPixelColor(int x, int y) {
         int x1 = x & 0xfffe;
         byte attr = getAttr(x, y);
@@ -150,21 +131,17 @@ public class NScreen extends Screen {
         else
             return getInkRBGColor(inkFromAttr(attr), pix & 1);
     }
-
+*/
     @Override
-    public Status getStatus(int x, int y) {
+    public Status getStatus(Point pos) {
         if (enhancedColors[0] ==-1 && enhancedColors[1] == -1) return Status.Normal;
-        byte attr = getAttr(x,y);
-        int ink = inkFromAttr(attr);
-        int paper = paperFromAttr(attr);
-        int pix = getPixelData(x,y);
-        if (pix<2)
-            return (paper == enhancedColors[Table.PAPER.ordinal()]) ? Status.Enhanced : Status.Dimmed;
-        else
-            return (ink == enhancedColors[Table.INK.ordinal()]) ? Status.Enhanced : Status.Dimmed;
+        byte attr = getAttr(pos);
+        byte pix = getPixelData(pos);
+        Pixel pixel = pixelProcessor.unpackPixel(pix, attr, pos);
+        return (pixel.index == enhancedColors[pixel.table.ordinal()]) ? Status.Enhanced : Status.Dimmed;
     }
 
-    @Override
+    /*@Override
     public Pixel getPixelDescriptor(int x, int y) {
         int v = getPixelData(x, y);
         byte attr = getAttr(x, y);
@@ -172,8 +149,8 @@ public class NScreen extends Screen {
                 (v < 2) ? paperFromAttr(attr): inkFromAttr(attr),
                 v & 1);
     }
-
-    @Override
+*/
+/*    @Override
     protected byte attrFromDesc(Pixel pixel, byte oldAttr) {
         if (pixel.table == Table.INK) {
             return inkToAttr(oldAttr, pixel.index);
@@ -181,12 +158,13 @@ public class NScreen extends Screen {
             return paperToAttr(oldAttr, pixel.index);
         }
     }
-
-    @Override
+*/
+/*    @Override
     protected byte pixelFromDesc(Pixel pixel, byte oldPixel, int x, int y) {
         return  (byte) (pixel.shift | ((pixel.table == Table.INK) ? 2 : 0) );
     }
-
+*/
+/*
     @Override
     public void setPixel(int x, int y, Pixel pixel) {
         Pixel p = pixel;
@@ -250,13 +228,13 @@ public class NScreen extends Screen {
         }
         super.setPixel(x, y, p);
     }
-
+*/
     @Override
     public void rearrangeColorTable(int t, int[] order) {
         Table table = mapColorTable(t);
         image.forEachAttr( (x, y, attr) -> {
-            int a = fromAttr(attr, table);
-            return toAttr(attr, order[a], table);
+            int a = PixelProcessor.fromAttr(attr, table);
+            return PixelProcessor.toAttr(attr, order[a], table);
         });
         palette.reorder(table, order);
         fireImageChanged();
@@ -337,16 +315,16 @@ public class NScreen extends Screen {
             m.put("Inverse palette", (dummy) -> inverseColors());
             m.put("Swap ink0 <-> paper0", (c) -> swapInkPaper(c[ink], c[paper], 0));
             m.put("Swap ink1 <-> paper1", (c) -> swapInkPaper(c[ink], c[paper], 1));
-            m.put("Correct X mode", (dummy) -> correctXMode());
+            //m.put("Correct X mode", (dummy) -> correctXMode());
             return m;
         }
 
         private void flipColorCell(Table table, int index) {
             image.forEachPixel((x, y, b, a) -> {
                 if (table == Table.INK)
-                    return (byte) (inkFromAttr(a) == index && b >= 2 ? 5 - b : b);
+                    return (byte) (PixelProcessor.inkFromAttr(a) == index && b >= 2 ? 5 - b : b);
                 else
-                    return (byte) (paperFromAttr(a) == index && b < 2 ? 1 - b : b);
+                    return (byte) (PixelProcessor.paperFromAttr(a) == index && b < 2 ? 1 - b : b);
             });
             int c = palette.getColorCell(table, index);
             palette.setColorCell(Palette.combine(Palette.second(c), Palette.first(c)), table, index);
@@ -367,7 +345,9 @@ public class NScreen extends Screen {
         private void swapInkPaper(int ink, int paper, int shift) {
             beginDraw();
             image.forEachPixel((x, y, b, a) -> {
-                final boolean f = (inkFromAttr(a) == ink && paperFromAttr(a) == paper && (b & 1) == shift);
+                final boolean f = (PixelProcessor.inkFromAttr(a) == ink
+                        && PixelProcessor.paperFromAttr(a) == paper
+                        && (b & 1) == shift);
                 if (f) undo.add(x, y, b, a, (byte) (b ^ 2), a);
                 return (byte) (f ? b ^ 2 : b);
             });
@@ -379,6 +359,7 @@ public class NScreen extends Screen {
             palette.setColorCell(Palette.replace(p, i1, shift), Table.PAPER, paper);
             endDraw();
         }
+/*
         private void correctXMode() {
             beginDraw();
             for (int y = 0; y < getImageHeight(); y++) {
@@ -395,7 +376,7 @@ public class NScreen extends Screen {
             endDraw();
             fireImageChanged();
         }
-
+*/
     }
 
 }

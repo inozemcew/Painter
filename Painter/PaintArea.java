@@ -1,6 +1,7 @@
 package Painter;
 
 import Painter.Screen.ImageSupplier;
+import Painter.Screen.Pixel;
 import Painter.Screen.Screen;
 
 import javax.swing.*;
@@ -96,9 +97,11 @@ public class PaintArea extends JComponent implements Scrollable {
 
         final int mx = Integer.min((c.x + c.width) / scale, screen.getImageWidth());
         final int my = Integer.min((c.y + c.height) / scale, screen.getImageHeight());
+        Point p = new Point();
         for (int x = c.x / scale; x < mx; x++) {
             for (int y = c.y / scale; y < my; y++) {
-                g.setColor(screen.getPixelColor(x,y));
+                p.setLocation(x,y);
+                g.setColor(screen.getPixelColor(p));
                 int xx = x * scale;
                 int yy = y * scale;
                 g.fillRect(xx, yy, scale, scale);
@@ -159,13 +162,13 @@ public class PaintArea extends JComponent implements Scrollable {
         private int button = 0;
         final Point pos = new Point();
 
-        private Screen.Pixel getPixelByEvent(int button) {
+        private Pixel getPixelByEvent(int button) {
             byte p;
             if ((button & MouseEvent.SHIFT_DOWN_MASK) == 0) p = 0; else p = 1;
             if ((button & MouseEvent.CTRL_DOWN_MASK) != 0) p += 2;
             final int b = button & MouseEvent.BUTTON1_DOWN_MASK;
             Enum t = screen.mapColorTable((b != 0) ? 0 : 1);
-            return new Screen.Pixel(t, getCurrentColorIndex(t), p);
+            return new Pixel(t, getCurrentColorIndex(t), p);
         }
 
         private boolean isInSameCell(Point p) {
@@ -182,7 +185,7 @@ public class PaintArea extends JComponent implements Scrollable {
             int button = e.getModifiersEx();
             if (e.getButton() == MouseEvent.BUTTON1) button = button | MouseEvent.BUTTON1_DOWN_MASK;
             if (isFillMode(e.getButton())) {
-                final Screen.Pixel pixel = getPixelByEvent(button);
+                final Pixel pixel = getPixelByEvent(button);
                 screen.fill(e.getX()/scale,e.getY()/scale, pixel);
                 firePropertyChange(OP_FILL,"0","1");
             } else if (isMiddleMouseButton(e)) {
@@ -206,9 +209,8 @@ public class PaintArea extends JComponent implements Scrollable {
             screen.beginDraw();
             if (isMiddleMouseButton(e)) {
                 if ((e.getModifiersEx() & MouseEvent.SHIFT_DOWN_MASK) == 0) {
-                    final int xx = e.getX() / scale;
-                    final int yy = e.getY() / scale;
-                    screen.copyCell(clipCell.getScreen(), clipCell.getX(), clipCell.getY(), xx, yy);
+                    final Point p = new Point(e.getX() / scale, e.getY() / scale);
+                    screen.copyCell(clipCell.getScreen(), clipCell.getPosition(),p);
                 }
             } else {
                 button = e.getModifiersEx()
@@ -221,20 +223,23 @@ public class PaintArea extends JComponent implements Scrollable {
         }
 
         private void doSetPixel(MouseEvent e) {
-            Screen.Pixel pixel = getPixelByEvent(button);
-            screen.setPixel(e.getX()/scale, e.getY()/scale, pixel);
+            Pixel pixel = getPixelByEvent(button);
+            Point p = new Point(e.getX()/scale, e.getY()/scale);
+            screen.setPixel(pixel,p);
         }
 
         private void doDrawLine(MouseEvent e) {
-            Screen.Pixel pixel = getPixelByEvent(button);
+            Pixel pixel = getPixelByEvent(button);
             screen.drawLine(pos.x/scale, pos.y/scale, e.getX()/scale, e.getY()/scale, pixel);
         }
 
         @Override
         public void mouseDragged(MouseEvent e) {
             if ((e.getModifiersEx() & MouseEvent.SHIFT_DOWN_MASK) == 0 && isMiddleMouseButton(e)) {
-                if (!isInSameCell(e.getPoint()))
-                    screen.copyCell(clipCell.getScreen(), clipCell.getX(), clipCell.getY(), e.getX() / scale, e.getY() / scale);
+                if (!isInSameCell(e.getPoint())) {
+                    Point toPos = new Point(e.getX() / scale, e.getY() / scale);
+                    screen.copyCell(clipCell.getScreen(), clipCell.getPosition(), toPos);
+                }
             } else if (!pos.equals(e.getPoint())) doDrawLine(e);
             pos.setLocation(e.getPoint());
         }
@@ -256,11 +261,10 @@ public class PaintArea extends JComponent implements Scrollable {
 
         @Override
         public void mouseMoved(MouseEvent e) {
-            int x = e.getX() / scale;
-            int y = e.getY() / scale;
-            if (screen.isInImage(x,y)) {
-                Screen.Pixel s = screen.getPixelDescriptor(x,y);
-                firePropertyChange(OP_STATUS, "", x + "x" + y + " : " + s.table.name()+s.shift+" = "+s.index);
+            Point p = new Point( e.getX() / scale, e.getY() / scale);
+            if (screen.isInImage(p)) {
+                Pixel s = screen.getPixel(p);
+                firePropertyChange(OP_STATUS, "", p.x + "x" + p.y + " : " + s.table.name()+s.shift+" = "+s.index);
             }
         }
 

@@ -2,9 +2,11 @@ package NPainter.Convert;
 
 import NPainter.NPalette;
 import NPainter.NScreen;
+import NPainter.PixelProcessor;
 import Painter.Palette.ColorConverter;
 import Painter.Palette.Palette;
 import Painter.Screen.ImageSupplier;
+import Painter.Screen.Pixel;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -57,8 +59,8 @@ public class ImageConverter implements ImageSupplier {
     }
 
     @Override
-    public Color getPixelColor(int x, int y) {
-        Color color = new Color(img.getRGB(x, y));
+    public Color getPixelColor(Point pos) {
+        Color color = new Color(img.getRGB(pos.x, pos.y));
         if (preview) return converter.remap(color); else return color;
     }
 
@@ -193,8 +195,8 @@ public class ImageConverter implements ImageSupplier {
 
     public int[] indexListByAttr(byte attr) {
         int[] l = {-1, -1, -1, -1};
-        int ink = palette.getColorCell(NScreen.Table.INK,NScreen.inkFromAttr(attr));
-        int paper = palette.getColorCell(NScreen.Table.PAPER, NScreen.paperFromAttr(attr));
+        int ink = palette.getColorCell(NScreen.Table.INK, PixelProcessor.inkFromAttr(attr));
+        int paper = palette.getColorCell(NScreen.Table.PAPER, PixelProcessor.paperFromAttr(attr));
         final int paperSize = palette.getCellSize(NScreen.Table.PAPER);
         for (int i = 0; i < paperSize; i++)
             l[i] = split(paper, i);
@@ -204,9 +206,13 @@ public class ImageConverter implements ImageSupplier {
     }
 
     byte packIntoAttr(int[] indices) {
-        return NScreen.packAttr(indices[0],indices[1]);
+        return packAttr(indices[0],indices[1]);
     }
 
+    public static byte packAttr(int ink, int paper) {
+        byte b = 0;
+        return  PixelProcessor.inkToAttr(PixelProcessor.paperToAttr(b,paper),ink);
+    }
 }
 
 class Pair {

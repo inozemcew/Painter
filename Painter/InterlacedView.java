@@ -53,12 +53,14 @@ public class InterlacedView extends JComponent {
         Rectangle r = g.getClipBounds();
         final int sx = Integer.max(0, r.x / scale);
         final int fx = sx + Integer.min(imageSupplier.getImageWidth() - sx, r.width / scale + 1);
+        Point p = new Point();
         for (int x = sx; x < fx; x++) {
             final int sy = Integer.max(0, r.y / scale);
             final int fy = sy + Integer.min(imageSupplier.getImageHeight() - sy, r.height / scale +1);
             for (int y = sy; y < fy; y++) {
-                Color c = imageSupplier.getPixelColor(x, y);
-                ImageSupplier.Status s = imageSupplier.getStatus(x,y);
+                p.setLocation(x, y);
+                Color c = imageSupplier.getPixelColor(p);
+                ImageSupplier.Status s = imageSupplier.getStatus(p);
                 g.setColor(c);
                 g.drawLine(x * scale, y * scale, x * scale + ((s == ImageSupplier.Status.Dimmed) ? 0 : 1), y * scale);
                 if (s != ImageSupplier.Status.Enhanced && scale >1 ) {
