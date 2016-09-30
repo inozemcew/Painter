@@ -15,7 +15,6 @@ import java.awt.event.MouseEvent;
 import java.beans.PropertyChangeListener;
 import java.io.*;
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Set;
 
@@ -278,7 +277,7 @@ public abstract class PainterApp extends JFrame {
             try {
                 final FileInputStream fs = new FileInputStream(file);
                 ObjectInputStream stream = new ObjectInputStream(fs);
-                screen.load(stream, fs.getChannel().size() == 50266);
+                screen.load(stream, fs.getChannel());
             } catch (Exception e) {
                 JOptionPane.showMessageDialog(this,
                         "Cannot load " + file,
@@ -368,7 +367,8 @@ public abstract class PainterApp extends JFrame {
 
         ArrayList<Action> screenModes = new ArrayList<>();
         {
-            final Set<? extends PixelProcessing> mode = screen.getPixelProcessor().enumPixelModes();
+            final PixelProcessing pixelProcessor = screen.getPixelProcessor();
+            final Set<? extends PixelProcessing> mode = pixelProcessor.enumPixelModes();
             if (mode != null)
                 for (PixelProcessing m: mode ) {
                     Action c = new AbstractAction(m.toString()) {
@@ -377,7 +377,7 @@ public abstract class PainterApp extends JFrame {
                             screen.setPixelProcessing(m);
                         }
                     };
-                    c.putValue(SELECTED_KEY, (m == mode));
+                    c.putValue(SELECTED_KEY, (m == pixelProcessor));
                     screenModes.add(c);
             }
 

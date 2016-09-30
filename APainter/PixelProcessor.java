@@ -5,7 +5,6 @@ import Painter.Screen.Pixel;
 import Painter.Screen.PixelProcessing;
 
 import java.awt.*;
-import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -26,9 +25,10 @@ public class PixelProcessor implements PixelProcessing {
     }
     @Override
     public Set<? extends PixelProcessing> enumPixelModes() {
-        HashSet<PixelProcessor> pixelProcessors = new HashSet<>();
+        return null;
+/*        HashSet<PixelProcessor> pixelProcessors = new HashSet<>();
         pixelProcessors.add(pixelProcessor);
-        return pixelProcessors;
+        return pixelProcessors;*/
     }
 
     @Override
@@ -55,7 +55,7 @@ public class PixelProcessor implements PixelProcessing {
     }
 
     @Override
-    public Color getPixelColor(Pixel pixel, Point pos, Palette palette) {
+    public Color getPixelColor(Pixel pixel,  Palette palette) {
         if (pixel.table == AScreen.Table.Back)
             return Color.BLACK ;
         else return palette.getRGBColor(AScreen.Table.Fore, pixel.index, 0);

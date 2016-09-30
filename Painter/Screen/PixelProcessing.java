@@ -14,5 +14,5 @@ public interface PixelProcessing {
     byte packPixel(Pixel pixel, byte oldPixelData, Point pos);
     byte packAttr(Pixel pixel, byte oldAttrData, Point pos);
     Pixel unpackPixel(byte pixelData, byte attrData, Point pos);
-    Color getPixelColor(Pixel pixel, Point pos, Palette palette);
+    Color getPixelColor(Pixel pixel, Palette palette);
 }

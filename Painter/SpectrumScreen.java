@@ -8,13 +8,15 @@ import java.io.InputStream;
  */
 public class SpectrumScreen {
     public class Pixel {
-        final public int value;
+        final public boolean value;
         final public int ink;
+        final public int bright;
         final public int paper;
 
-        public Pixel(int ink, int paper, int value) {
+        public Pixel(int ink, int paper, int bright, boolean value) {
             this.ink = ink;
             this.paper = paper;
+            this.bright = bright;
             this.value = value;
         }
     }
@@ -51,7 +53,7 @@ public class SpectrumScreen {
 
     public Pixel getPixel(int x, int y) {
         int mx = mapX(x), my = mapY(y);
-        if (mx < 0 || mx >= 255 || my < 0 || my >= 192)
+        if (mx < 0 || mx >= 256 || my < 0 || my >= 192)
             return null;
         int xx = mx / 8, yy = my / 8;
         byte b = pixels[my][xx];
@@ -59,7 +61,8 @@ public class SpectrumScreen {
         byte a = attrs[yy][xx];
         int ink = a & 7;
         int paper = (a & 0x38) >> 3;
-        return new Pixel(ink, paper, p);
+        int bright = (a & 0x40) >> 6;
+        return new Pixel(ink, paper, bright, p != 0);
     }
 
     public int getChunk(int x, int y) {

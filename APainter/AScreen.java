@@ -1,14 +1,14 @@
 package APainter;
 
 import Painter.Palette.Palette;
-import Painter.Screen.Pixel;
 import Painter.Screen.PixelProcessing;
 import Painter.Screen.Screen;
 import Painter.SpectrumScreen;
 
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -127,8 +127,8 @@ public class AScreen extends Screen {
                 for (int yy = 0; yy < 2; yy++)
                     for (int xx = 0; xx < 3; xx++) {
                         final SpectrumScreen.Pixel p = scr.getPixel(x * 3 + xx, y * 2 + yy);
-                        final int v = (p.value == 0) ? p.paper : p.ink;
-                        bs[yy * 3 + xx] = (v < p.ink | v < p.paper) ? 0 : v;
+                        final int v = (p.value) ? p.ink : p.paper;
+                        bs[yy * 3 + xx] = (v < p.ink || v < p.paper) ? 0 : v;
                     }
                 int max = Arrays.stream(bs).max().getAsInt();
                 int b = 0;

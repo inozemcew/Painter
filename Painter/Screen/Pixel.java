@@ -24,8 +24,8 @@ public class Pixel {
         return (this.table == other.table) && (this.index == other.index) && (this.shift == other.shift);
     }
 
-    public boolean hasSameColor(Pixel other, Palette palette) {
-        return palette.getRGBColor(table, index, shift).equals(palette.getRGBColor(other.table, other.index, other.shift));
+    public boolean hasSameColor(Pixel other, PixelProcessing processor, Palette palette) {
+        return processor.getPixelColor(this,palette).equals(processor.getPixelColor(other,palette));
     }
 
 }

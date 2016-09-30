@@ -1,19 +1,21 @@
 package NPainter;
 
 import Painter.Palette.Palette;
+import Painter.Screen.ImageBuffer;
 import Painter.Screen.Pixel;
 import Painter.Screen.PixelProcessing;
 import Painter.Screen.Screen;
+import Painter.SpectrumScreen;
 
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
+import java.nio.channels.FileChannel;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
+
+import static NPainter.PixelProcessor.*;
 
 /**
  * Created by ainozemtsev on 17.06.16.
@@ -25,9 +27,9 @@ public class NScreen extends Screen {
 
     @Override
     final protected void setFactors() {
-        GRID_FACTOR.setSize(8,8);
-        pixelFactor.setSize(1,1);
-        attrFactor.setSize(8,8);
+        GRID_FACTOR.setSize(8, 8);
+        pixelFactor.setSize(2, 1);
+        attrFactor.setSize(8, 8);
     }
 
     @Override
@@ -45,53 +47,28 @@ public class NScreen extends Screen {
         return PixelProcessor.MODE4;
     }
 
-    public enum Mode {
-        Color4("4 colors mode"),
-        Color5("5+1 colors mode"),
-        Color6("6 colors mode"),
-        Color8("8 colors mode"),
-        ColorX("X mode");
-
-        String name;
-        Mode(String name) {
-            this.name = name;
-        }
-
+    /*
         @Override
-        public String toString() {
-            return name;
+        public Color getPixelColor(int x, int y) {
+            byte attr = image.getAttr(x, y);
+            int pix = image.getPixel(x, y);
+            int pix1 = image.getPixel(x-1, y);
+            int pix2 = image.getPixel(x+1, y);
+
+            if (mode != Mode.Color4) {
+                if ((pix1 ^ pix) == 2 && (pix1 & pix) == 1)
+                    return getPixelColor(x-1,y);
+                if ((pix2 ^ pix) == 2 && (pix2 & pix) == 1)
+                    return getInkRBGColor(paperFromAttr(attr), (pix & 2) == 2 ? 0 : 1);
+            }
+            if ((pix1 ^ pix2) == 3 && (pix1 * pix2) != 0 && mode == Mode.Color8 )
+                    return getPaperRGBColor(inkFromAttr(attr), (pix1 & 2) == 2 ? 0 : 1);
+            if (pix < 2)
+                return getPaperRGBColor(paperFromAttr(attr), pix & 1);
+            else
+                return getInkRBGColor(inkFromAttr(attr), pix & 1);
         }
-    }
-
-    private Color getInkRBGColor(int index, int shift) {
-        return palette.getRGBColor(Table.INK, index, shift);
-    }
-
-    private Color getPaperRGBColor(int index, int shift) {
-        return palette.getRGBColor(Table.PAPER, index, shift);
-    }
-/*
-    @Override
-    public Color getPixelColor(int x, int y) {
-        byte attr = image.getAttr(x, y);
-        int pix = image.getPixel(x, y);
-        int pix1 = image.getPixel(x-1, y);
-        int pix2 = image.getPixel(x+1, y);
-
-        if (mode != Mode.Color4) {
-            if ((pix1 ^ pix) == 2 && (pix1 & pix) == 1)
-                return getPixelColor(x-1,y);
-            if ((pix2 ^ pix) == 2 && (pix2 & pix) == 1)
-                return getInkRBGColor(paperFromAttr(attr), (pix & 2) == 2 ? 0 : 1);
-        }
-        if ((pix1 ^ pix2) == 3 && (pix1 * pix2) != 0 && mode == Mode.Color8 )
-                return getPaperRGBColor(inkFromAttr(attr), (pix1 & 2) == 2 ? 0 : 1);
-        if (pix < 2)
-            return getPaperRGBColor(paperFromAttr(attr), pix & 1);
-        else
-            return getInkRBGColor(inkFromAttr(attr), pix & 1);
-    }
-*/
+    */
 /*    @Override
     public Color getPixelColor(int x, int y) {
         int x1 = x & 0xfffe;
@@ -134,7 +111,7 @@ public class NScreen extends Screen {
 */
     @Override
     public Status getStatus(Point pos) {
-        if (enhancedColors[0] ==-1 && enhancedColors[1] == -1) return Status.Normal;
+        if (enhancedColors[0] == -1 && enhancedColors[1] == -1) return Status.Normal;
         byte attr = getAttr(pos);
         byte pix = getPixelData(pos);
         Pixel pixel = pixelProcessor.unpackPixel(pix, attr, pos);
@@ -232,7 +209,7 @@ public class NScreen extends Screen {
     @Override
     public void rearrangeColorTable(int t, int[] order) {
         Table table = mapColorTable(t);
-        image.forEachAttr( (x, y, attr) -> {
+        image.forEachAttr((x, y, attr) -> {
             int a = PixelProcessor.fromAttr(attr, table);
             return PixelProcessor.toAttr(attr, order[a], table);
         });
@@ -243,9 +220,9 @@ public class NScreen extends Screen {
     @Override
     public Map<String, Dimension> getResolutions() {
         HashMap<String, Dimension> m = new HashMap<>();
-        m.put("256x192", new Dimension(256,192));
-        m.put("320x200", new Dimension(320,200));
-        m.put("320x240", new Dimension(320,240));
+        m.put("256x192", new Dimension(256, 192));
+        m.put("320x200", new Dimension(320, 200));
+        m.put("320x240", new Dimension(320, 240));
         return m;
     }
 
@@ -256,39 +233,79 @@ public class NScreen extends Screen {
 
     @Override
     public void importSCR(InputStream stream) throws IOException {
-        byte[] pix = new byte[2048 * 3];
-        byte[] attr = new byte[768];
-        stream.read(pix);
-        stream.read(attr);
-        ByteArrayOutputStream as = new ByteArrayOutputStream(256 * 192 + 32 * 24);
-        boolean bright;
-        for (int x = 0; x < 256; x++) {
-            byte[] buf = new byte[192];
-            for (int y = 0; y < 192; y++) {
-                byte a = attr[(y & 0xf8) * 4 + x / 8];
-                bright = (a & 0x40) != 0;
-                int b = pix[(x >> 3) + 256 * (y & 7) + 4 * (y & 0x38) + 32 * (y & 0xc0)] >> (7 - (x & 7));
-                byte p = (byte) ((b & 1) * 2 + (bright ? 0 : 1));
-                if ((a & 7) == 0 && p == 3) p = 2;
-                if ((a & 0x38) == 0 && p == 1) p = 0;
-                buf[y] = p;
+        SpectrumScreen spectrumScreen = new SpectrumScreen(stream);
+        spectrumScreen.setOffset(128 - getImageWidth() / 2, 96 - getImageHeight() / 2);
+        Point pos = new Point();
+        for (int x = 0; x < getImageWidth(); x++) {
+            for (int y = 0; y < getImageHeight(); y++) {
+                SpectrumScreen.Pixel p = spectrumScreen.getPixel(x, y);
+                Pixel pixel;
+                if (p != null) {
+                    if (p.value) {
+                        pixel = new Pixel(Table.INK, p.ink, (p.ink > 0) ? p.bright : 0);
+                    } else {
+                        pixel = new Pixel(Table.PAPER, p.paper, (p.paper > 0) ? p.bright : 0);
+                    }
+                    pos.setLocation(x, y);
+                    setPixel(pixel, pos);
+                }
             }
-            as.write(buf);
         }
-        for (int x = 0; x < 32; x++) {
-            byte[] buf = new byte[24];
-            for (int y = 0; y < 24; y++) {
-                byte a = attr[x + 32 * y];
-                buf[y] = (byte) (a & 0x3f);
-            }
-            as.write(buf);
-        }
-        image.load(new ByteArrayInputStream(as.toByteArray()));
+
 
         int[] ink = {0x00, 0x14, 0x18, 0x1e, 0x1c, 0x1a, 0x16, 0x12};
         for (int i = 1; i < 8; i++) ink[i] += (ink[i] + 0x10) << 6;
         palette.setPalette(ink, ink);
 
+    }
+
+    @Override
+    public void load(ObjectInputStream stream, FileChannel fc) throws IOException, ClassNotFoundException {
+        final ByteArrayOutputStream bs = new ByteArrayOutputStream();
+        ObjectOutputStream os = new ObjectOutputStream(bs);
+        ImageBuffer img;
+        Palette pal = createPalette();
+        int x = 256, y = 192;
+        if (fc.size() == 50266) {
+            img = new ImageBuffer(256, 192, new Dimension(1, 1), new Dimension(8, 8));
+            img.load(stream);
+            pal.loadPalette(stream);
+
+        } else {
+            pal.loadPalette(stream);
+            x = stream.readInt();
+            if (x<255) {
+                fc.position(0);
+                super.load(stream, fc);
+                return;
+            }
+            y = stream.readInt();
+            img = new ImageBuffer(x, y, new Dimension(1, 1), new Dimension(8, 8));
+            img.load(stream, x, y);
+        }
+        pal.savePalette(os);
+        os.writeInt(x / 2);
+        os.writeInt(y);
+
+        byte[] a = new byte[y];
+        for (int i = 0; i < x; i += 2) {
+            for (int j = 0; j < y; j++) {
+                a[j] = (byte) (img.getPixel(i, j) | (img.getPixel(i + 1, j) << 4));
+            }
+            os.write(a);
+        }
+        a = new byte[y / 8];
+        for (int i = 0; i < x; i += 8) {
+            for (int j = 0; j < y; j += 8) {
+                a[j / 8] = img.getAttr(i, j);
+            }
+            os.write(a);
+        }
+        os.close();
+        ObjectInputStream is = new ObjectInputStream(new ByteArrayInputStream(bs.toByteArray()));
+
+        super.load(is, fc);
+        stream.close();
     }
 
     SpecialMethods specialMethods = new SpecialMethods();
@@ -315,24 +332,31 @@ public class NScreen extends Screen {
             m.put("Inverse palette", (dummy) -> inverseColors());
             m.put("Swap ink0 <-> paper0", (c) -> swapInkPaper(c[ink], c[paper], 0));
             m.put("Swap ink1 <-> paper1", (c) -> swapInkPaper(c[ink], c[paper], 1));
-            //m.put("Correct X mode", (dummy) -> correctXMode());
+            m.put("Correct X mode", (dummy) -> correctXMode());
             return m;
         }
 
         private void flipColorCell(Table table, int index) {
+            PixelProcessor.PixelDataList l = new PixelProcessor.PixelDataList();
             image.forEachPixel((x, y, b, a) -> {
-                if (table == Table.INK)
-                    return (byte) (PixelProcessor.inkFromAttr(a) == index && b >= 2 ? 5 - b : b);
-                else
-                    return (byte) (PixelProcessor.paperFromAttr(a) == index && b < 2 ? 1 - b : b);
+                l.setPixelData(b);
+                for (int i = 0; i < l.size(); i++) {
+                    final Integer e = l.get(i);
+                    if (table == Table.INK) {
+                        if (PixelProcessor.inkFromAttr(a) == index) l.set(i, e ^ ((e & 0x2) >> 1));
+                    } else {
+                        if (PixelProcessor.paperFromAttr(a) == index) l.set(i, e ^ (((~e) & 0x2) >> 1));
+                    }
+                }
+                return l.getPixelData();
             });
             int c = palette.getColorCell(table, index);
             palette.setColorCell(Palette.combine(Palette.second(c), Palette.first(c)), table, index);
         }
 
         private void inverseColors() {
-            image.forEachPixel((x, y, b, a) -> (byte) (b ^ 2));
-            image.forEachAttr((x, y, b) -> (byte) (((b & 7) << 3) | ((b >> 3) & 7)));
+            image.forEachPixel((x, y, b, a) -> (byte) (b ^ 0x22));
+            image.forEachAttr((x, y, a) -> paperToAttr(inkToAttr((byte) 0, paperFromAttr(a)), inkFromAttr(a)));
             int l = Integer.min(palette.getColorsCount(Table.INK), palette.getColorsCount(Table.PAPER));
             for (int i = 0; i < l; i++) {
                 int ink = palette.getColorCell(Table.INK, i);
@@ -359,16 +383,19 @@ public class NScreen extends Screen {
             palette.setColorCell(Palette.replace(p, i1, shift), Table.PAPER, paper);
             endDraw();
         }
-/*
+
         private void correctXMode() {
             beginDraw();
+            Point pos1 = new Point(), pos2 = new Point();
             for (int y = 0; y < getImageHeight(); y++) {
                 for (int x = 0; x < getImageWidth(); x += 2) {
-                    byte b1 = getPixelData(x, y);
-                    byte b2 = getPixelData(x + 1, y);
+                    pos1.setLocation(x, y);
+                    pos2.setLocation(x + 1, y);
+                    byte b1 = getPixelData(pos1);
+                    byte b2 = getPixelData(pos2);
                     if ((b1 == 2 && b2 == 1) || (b1 == 1 && b2 == 2)) {
-                        putPixelData(x, y, b2);
-                        putPixelData(x + 1, y, b1);
+                        putPixelData(pos1, b2);
+                        putPixelData(pos2, b1);
                     }
                 }
 
@@ -376,7 +403,7 @@ public class NScreen extends Screen {
             endDraw();
             fireImageChanged();
         }
-*/
+
     }
 
 }

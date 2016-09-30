@@ -2,10 +2,10 @@ package Painter.Screen;
 
 import Painter.Palette.Palette;
 
-import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.io.*;
+import java.nio.channels.FileChannel;
 import java.util.*;
 import java.util.function.Consumer;
 
@@ -73,7 +73,7 @@ public abstract class Screen implements ImageSupplier {
     @Override
     public Color getPixelColor(Point pos){
         Pixel pixel = getPixel(pos);
-        return pixelProcessor.getPixelColor(pixel, pos, palette);
+        return pixelProcessor.getPixelColor(pixel, palette);
     }
 
     public Pixel getPixel(Point pos) {
@@ -252,7 +252,7 @@ public abstract class Screen implements ImageSupplier {
             while (!stack.empty()) {
                 Point p = stack.pop();
                 Pixel pix2 = getPixel(p);
-                if (!pix2.hasSameColor(pix,palette) || pixels[p.x][p.y]!=null)
+                if (!pix2.hasSameColor(pix, pixelProcessor, palette) || pixels[p.x][p.y]!=null)
                     continue;
                 pixels[p.x][p.y] = pixel;
                 //setPixel(p.x, p.y, pixel);
@@ -386,10 +386,10 @@ public abstract class Screen implements ImageSupplier {
         image.store(stream);
     }
 
-    public void load(ObjectInputStream stream, boolean old) throws IOException, ClassNotFoundException {
+    public void load(ObjectInputStream stream, FileChannel fc) throws IOException, ClassNotFoundException {
         int[] ink;
         int[] paper;
-        if (old) {
+        if (fc.size() == 50266) {
             image.load(stream);
             getPalette().loadPalette(stream);
 

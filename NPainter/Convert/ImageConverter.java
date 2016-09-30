@@ -6,7 +6,6 @@ import NPainter.PixelProcessor;
 import Painter.Palette.ColorConverter;
 import Painter.Palette.Palette;
 import Painter.Screen.ImageSupplier;
-import Painter.Screen.Pixel;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -170,7 +169,7 @@ public class ImageConverter implements ImageSupplier {
         DataOutputStream os = new DataOutputStream(bs);
 
         palette.savePalette(os);
-        os.writeInt(img.getWidth());
+        os.writeInt(img.getWidth()/2);
         os.writeInt(img.getHeight());
 
         for (int x = 0; x < sizeXCells; x++)
@@ -180,13 +179,16 @@ public class ImageConverter implements ImageSupplier {
 
                 int[] l = indexListByAttr(attr);
                 for (int yy = 0; yy < 8; yy++)
-                    for (int xx = 0; xx < 8; xx++) {
+                    for (int xx = 0; xx < 8; xx+=2) {
                         final int xi = x * 8 + xx;
                         final int yi = y * 8 + yy;
-                        final Color color = converter.remap(new Color(
+                        final Color color1 = converter.remap(new Color(
                                 (xi < img.getWidth() && yi < img.getHeight())
                                 ? img.getRGB(xi, yi) : img.getRGB(0, 0)));
-                        os.write ((byte) (Palette.fromRGB(color,l)));
+                        final Color color2 = converter.remap(new Color(
+                                (xi+1 < img.getWidth() && yi < img.getHeight())
+                                        ? img.getRGB(xi+1, yi) : img.getRGB(0, 0)));
+                        os.write ((byte) (Palette.fromRGB(color1,l)) | (Palette.fromRGB(color2,l)<<4));
                     }
                 os.write(attr);
             }
