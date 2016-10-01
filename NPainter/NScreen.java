@@ -10,7 +10,6 @@ import Painter.SpectrumScreen;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.io.*;
-import java.nio.channels.FileChannel;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -260,29 +259,31 @@ public class NScreen extends Screen {
     }
 
     @Override
-    public void load(ObjectInputStream stream, FileChannel fc) throws IOException, ClassNotFoundException {
+    public void load(InputStream stream, boolean old) throws IOException, ClassNotFoundException {
         final ByteArrayOutputStream bs = new ByteArrayOutputStream();
-        ObjectOutputStream os = new ObjectOutputStream(bs);
         ImageBuffer img;
         Palette pal = createPalette();
+        stream.mark(1024);
+        ObjectInputStream iStream = new ObjectInputStream(stream);
         int x = 256, y = 192;
-        if (fc.size() == 50266) {
+        if (old) {
             img = new ImageBuffer(256, 192, new Dimension(1, 1), new Dimension(8, 8));
-            img.load(stream);
-            pal.loadPalette(stream);
+            img.load(iStream);
+            pal.loadPalette(iStream);
 
         } else {
-            pal.loadPalette(stream);
-            x = stream.readInt();
+            pal.loadPalette(iStream);
+            x = iStream.readInt();
             if (x<255) {
-                fc.position(0);
-                super.load(stream, fc);
+                stream.reset();
+                super.load(stream, old);
                 return;
             }
-            y = stream.readInt();
+            y = iStream.readInt();
             img = new ImageBuffer(x, y, new Dimension(1, 1), new Dimension(8, 8));
-            img.load(stream, x, y);
+            img.load(iStream, x, y);
         }
+        ObjectOutputStream os = new ObjectOutputStream(bs);
         pal.savePalette(os);
         os.writeInt(x / 2);
         os.writeInt(y);
@@ -302,9 +303,8 @@ public class NScreen extends Screen {
             os.write(a);
         }
         os.close();
-        ObjectInputStream is = new ObjectInputStream(new ByteArrayInputStream(bs.toByteArray()));
 
-        super.load(is, fc);
+        super.load(new ByteArrayInputStream(bs.toByteArray()), false);
         stream.close();
     }
 

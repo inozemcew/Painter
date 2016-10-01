@@ -5,7 +5,6 @@ import Painter.Palette.Palette;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.io.*;
-import java.nio.channels.FileChannel;
 import java.util.*;
 import java.util.function.Consumer;
 
@@ -386,20 +385,19 @@ public abstract class Screen implements ImageSupplier {
         image.store(stream);
     }
 
-    public void load(ObjectInputStream stream, FileChannel fc) throws IOException, ClassNotFoundException {
-        int[] ink;
-        int[] paper;
-        if (fc.size() == 50266) {
-            image.load(stream);
-            getPalette().loadPalette(stream);
+    public void load(InputStream stream, boolean old) throws IOException, ClassNotFoundException {
+        ObjectInputStream oStream = new ObjectInputStream(stream);
+        if (old) {
+            image.load(oStream);
+            getPalette().loadPalette(oStream);
 
         } else {
-            getPalette().loadPalette(stream);
-            int x = stream.readInt();
-            int y = stream.readInt();
-            image.load(stream,x,y);
+            getPalette().loadPalette(oStream);
+            int x = oStream.readInt();
+            int y = oStream.readInt();
+            image.load(oStream,x,y);
         }
-        stream.close();
+        oStream.close();
     }
 
     public abstract void importSCR(InputStream stream) throws IOException;

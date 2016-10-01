@@ -276,12 +276,12 @@ public abstract class PainterApp extends JFrame {
             File file = fileChooser.getSelectedFile();
             try {
                 final FileInputStream fs = new FileInputStream(file);
-                ObjectInputStream stream = new ObjectInputStream(fs);
-                screen.load(stream, fs.getChannel());
+                //ObjectInputStream stream = new ObjectInputStream(fs);
+                screen.load(new BufferedInputStream(fs), fs.getChannel().size() == 50266);
             } catch (Exception e) {
                 JOptionPane.showMessageDialog(this,
                         "Cannot load " + file,
-                        "Load error",
+                        e.getMessage(),
                         JOptionPane.ERROR_MESSAGE);
             }
             repaint();
