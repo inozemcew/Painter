@@ -274,6 +274,30 @@ public abstract class Screen implements ImageSupplier {
         }
     }
 
+    public void swap(Pixel pixel, Point pos) {
+        if (isInImage(pos)) {
+            lock();
+            beginDraw();
+            int xx = alignX(pos.x);
+            int yy = alignY(pos.y);
+            Point xy = new Point();
+            Pixel old = getPixel(pos);
+            for (int i = 0; i < GRID_FACTOR.width; i++) {
+                for (int j = 0; j < GRID_FACTOR.height; j++) {
+                    xy.setLocation(xx + i, yy + j);
+                    Pixel pix = getPixel(xy);
+                    if (pix.equals(old))
+                        setPixel(pixel, xy);
+                    else if (pix.equals(pixel))
+                        setPixel(old, xy);
+                }
+            }
+            endDraw();
+            unlock();
+            fireImageChanged(xx, yy, GRID_FACTOR.width, GRID_FACTOR.height);
+        }
+    }
+
     public void copyCell(Point from, Point to) {
         copyCell(this,from, to);
     }

@@ -41,6 +41,7 @@ public abstract class PainterApp extends JFrame {
         propertyChangeListeners.put(PaintArea.OP_STATUS, evt -> statusBar.setText(evt.getNewValue().toString()));
         propertyChangeListeners.put(PaintArea.OP_SCALE, evt -> scaleSlider.setValue((Integer)evt.getNewValue()));
         propertyChangeListeners.put(PaintArea.OP_FILL, evt ->  actions.editModes.reset());
+        propertyChangeListeners.put(PaintArea.OP_SWAP, evt ->  actions.editModes.reset());
     }
 
     public static void run(PainterApp app) {
@@ -276,8 +277,8 @@ public abstract class PainterApp extends JFrame {
             File file = fileChooser.getSelectedFile();
             try {
                 final FileInputStream fs = new FileInputStream(file);
-                //ObjectInputStream stream = new ObjectInputStream(fs);
-                screen.load(new BufferedInputStream(fs), fs.getChannel().size() == 50266);
+                InputStream stream = new BufferedInputStream(fs);
+                screen.load(stream, fs.getChannel().size() == 50266);
             } catch (Exception e) {
                 JOptionPane.showMessageDialog(this,
                         "Cannot load " + file,
@@ -350,6 +351,7 @@ public abstract class PainterApp extends JFrame {
         {
             editModes.addAction("Paint", PaintArea.Mode.Paint);
             editModes.addAction("Fill", PaintArea.Mode.Fill, "Z");
+            editModes.addAction("Swap", PaintArea.Mode.Swap, "S");
         }
 
 

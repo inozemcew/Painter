@@ -21,7 +21,7 @@ public class PaintArea extends JComponent implements Scrollable {
     private int scale = 2;
     private int[] currentColors;
     private ClipCell clipCell;
-    public enum Mode {Paint, Fill}
+    public enum Mode {Paint, Fill, Swap}
 
     private Mode mode = Mode.Paint;
 
@@ -157,6 +157,7 @@ public class PaintArea extends JComponent implements Scrollable {
     final static String OP_FILL = "fill";
     final static String OP_STATUS = "status";
     final static String OP_SCALE = "scale";
+    final static String OP_SWAP = "swap";
 
     private class Listener implements MouseListener, MouseMotionListener, MouseWheelListener {
         private int button = 0;
@@ -184,11 +185,20 @@ public class PaintArea extends JComponent implements Scrollable {
         public void mouseClicked(MouseEvent e) {
             int button = e.getModifiersEx();
             if (e.getButton() == MouseEvent.BUTTON1) button = button | MouseEvent.BUTTON1_DOWN_MASK;
+            Point pos = new Point(e.getX()/scale, e.getY()/scale);
             if (isFillMode(e.getButton())) {
                 final Pixel pixel = getPixelByEvent(button);
                 screen.fill(e.getX()/scale,e.getY()/scale, pixel);
                 firePropertyChange(OP_FILL,"0","1");
-            } else if (isMiddleMouseButton(e)) {
+                return;
+            }
+            if (isSwapMode(e.getButton())) {
+                final Pixel pixel = getPixelByEvent(button);
+                screen.swap(pixel, pos);
+                firePropertyChange(OP_SWAP,"0","1");
+                return;
+            }
+            if (isMiddleMouseButton(e)) {
                 final int xx = e.getX() / scale ;
                 final int yy = e.getY() / scale ;
                 if ((button & MouseEvent.SHIFT_DOWN_MASK) != 0) {
@@ -198,14 +208,20 @@ public class PaintArea extends JComponent implements Scrollable {
             }
         }
 
-        boolean isFillMode(int button) {
+        boolean isFillMode(final int button) {
             return mode == Mode.Fill && (button == MouseEvent.BUTTON1 || button == MouseEvent.BUTTON3);
         }
+
+        boolean isSwapMode(final int button) {
+            return mode == Mode.Swap && (button == MouseEvent.BUTTON1 || button == MouseEvent.BUTTON3);
+        }
+
 
         @Override
         public void mousePressed(MouseEvent e) {
             pos.setLocation(e.getPoint());
-            if (isFillMode(e.getButton())) return;
+            final int button = e.getButton();
+            if (isFillMode(button) || isSwapMode(button)) return;
             screen.beginDraw();
             if (isMiddleMouseButton(e)) {
                 if ((e.getModifiersEx() & MouseEvent.SHIFT_DOWN_MASK) == 0) {
@@ -213,7 +229,7 @@ public class PaintArea extends JComponent implements Scrollable {
                     screen.copyCell(clipCell.getScreen(), clipCell.getPosition(),p);
                 }
             } else {
-                button = e.getModifiersEx()
+                this.button = e.getModifiersEx()
                         & (MouseEvent.SHIFT_DOWN_MASK
                         | MouseEvent.CTRL_DOWN_MASK
                         | MouseEvent.BUTTON1_DOWN_MASK
