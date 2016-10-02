@@ -46,68 +46,6 @@ public class NScreen extends Screen {
         return PixelProcessor.MODE4;
     }
 
-    /*
-        @Override
-        public Color getPixelColor(int x, int y) {
-            byte attr = image.getAttr(x, y);
-            int pix = image.getPixel(x, y);
-            int pix1 = image.getPixel(x-1, y);
-            int pix2 = image.getPixel(x+1, y);
-
-            if (mode != Mode.Color4) {
-                if ((pix1 ^ pix) == 2 && (pix1 & pix) == 1)
-                    return getPixelColor(x-1,y);
-                if ((pix2 ^ pix) == 2 && (pix2 & pix) == 1)
-                    return getInkRBGColor(paperFromAttr(attr), (pix & 2) == 2 ? 0 : 1);
-            }
-            if ((pix1 ^ pix2) == 3 && (pix1 * pix2) != 0 && mode == Mode.Color8 )
-                    return getPaperRGBColor(inkFromAttr(attr), (pix1 & 2) == 2 ? 0 : 1);
-            if (pix < 2)
-                return getPaperRGBColor(paperFromAttr(attr), pix & 1);
-            else
-                return getInkRBGColor(inkFromAttr(attr), pix & 1);
-        }
-    */
-/*    @Override
-    public Color getPixelColor(int x, int y) {
-        int x1 = x & 0xfffe;
-        byte attr = getAttr(x, y);
-        int pix1 = getPixelData(x1, y);
-        int pix2 = getPixelData(x1+1, y);
-        int pix = (x==x1) ? pix1 : pix2;
-
-        if (mode == Mode.Color5) {
-            if ((pix1 ^ pix2) == 1 && (pix1 & pix2)>1)
-                return getInkRBGColor(paperFromAttr(attr), pix2 & 1);
-            if ((pix1==1 || pix2==1) && (pix1>1 || pix2>1)) {
-                if (pix > 1) return getInkRBGColor(paperFromAttr(attr), pix & 1);
-                else return getPaperRGBColor(paperFromAttr(attr), 0);
-            }
-        }
-
-        if ( (pix1 ^ pix2) >1 && (pix1 * pix2) != 0 && mode == Mode.ColorX ) {
-            if (pix==2)
-                return getPaperRGBColor(paperFromAttr(attr), 0);
-            if (pix1 == 2 || pix2 == 2)
-                return getInkRBGColor(paperFromAttr(attr), 0);
-            if (pix1 ==3 || pix2 == 3)
-                return getInkRBGColor(paperFromAttr(attr), pix1>1 ? 0 : 1);
-            //if ((pix1 | pix2)>1)
-                return getPaperRGBColor(paperFromAttr(attr), 0);
-
-        }
-
-        if ((pix1 ^ pix2) == 2 && (pix1 & pix2) == 1 && mode != Mode.Color4 )
-                return getInkRBGColor(paperFromAttr(attr), (pix1 & 2) == 2 ? 0 : 1);
-        if ((pix1 ^ pix2) == 3 && (pix1 * pix2) != 0 && mode == Mode.Color8 )
-                return getPaperRGBColor(inkFromAttr(attr), (pix1 & 2) == 2 ? 0 : 1);
-
-        if (pix < 2)
-            return getPaperRGBColor(paperFromAttr(attr), pix & 1);
-        else
-            return getInkRBGColor(inkFromAttr(attr), pix & 1);
-    }
-*/
     @Override
     public Status getStatus(Point pos) {
         if (enhancedColors[0] == -1 && enhancedColors[1] == -1) return Status.Normal;
@@ -117,94 +55,6 @@ public class NScreen extends Screen {
         return (pixel.index == enhancedColors[pixel.table.ordinal()]) ? Status.Enhanced : Status.Dimmed;
     }
 
-    /*@Override
-    public Pixel getPixelDescriptor(int x, int y) {
-        int v = getPixelData(x, y);
-        byte attr = getAttr(x, y);
-        return new Pixel((v<2)? Table.PAPER: Table.INK,
-                (v < 2) ? paperFromAttr(attr): inkFromAttr(attr),
-                v & 1);
-    }
-*/
-/*    @Override
-    protected byte attrFromDesc(Pixel pixel, byte oldAttr) {
-        if (pixel.table == Table.INK) {
-            return inkToAttr(oldAttr, pixel.index);
-        } else {
-            return paperToAttr(oldAttr, pixel.index);
-        }
-    }
-*/
-/*    @Override
-    protected byte pixelFromDesc(Pixel pixel, byte oldPixel, int x, int y) {
-        return  (byte) (pixel.shift | ((pixel.table == Table.INK) ? 2 : 0) );
-    }
-*/
-/*
-    @Override
-    public void setPixel(int x, int y, Pixel pixel) {
-        Pixel p = pixel;
-        if (mode == Mode.ColorX) {
-            int xx = x ^ 1;
-            if (isInImage(x, y)) {
-                byte a =  getAttr(x, y);
-                if (pixel.index >= 0)
-                    a = attrFromDesc(pixel, a);
-
-                byte b = -1;
-                final byte sibling = getPixelData(xx, y);
-                final byte oldPixel = getPixelData(x, y);
-                if (pixel.table == Table.PAPER && pixel.shift == 3) {
-                    if ((x & 1) == 0) {
-                        p = new Pixel(Table.PAPER, p.index, 1);
-                        b = 3;
-                    } else {
-                        p = new Pixel(Table.INK, -1, 1);
-                        b = 1;
-                    }
-                } else if (pixel.table == Table.PAPER && pixel.shift == 2 ) {
-                    if (sibling == 0 // s.paper=0
-                            || (oldPixel==1 && sibling == 2 ) // o.paper=1 & s.ink=0
-                            )  {
-                        p = new Pixel(Table.PAPER, p.index, 1); //n.paper = 1
-                        b = 2;                                  //s.ink = 0
-                    } else {
-                        if ((x & 1) == 1) {
-                            p = new Pixel(Table.PAPER, p.index, 1);
-                            b = 3;
-                        } else {
-                            p = new Pixel(Table.INK, -1, 1);
-                            b = 1;
-                        }
-                    }
-                } else if (oldPixel==2 && sibling==1) {
-                    if (p.table == Table.PAPER && p.shift == 0) {
-                        b=1;
-                        p=new Pixel(Table.INK, -1,0);
-                    } else {
-                        b=pixelFromDesc(p,b,x,y);
-                    }
-                } else if (oldPixel==1 && sibling==2) {
-                        b=0;
-                } else if ((oldPixel==1 && sibling==3) || (oldPixel==3 && sibling==1)) {
-                    if (p.table == Table.PAPER && p.shift == 0) {
-                        b = 1;
-                        p = new Pixel(Table.INK,-1,0);
-                    } else {
-                        b = pixelFromDesc(p, b, x, y);
-                    }
-                }
-
-                if (b>=0) {
-                    //byte b = pixelFromDesc(pixel, getPixelData(x, y), x, y);
-                    undo.add(xx, y, sibling, getAttr(xx, y), b, a);
-                    putPixelData(xx, y, b, a);
-                }
-            }
-        }
-        super.setPixel(x, y, p);
-    }
-*/
     @Override
     public void rearrangeColorTable(int t, int[] order) {
         Table table = mapColorTable(t);
@@ -386,16 +236,15 @@ public class NScreen extends Screen {
 
         private void correctXMode() {
             beginDraw();
-            Point pos1 = new Point(), pos2 = new Point();
+            Point pos = new Point();
             for (int y = 0; y < getImageHeight(); y++) {
                 for (int x = 0; x < getImageWidth(); x += 2) {
-                    pos1.setLocation(x, y);
-                    pos2.setLocation(x + 1, y);
-                    byte b1 = getPixelData(pos1);
-                    byte b2 = getPixelData(pos2);
+                    pos.setLocation(x, y);
+                    byte b = getPixelData(pos);
+                    int b1 = PixelProcessor.split(b,0);
+                    int b2 = PixelProcessor.split(b,1);
                     if ((b1 == 2 && b2 == 1) || (b1 == 1 && b2 == 2)) {
-                        putPixelData(pos1, b2);
-                        putPixelData(pos2, b1);
+                        putPixelData(pos, PixelProcessor.combine(b2, b1));
                     }
                 }
 

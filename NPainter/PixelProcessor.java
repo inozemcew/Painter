@@ -109,6 +109,31 @@ public enum  PixelProcessor implements PixelProcessing {
             }
             return MODE4.unpackPixel(pixelData, attrData, pos);
         }
+    },
+
+    MODEX("X mode") {
+        @Override
+        public byte packPixel(Pixel pixel, byte oldPixelData, Point pos) {
+            Point s_pos = new Point(pos.x ^ 1, pos.y );
+            Pixel sibling = unpackPixel(oldPixelData, s_pos);
+            if (pixel.table == Table.PAPER && pixel.shift == 2
+                    && sibling.table == Table.PAPER && sibling.shift == 0)
+                return ((pos.x & 1) == 0) ? combine(1,2): combine(2,1);
+            return MODE6.packPixel(pixel, oldPixelData, pos);
+        }
+
+        @Override
+        public Pixel unpackPixel(byte pixelData, byte attrData, Point pos) {
+            int pix = split(pixelData, pos.x & 1);
+            int pix1 = split(pixelData, 0), pix2 = split(pixelData, 1);
+//            if ((pix1 ^ pix2) == 1 && (pix1 & pix2) > 1) // Ink-Ink -> width = 2
+//                return new Pixel(Table.PAPER, paperFromAttr(attrData), 2 | (pix2 & 1));
+            if ((pix1==1 || pix2==1) && (pix1==2 || pix2==2)) { // Ink-Paper -> width = 1
+                if (pix < 2) return new Pixel(Table.PAPER, paperFromAttr(attrData), 2);
+                else return new Pixel(Table.PAPER, paperFromAttr(attrData), 0);
+            }
+            return MODE6.unpackPixel(pixelData, attrData, pos);
+        }
     }
 
     ;
@@ -222,24 +247,6 @@ public enum  PixelProcessor implements PixelProcessing {
         int result = 0;
         for (int i = 0; i < b.length; i++) result |= b[i] << (i * 4);
         return (byte) result;
-    }
-}
-
-enum Mode {
-    Color4("4 colors mode"),
-    Color5("5+1 colors mode"),
-    Color6("6 colors mode"),
-    Color8("8 colors mode"),
-    ColorX("X mode");
-
-    String name;
-    Mode(String name) {
-        this.name = name;
-    }
-
-    @Override
-    public String toString() {
-        return name;
     }
 }
 
