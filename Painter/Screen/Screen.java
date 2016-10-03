@@ -243,7 +243,7 @@ public abstract class Screen implements ImageSupplier {
             lock();
             beginDraw();
             Stack<Point> stack = new Stack<>();
-            Pixel[][] pixels = new Pixel[getImageWidth()][getImageHeight()];
+            HashMap<Point,Pixel> pixels = new HashMap<>(256);
             final int ss = 1;
             Point pos = new Point(x, y);
             stack.push(pos);
@@ -251,23 +251,16 @@ public abstract class Screen implements ImageSupplier {
             while (!stack.empty()) {
                 Point p = stack.pop();
                 Pixel pix2 = getPixel(p);
-                if (!pix2.hasSameColor(pix, pixelProcessor, palette) || pixels[p.x][p.y]!=null)
+                if (!pix2.hasSameColor(pix, pixelProcessor, palette) || pixels.containsKey(p))
                     continue;
-                pixels[p.x][p.y] = pixel;
+                pixels.put(p, pixel);
                 //setPixel(p.x, p.y, pixel);
                 if (p.x > 0) stack.push(new Point(p.x - ss, p.y));
                 if (p.y > 0) stack.push(new Point(p.x, p.y - ss));
                 if (p.x < getImageWidth() - 1) stack.push(new Point(p.x + ss, p.y));
                 if (p.y < getImageHeight() - 1) stack.push(new Point(p.x, p.y + ss));
             }
-            for (int xx = 0; xx < getImageWidth(); xx++)
-                for (int yy = 0; yy < getImageHeight(); yy++) {
-                    if (pixels[xx][yy] != null) {
-                        pos.setLocation(xx,yy);
-                        setPixel(pixels[xx][yy],pos);
-                    }
-                }
-
+            pixels.forEach((ps, px) -> setPixel(px, ps));
             endDraw();
             unlock();
             fireImageChanged();
@@ -280,18 +273,19 @@ public abstract class Screen implements ImageSupplier {
             beginDraw();
             int xx = alignX(pos.x);
             int yy = alignY(pos.y);
-            Point xy = new Point();
             Pixel old = getPixel(pos);
+            HashMap<Point, Pixel> pixels = new HashMap<>(64);
             for (int i = 0; i < GRID_FACTOR.width; i++) {
                 for (int j = 0; j < GRID_FACTOR.height; j++) {
-                    xy.setLocation(xx + i, yy + j);
+                    Point xy = new Point(xx + i, yy + j);
                     Pixel pix = getPixel(xy);
                     if (pix.equals(old))
-                        setPixel(pixel, xy);
+                        pixels.put(xy, pixel);
                     else if (pix.equals(pixel))
-                        setPixel(old, xy);
+                        pixels.put(xy, old);
                 }
             }
+            pixels.forEach((ps, px) -> setPixel(px, ps));
             endDraw();
             unlock();
             fireImageChanged(xx, yy, GRID_FACTOR.width, GRID_FACTOR.height);

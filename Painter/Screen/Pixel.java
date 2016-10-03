@@ -16,8 +16,8 @@ public class Pixel {
         this.table = table;
     }
 
-    public Pixel clone() {
-        return new Pixel(this.table, this.index, this.shift);
+    public Pixel(Pixel other) {
+        this(other.table, other.index, other.shift);
     }
 
     public boolean equals(Pixel other) {
