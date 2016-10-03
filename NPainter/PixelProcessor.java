@@ -116,10 +116,21 @@ public enum  PixelProcessor implements PixelProcessing {
         public byte packPixel(Pixel pixel, byte oldPixelData, Point pos) {
             Point s_pos = new Point(pos.x ^ 1, pos.y );
             Pixel sibling = unpackPixel(oldPixelData, s_pos);
-            if (pixel.table == Table.PAPER && pixel.shift == 2
-                    && sibling.table == Table.PAPER && sibling.shift == 0)
-                return ((pos.x & 1) == 0) ? combine(1,2): combine(2,1);
-            return MODE6.packPixel(pixel, oldPixelData, pos);
+            if (pixel.table == Table.PAPER && pixel.shift == 2) {
+                if (sibling.table == Table.PAPER && sibling.shift == 0)
+                    return ((pos.x & 1) == 0) ? combine(1, 2) : combine(2, 1);
+                return combine(3,1);
+            }
+            if (sibling.table == Table.PAPER && sibling.shift == 2) {
+                if (pixel.table == Table.PAPER && pixel.shift == 0)
+                    return ((pos.x & 1) == 1) ? combine(1,2): combine(2,1);
+            }
+            if ((pixel.table == Table.INK && pixel.shift < 2 && sibling.table == Table.PAPER && sibling.shift > 0)
+                ||(pixel.table == Table.PAPER && pixel.shift > 0 && sibling.table == Table.INK && sibling.shift < 2)) {
+                sibling = pixel;
+            }
+
+            return MODE6.packPixel(pixel, MODE6.packPixel(sibling, (byte)0, s_pos), pos);
         }
 
         @Override

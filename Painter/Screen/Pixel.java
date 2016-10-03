@@ -6,9 +6,9 @@ import Painter.Palette.Palette;
  * Created by aleksey on 25.09.16.
  */
 public class Pixel {
-    public final Enum table;
-    public final int index;
-    public final int shift;
+    public Enum table;
+    public int index;
+    public int shift;
 
     public Pixel(Enum table, int index, int shift) {
         this.index = index;
