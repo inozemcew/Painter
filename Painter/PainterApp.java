@@ -6,18 +6,18 @@ import Painter.Screen.PixelProcessing;
 import Painter.Screen.Screen;
 
 import javax.swing.*;
+import javax.swing.event.MenuKeyEvent;
+import javax.swing.event.MenuKeyListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.InputEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import java.awt.event.*;
 import java.beans.PropertyChangeListener;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Set;
 
+import static javax.swing.Action.ACCELERATOR_KEY;
 import static javax.swing.Action.SELECTED_KEY;
 
 /**
@@ -163,8 +163,31 @@ public abstract class PainterApp extends JFrame {
         edit.add(actions.editRedo);
         edit.addSeparator();
 
+
+
         ButtonGroup group = new ButtonGroup();
-        actions.editModes.forEach(action -> group.add(edit.add(new JRadioButtonMenuItem(action))));
+        actions.editModes.forEach(action -> {
+            JRadioButtonMenuItem menuItem = new JRadioButtonMenuItem(action);
+            menuItem.addMenuKeyListener(new MenuKeyListener() {
+                @Override
+                public void menuKeyTyped(MenuKeyEvent e) {
+
+                }
+
+                @Override
+                public void menuKeyPressed(MenuKeyEvent e) {
+                    if (e.getKeyChar() == ((KeyStroke)(action.getValue(ACCELERATOR_KEY))).getKeyChar()
+                            && e.getModifiers() == KeyEvent.SHIFT_DOWN_MASK)
+                        menuItem.doClick();
+                }
+
+                @Override
+                public void menuKeyReleased(MenuKeyEvent e) {
+
+                }
+            });
+            group.add(edit.add(menuItem));
+        });
 
         edit.addSeparator();
 
@@ -349,7 +372,7 @@ public abstract class PainterApp extends JFrame {
 
         EditModeActionList editModes = new EditModeActionList(paintArea);
         {
-            editModes.addAction("Paint", PaintArea.Mode.Paint);
+            editModes.addAction("Paint", PaintArea.Mode.Paint, "A");
             editModes.addAction("Fill", PaintArea.Mode.Fill, "Z");
             editModes.addAction("Swap", PaintArea.Mode.Swap, "S");
         }
@@ -404,6 +427,7 @@ public abstract class PainterApp extends JFrame {
 
 class EditModeActionList extends ArrayList<EditModeActionList.Action> {
     PaintArea paintArea;
+    boolean fixed = false;
 
     class Action extends AbstractAction {
         PaintArea.Mode mode;
@@ -423,8 +447,9 @@ class EditModeActionList extends ArrayList<EditModeActionList.Action> {
         @Override
         public void actionPerformed(ActionEvent e) {
             if (paintArea.getMode() == mode) {
-                reset();
+                fixed = true;
             } else
+                fixed = false;
                 paintArea.setMode(mode);
         }
 
@@ -443,6 +468,7 @@ class EditModeActionList extends ArrayList<EditModeActionList.Action> {
     }
 
     public void reset() {
+        if (fixed) return;
         final EditModeActionList.Action paintAction = get(0);
         paintAction.putValue(SELECTED_KEY, Boolean.TRUE);
         paintArea.setMode(paintAction.mode);
