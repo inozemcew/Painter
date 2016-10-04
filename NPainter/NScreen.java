@@ -62,7 +62,6 @@ public class NScreen extends Screen {
         image.forEachAttr((x, y, attr) -> {
             final int a = PixelProcessor.fromAttr(attr, table);
             final byte b = PixelProcessor.toAttr(attr, order[a], table);
-            undo.addAttr(x, y, attr, b);
             return b;
         });
         palette.reorder(table, order);
@@ -209,6 +208,7 @@ public class NScreen extends Screen {
         }
 
         private void inverseColors() {
+            beginDraw();
             image.forEachPixel((x, y, b, a) -> (byte) (b ^ 0x22));
             image.forEachAttr((x, y, a) -> paperToAttr(inkToAttr((byte) 0, paperFromAttr(a)), inkFromAttr(a)));
             int l = Integer.min(palette.getColorsCount(Table.INK), palette.getColorsCount(Table.PAPER));
@@ -218,17 +218,23 @@ public class NScreen extends Screen {
                 palette.setColorCell(ink, Table.PAPER, i);
                 palette.setColorCell(paper, Table.INK, i);
             }
+            endDraw();
         }
 
         private void swapInkPaper(int ink, int paper, int shift) {
             beginDraw();
-            image.forEachPixel((x, y, b, a) -> {
-                final boolean f = (PixelProcessor.inkFromAttr(a) == ink
-                        && PixelProcessor.paperFromAttr(a) == paper
-                        && (b & 1) == shift);
-                if (f) undo.addPixel(x, y, b, a, (byte) (b ^ 2), a);
-                return (byte) (f ? b ^ 2 : b);
-            });
+            Point pos = new Point();
+            Pixel ip = new Pixel(Table.INK, ink, shift);
+            Pixel pp = new Pixel(Table.PAPER, paper, shift);
+            for (int x = 0; x < getImageWidth(); x++) {
+                for (int y = 0; y < getImageHeight(); y++) {
+                    pos.setLocation(x, y);
+                    Pixel pix = getPixel(pos);
+                    if (pix.equals(ip)) {
+                        setPixel(pp,pos);
+                    } else if (pix.equals(pp)) setPixel(ip, pos);
+                }
+            }
             int i = palette.getColorCell(Table.INK, ink);
             int i1 = Palette.split(i, shift);
             int p = palette.getColorCell(Table.PAPER, paper);

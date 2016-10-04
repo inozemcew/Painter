@@ -35,6 +35,7 @@ public abstract class Screen implements ImageSupplier {
         image = createImageBuffer(w,h);
         palette = createPalette();
         palette.setUndo(this.undo);
+        image.setUndo(this.undo);
         pixelProcessor = createPixelProcessor();
         enhancedColors = new int[palette.getTablesCount()];
         resetEnhanced();
@@ -113,6 +114,8 @@ public abstract class Screen implements ImageSupplier {
 
     public void newImageBuffer(int sizeX, int sizeY) {
         this.image = createImageBuffer(sizeX, sizeY);
+        this.image.setUndo(undo);
+        undo.clear();
         fireImageChanged();
     }
 
@@ -140,7 +143,7 @@ public abstract class Screen implements ImageSupplier {
                 UndoRedo.Entry e = i.previous();
                 if (e instanceof UndoPixelElement) {
                     UndoPixelElement ee = (UndoPixelElement) e;
-                    putPixelData(ee.pos, ee.pixel, ee.attr);
+                    image.putPixel(ee.pos.x, ee.pos.y, ee.pixel, ee.attr);
                 } else if (e instanceof UndoColorElement) {
                     UndoColorElement ee = (UndoColorElement) e;
                     palette.setColorCell(ee.oldValue, ee.table, ee.index);
@@ -158,7 +161,7 @@ public abstract class Screen implements ImageSupplier {
             for (UndoRedo.Entry e : elements) {
                 if (e instanceof UndoPixelElement) {
                     UndoPixelElement ee = (UndoPixelElement) e;
-                    putPixelData(ee.pos, ee.newPixel, ee.newAttr);
+                    image.putPixel(ee.pos.x, ee.pos.y, ee.newPixel, ee.newAttr);
                 } else if (e instanceof UndoColorElement) {
                     UndoColorElement ee = (UndoColorElement) e;
                     palette.setColorCell(ee.newValue, ee.table, ee.index);
@@ -202,7 +205,6 @@ public abstract class Screen implements ImageSupplier {
                 a = pixelProcessor.packAttr(pixel, a,pos);
             byte oldPixelData = getPixelData(pos);
             byte b = pixelProcessor.packPixel(pixel, oldPixelData,pos);
-            undo.addPixel(pos.x, pos.y, oldPixelData, getAttr(pos), b, a);
             putPixelData(pos, b, a);
             fireImageChanged(alignX(pos.x), alignY(pos.y), GRID_FACTOR.width, GRID_FACTOR.height);
         }
@@ -326,7 +328,6 @@ public abstract class Screen implements ImageSupplier {
                     ff.setLocation(f.x + x, f.y + y);
                     tt.setLocation(t.x + x, t.y + y);
                     byte b = source.getPixelData(ff);
-                    undo.addPixel(tt.x, tt.y, getPixelData(tt),getAttr(tt),b,a);
                     putPixelData(tt,b, a);
                 }
             }

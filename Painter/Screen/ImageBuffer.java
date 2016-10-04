@@ -33,6 +33,11 @@ public class ImageBuffer {
         return new byte[SIZE_X][SIZE_Y];
     }
 
+    private UndoRedo undo = null;
+    public void setUndo(UndoRedo undo) {
+        this.undo = undo;
+    }
+
     public byte getPixel(int x, int y) {
         return (x >= 0 && x < SIZE_X && y >= 0 && y < SIZE_Y) ? pixbuf[x][y] : -1;
     }
@@ -41,16 +46,24 @@ public class ImageBuffer {
         return attrbuf[x / ATTR_FACTOR_X][y / ATTR_FACTOR_Y];
     }
     void putAttr(int x, int y, byte attr) {
+        byte oldAttr = getAttr(x, y);
         attrbuf[x / ATTR_FACTOR_X][y / ATTR_FACTOR_Y] = attr;
+        if (undo != null) undo.addAttr(x, y, oldAttr, attr);
     }
 
     public void putPixel(int x, int y, byte pixel) {
+        byte attr = getAttr(x, y);
+        byte oldPixel = getPixel(x, y);
         this.pixbuf[x][y] = pixel;
+        if (undo != null) undo.addPixel(x, y, oldPixel, attr, pixel, attr);
     }
 
     public void putPixel(int x, int y, byte pixel, byte attr) {
-        putPixel(x, y, pixel);
+        byte oldAttr = getAttr(x, y);
+        byte oldPixel = getPixel(x, y);
+        this.pixbuf[x][y] = pixel;
         this.attrbuf[x / ATTR_FACTOR_X][y / ATTR_FACTOR_Y] = attr;
+        if (undo != null) undo.addPixel(x, y, oldPixel, oldAttr, pixel, attr);
     }
 
     void shift (int dx, int dy) {
@@ -78,18 +91,16 @@ public class ImageBuffer {
 
     public void forEachPixel(PixelDataProcessor proc) {
         for (int x = 0; x < SIZE_X; x++) {
-            int xx = x / ATTR_FACTOR_X;
             for (int y = 0; y < SIZE_Y; y++){
-                int yy = y / ATTR_FACTOR_Y;
-                pixbuf[x][y] = proc.process(x, y, pixbuf[x][y], attrbuf[xx][yy]);
+                putPixel(x,y, proc.process(x, y, getPixel(x, y), getAttr(x,y)));
             }
         }
     }
 
     public void forEachAttr(AttrDataProcessor proc) {
-        for (int x = 0; x < ATTR_SIZE_X; x++)
-            for (int y = 0; y < ATTR_SIZE_Y; y++)
-                attrbuf[x][y] = proc.process(x*ATTR_FACTOR_X, y*ATTR_FACTOR_Y, attrbuf[x][y]);
+        for (int x = 0; x < SIZE_X; x+=ATTR_FACTOR_X)
+            for (int y = 0; y < SIZE_Y; y+=ATTR_FACTOR_Y)
+                putAttr(x, y, proc.process(x, y, getAttr(x, y)));
     }
 
     void store(OutputStream stream) throws IOException {
