@@ -1,4 +1,4 @@
-package Painter.Palette;
+package Painter.PaletteControls;
 
 import javax.swing.*;
 import javax.swing.event.MouseInputAdapter;

@@ -1,6 +1,6 @@
 package APainter;
 
-import Painter.Palette.Palette;
+import Painter.Screen.Palette.Palette;
 import Painter.Screen.PixelProcessing;
 import Painter.Screen.Screen;
 import Painter.SpectrumScreen;

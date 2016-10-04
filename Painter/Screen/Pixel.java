@@ -1,6 +1,6 @@
 package Painter.Screen;
 
-import Painter.Palette.Palette;
+import Painter.Screen.Palette.Palette;
 
 /**
  * Created by aleksey on 25.09.16.

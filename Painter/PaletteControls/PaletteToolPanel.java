@@ -1,4 +1,6 @@
-package Painter.Palette;
+package Painter.PaletteControls;
+
+import Painter.Screen.Palette.Palette;
 
 import javax.swing.*;
 import java.awt.*;

@@ -1,6 +1,6 @@
 package NPainter;
 
-import Painter.Palette.Palette;
+import Painter.Screen.Palette.Palette;
 
 /**
  * Created by ainozemtsev on 04.07.16.

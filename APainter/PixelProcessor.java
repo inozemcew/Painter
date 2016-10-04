@@ -1,6 +1,6 @@
 package APainter;
 
-import Painter.Palette.Palette;
+import Painter.Screen.Palette.Palette;
 import Painter.Screen.Pixel;
 import Painter.Screen.PixelProcessing;
 
@@ -27,7 +27,7 @@ public class PixelProcessor implements PixelProcessing {
     public Set<? extends PixelProcessing> enumPixelModes() {
         return null;
 /*        HashSet<PixelProcessor> pixelProcessors = new HashSet<>();
-        pixelProcessors.add(pixelProcessor);
+        pixelProcessors.addPixel(pixelProcessor);
         return pixelProcessors;*/
     }
 

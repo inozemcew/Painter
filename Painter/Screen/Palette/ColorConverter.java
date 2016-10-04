@@ -1,4 +1,4 @@
-package Painter.Palette;
+package Painter.Screen.Palette;
 
 import java.awt.*;
 import java.util.HashMap;

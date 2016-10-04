@@ -1,4 +1,6 @@
-package Painter.Palette;
+package Painter.Screen.Palette;
+
+import Painter.Screen.UndoRedo;
 
 import java.awt.*;
 import java.io.*;
@@ -93,10 +95,24 @@ public class Palette {
         setColorCell(value, table.ordinal(), index);
     }
     public void setColorCell(int value, int table, int index) {
+        int oldValue = getColorCell(table, index);
         colorTables[table][index] = value;
-        fireChangeEvent(table,index);
+        if (undo != null) undo.addColor(table, index, value, oldValue);
+        fireChangeEvent(table, index);
     }
 
+    private UndoRedo undo = null;
+    public void setUndo(UndoRedo undo) {
+        this.undo = undo;
+    }
+
+    public void beginUpdate() {
+        undo.start();
+    }
+
+    public void endUpdate() {
+        undo.commit();
+    }
 
     public void addChangeListener(PaletteChangeListener listener, int table, int index) {
         this.listeners.add(new PaletteChangeListenerItem(table,index,listener));

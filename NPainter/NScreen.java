@@ -1,7 +1,7 @@
 package NPainter;
 
-import Painter.Palette.Palette;
 import Painter.Screen.ImageBuffer;
+import Painter.Screen.Palette.Palette;
 import Painter.Screen.Pixel;
 import Painter.Screen.PixelProcessing;
 import Painter.Screen.Screen;
@@ -58,11 +58,15 @@ public class NScreen extends Screen {
     @Override
     public void rearrangeColorTable(int t, int[] order) {
         Table table = mapColorTable(t);
+        beginDraw();
         image.forEachAttr((x, y, attr) -> {
-            int a = PixelProcessor.fromAttr(attr, table);
-            return PixelProcessor.toAttr(attr, order[a], table);
+            final int a = PixelProcessor.fromAttr(attr, table);
+            final byte b = PixelProcessor.toAttr(attr, order[a], table);
+            undo.addAttr(x, y, attr, b);
+            return b;
         });
         palette.reorder(table, order);
+        endDraw();
         fireImageChanged();
     }
 
@@ -222,7 +226,7 @@ public class NScreen extends Screen {
                 final boolean f = (PixelProcessor.inkFromAttr(a) == ink
                         && PixelProcessor.paperFromAttr(a) == paper
                         && (b & 1) == shift);
-                if (f) undo.add(x, y, b, a, (byte) (b ^ 2), a);
+                if (f) undo.addPixel(x, y, b, a, (byte) (b ^ 2), a);
                 return (byte) (f ? b ^ 2 : b);
             });
             int i = palette.getColorCell(Table.INK, ink);

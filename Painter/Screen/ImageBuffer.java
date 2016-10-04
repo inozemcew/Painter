@@ -40,6 +40,9 @@ public class ImageBuffer {
     public byte getAttr(int x, int y) {
         return attrbuf[x / ATTR_FACTOR_X][y / ATTR_FACTOR_Y];
     }
+    void putAttr(int x, int y, byte attr) {
+        attrbuf[x / ATTR_FACTOR_X][y / ATTR_FACTOR_Y] = attr;
+    }
 
     public void putPixel(int x, int y, byte pixel) {
         this.pixbuf[x][y] = pixel;
@@ -86,7 +89,7 @@ public class ImageBuffer {
     public void forEachAttr(AttrDataProcessor proc) {
         for (int x = 0; x < ATTR_SIZE_X; x++)
             for (int y = 0; y < ATTR_SIZE_Y; y++)
-                attrbuf[x][y] = proc.process(x, y, attrbuf[x][y]);
+                attrbuf[x][y] = proc.process(x*ATTR_FACTOR_X, y*ATTR_FACTOR_Y, attrbuf[x][y]);
     }
 
     void store(OutputStream stream) throws IOException {

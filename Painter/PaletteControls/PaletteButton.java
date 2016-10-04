@@ -1,4 +1,6 @@
-package Painter.Palette;
+package Painter.PaletteControls;
+
+import Painter.Screen.Palette.Palette;
 
 import javax.swing.*;
 import java.awt.*;
@@ -43,7 +45,9 @@ public class PaletteButton extends JToggleButton
     }
 
     public void setColorCell(int value) {
+        palette.beginUpdate();
         palette.setColorCell(value,this.table,this.index);
+        palette.endUpdate();
     }
 
     @Override
@@ -51,10 +55,6 @@ public class PaletteButton extends JToggleButton
         setIcon(createIcon());
     }
 
-/*    @Override
-    public void reorder(int oldIndex, int newIndex) {
-
-    }*/
 }
 
 class PaletteIcon implements Icon {

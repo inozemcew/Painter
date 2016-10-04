@@ -3,9 +3,9 @@ package NPainter.Convert;
 import NPainter.NScreen;
 import NPainter.PixelProcessor;
 import Painter.InterlacedView;
-import Painter.Palette.ChangeAdapter;
-import Painter.Palette.Palette;
-import Painter.Palette.PaletteToolPanel;
+import Painter.PaletteControls.ChangeAdapter;
+import Painter.PaletteControls.PaletteToolPanel;
+import Painter.Screen.Palette.Palette;
 import Painter.Screen.Screen;
 
 import javax.swing.*;
@@ -259,7 +259,7 @@ public class ConvertDialog {
 
 /*                JToggleButton t = new JToggleButton("Preview");
                 t.addActionListener(e -> converter.setPreview(t.isSelected()));
-                p.add(t);*/
+                p.addPixel(t);*/
 
                 add(p, BorderLayout.PAGE_END);
             }

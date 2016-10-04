@@ -1,7 +1,7 @@
 package Painter;
 
-import Painter.Palette.ChangeAdapter;
-import Painter.Palette.PaletteToolPanel;
+import Painter.PaletteControls.ChangeAdapter;
+import Painter.PaletteControls.PaletteToolPanel;
 import Painter.Screen.PixelProcessing;
 import Painter.Screen.Screen;
 

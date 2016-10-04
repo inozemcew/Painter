@@ -1,6 +1,6 @@
 package NPainter;
 
-import Painter.Palette.Palette;
+import Painter.Screen.Palette.Palette;
 import Painter.Screen.Pixel;
 import Painter.Screen.PixelProcessing;
 

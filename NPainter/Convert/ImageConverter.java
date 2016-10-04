@@ -3,9 +3,9 @@ package NPainter.Convert;
 import NPainter.NPalette;
 import NPainter.NScreen;
 import NPainter.PixelProcessor;
-import Painter.Palette.ColorConverter;
-import Painter.Palette.Palette;
 import Painter.Screen.ImageSupplier;
+import Painter.Screen.Palette.ColorConverter;
+import Painter.Screen.Palette.Palette;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static Painter.Palette.Palette.split;
+import static Painter.Screen.Palette.Palette.split;
 
 /**
  * Created by aleksey on 23.01.16.

@@ -7,20 +7,34 @@ import java.util.Vector;
  * Created by aleksey on 05.12.15.
  */
 public class UndoRedo {
-    private final LinkedList<Vector<UndoElement>> undoStack= new LinkedList<>();
-    private final LinkedList<Vector<UndoElement>> redoStack= new LinkedList<>();
 
-    private Vector<UndoElement> current = null;
+    public interface Entry {   }
+
+    private final LinkedList<Vector<Entry>> undoStack= new LinkedList<>();
+    private final LinkedList<Vector<Entry>> redoStack= new LinkedList<>();
+
+    private Vector<Entry> current = null;
 
     public void start(){
         current = new Vector<>();
         redoStack.clear();
     }
 
-    public void add(int x, int y, byte pixel, byte attr, byte newPixel, byte newAttr) {
+    public void addPixel(int x, int y, byte pixel, byte attr, byte newPixel, byte newAttr) {
         if (current != null) {
-            current.add(new UndoElement(x, y, pixel, attr, newPixel, newAttr));
+            current.add(new UndoPixelElement(x, y, pixel, attr, newPixel, newAttr));
         }
+    }
+
+    public void addAttr(int x, int y, byte attr, byte newAttr) {
+        if (current != null) {
+            current.add(new UndoAttrElement(x, y, attr, newAttr));
+        }
+    }
+
+    public void addColor(int table, int index, int newValue, int oldValue) {
+        if (current != null)
+            current.add(new UndoColorElement(table, index, newValue, oldValue));
     }
 
     public void commit() {
@@ -32,30 +46,43 @@ public class UndoRedo {
         }
     }
 
-    public Vector<UndoElement> undo() {
+    public Vector<Entry> undo() {
         if (!undoStack.isEmpty()) {
-            Vector<UndoElement> e = undoStack.removeFirst();
+            Vector<Entry> e = undoStack.removeFirst();
             redoStack.addFirst(e);
             return e;
         } else return null;
     }
 
-    public Vector<UndoElement> redo() {
+    public Vector<Entry> redo() {
         if (!redoStack.isEmpty() && current == null) {
-            Vector<UndoElement> e = redoStack.removeFirst();
+            Vector<Entry> e = redoStack.removeFirst();
             undoStack.addFirst(e);
             return e;
         }
         return null;
     }
+
+    public void clear() {
+        undoStack.clear();
+        redoStack.clear();
+    }
+
+    public boolean isUndoEmpty() {
+        return undoStack.isEmpty();
+    }
+
+    public boolean isRedoEmpty() {
+        return  redoStack.isEmpty();
+    }
 }
 
-class UndoElement {
-    Point pos;
-    byte pixel,attr;
-    byte newPixel,newAttr;
+class UndoPixelElement implements UndoRedo.Entry {
+    final Point pos;
+    final byte pixel,attr;
+    final byte newPixel,newAttr;
 
-    public UndoElement(int x, int y, byte pixel, byte attr, byte newPixel, byte newAttr) {
+    public UndoPixelElement(int x, int y, byte pixel, byte attr, byte newPixel, byte newAttr) {
         this.pos = new Point(x,y);
         this.pixel = pixel;
         this.attr = attr;
@@ -64,3 +91,28 @@ class UndoElement {
     }
 }
 
+class UndoAttrElement implements UndoRedo.Entry {
+    final Point pos;
+    final byte attr, newAttr;
+
+    public UndoAttrElement(int x, int y, byte attr, byte newAttr) {
+        this.pos = new Point(x, y);
+        this.attr = attr;
+        this.newAttr = newAttr;
+    }
+}
+
+class UndoColorElement implements UndoRedo.Entry {
+    final int table;
+    final int index;
+    final int newValue;
+    final int oldValue;
+
+    public UndoColorElement(int table, int index, int newValue, int oldValue) {
+        this.table = table;
+        this.index = index;
+        this.newValue = newValue;
+        this.oldValue = oldValue;
+    }
+
+}

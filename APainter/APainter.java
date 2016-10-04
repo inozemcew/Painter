@@ -2,7 +2,7 @@ package APainter;
 
 import Painter.InterlacedView;
 import Painter.PainterApp;
-import Painter.Palette.ColorConverter;
+import Painter.Screen.Palette.ColorConverter;
 import Painter.Screen.Screen;
 
 import javax.imageio.ImageIO;
