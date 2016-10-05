@@ -1,6 +1,7 @@
 package Painter.Screen;
 
 import Painter.Screen.Palette.Palette;
+import Painter.Screen.UndoRedo.UndoRedo;
 
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
@@ -136,8 +137,8 @@ public abstract class Screen implements ImageSupplier {
     }
 
     public void undoDraw() {
-        Vector<UndoRedo.Entry> elements = undo.undo();
-        if (null != elements) {
+        undo.undo();
+/*        if (null != elements) {
             ListIterator<UndoRedo.Entry> i = elements.listIterator(elements.size());
             while (i.hasPrevious()) {
                 UndoRedo.Entry e = i.previous();
@@ -153,11 +154,11 @@ public abstract class Screen implements ImageSupplier {
                 }
             }
         }
-    }
+*/    }
 
     public void redoDraw() {
-        Vector<UndoRedo.Entry> elements = undo.redo();
-        if (null != elements) {
+        undo.redo();
+/*        if (null != elements) {
             for (UndoRedo.Entry e : elements) {
                 if (e instanceof UndoPixelElement) {
                     UndoPixelElement ee = (UndoPixelElement) e;
@@ -171,7 +172,7 @@ public abstract class Screen implements ImageSupplier {
                 }
             }
         }
-    }
+*/    }
 
     protected byte getPixelData(Point pos) {
         final int xx = pos.x / pixelFactor.width;
