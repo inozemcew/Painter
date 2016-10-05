@@ -20,8 +20,17 @@ public class Pixel {
         this(other.table, other.index, other.shift);
     }
 
-    public boolean equals(Pixel other) {
-        return (this.table == other.table) && (this.index == other.index) && (this.shift == other.shift);
+    @Override
+    public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Pixel)) return false;
+        Pixel o = (Pixel)other;
+        return (this.table == o.table) && (this.index == o.index) && (this.shift == o.shift);
+    }
+
+    @Override
+    public int hashCode() {
+        return table.hashCode() << 16 + index << 4 + shift;
     }
 
     public boolean hasSameColor(Pixel other, PixelProcessing processor, Palette palette) {
