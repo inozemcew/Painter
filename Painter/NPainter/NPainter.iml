@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module version="4">
+  <component name="NewModuleRootManager" inherit-compiler-output="true">
+    <exclude-output />
+    <content url="file://$MODULE_DIR$/../../NPainter">
+      <sourceFolder url="file://$MODULE_DIR$/../../NPainter" isTestSource="false" packagePrefix="NPainter" />
+    </content>
+    <orderEntry type="jdk" jdkName="1.8" jdkType="JavaSDK" />
+    <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="module" module-name="Painter" />
+    <orderEntry type="library" name="testng" level="application" />
+  </component>
+</module>

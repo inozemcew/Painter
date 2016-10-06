@@ -3,7 +3,7 @@ package Painter.Screen.UndoRedo;
 /**
  * Created by ainozemtsev on 05.10.16.
  */
-public class UndoColorElement extends UndoElement {
+public class UndoColorElement extends UndoElement<UndoColorElement> {
     public final int table;
     public final int index;
     public final int newValue;
@@ -17,4 +17,13 @@ public class UndoColorElement extends UndoElement {
         this.oldValue = oldValue;
     }
 
+    @Override
+    void undo() {
+        handler.undo(this);
+    }
+
+    @Override
+    void redo() {
+        handler.redo(this);
+    }
 }

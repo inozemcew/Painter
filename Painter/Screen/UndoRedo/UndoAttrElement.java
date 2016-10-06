@@ -5,7 +5,7 @@ import java.awt.*;
 /**
  * Created by ainozemtsev on 05.10.16.
  */
-public class UndoAttrElement extends UndoElement {
+public class UndoAttrElement extends UndoElement<UndoAttrElement> {
     public final Point pos;
     public final byte attr, newAttr;
 
@@ -14,5 +14,15 @@ public class UndoAttrElement extends UndoElement {
         this.pos = new Point(x, y);
         this.attr = attr;
         this.newAttr = newAttr;
+    }
+
+    @Override
+    void undo() {
+        handler.undo(this);
+    }
+
+    @Override
+    void redo() {
+        handler.redo(this);
     }
 }

@@ -16,5 +16,15 @@ public class UndoPixelElement extends UndoElement<UndoPixelElement> {
         this.newPixel = newPixel;
         this.newAttr = newAttr;
     }
+
+    @Override
+    void undo() {
+        handler.undo(this);
+    }
+
+    @Override
+    void redo() {
+        handler.redo(this);
+    }
 }
 
