@@ -1,7 +1,6 @@
 package Painter.Screen.Palette;
 
-import Painter.Screen.UndoRedo.UndoColorElement;
-import Painter.Screen.UndoRedo.UndoRedo;
+import Painter.Screen.UndoRedo;
 
 import java.awt.*;
 import java.io.*;
@@ -98,20 +97,30 @@ public class Palette {
     public void setColorCell(int value, int table, int index) {
         int oldValue = getColorCell(table, index);
         colorTables[table][index] = value;
-        if (undo != null) undo.addColor(colorUndoClient, table, index, value, oldValue);
+        if (undo != null) undo.add(new UndoColorItem(table, index, value, oldValue));
         fireChangeEvent(table, index);
     }
 
     private UndoRedo undo = null;
-    private UndoRedo.Client<UndoColorElement> colorUndoClient = new UndoRedo.Client<UndoColorElement>() {
-        @Override
-        public void undo(UndoColorElement element) {
-            setColorCell(element.oldValue, element.table, element.index);
+
+    private class UndoColorItem implements UndoRedo.Item {
+        private final int table, index, newValue, oldValue;
+
+        UndoColorItem(int table, int index, int newValue, int oldValue) {
+            this.table = table;
+            this.index = index;
+            this.newValue = newValue;
+            this.oldValue = oldValue;
         }
 
         @Override
-        public void redo(UndoColorElement element) {
-            setColorCell(element.newValue, element.table, element.index);
+        public void undo() {
+            setColorCell(this.oldValue, this.table, this.index);
+        }
+
+        @Override
+        public void redo() {
+            setColorCell(this.newValue, this.table, this.index);
         }
     };
 
@@ -139,7 +148,7 @@ public class Palette {
     private void fireChangeEvent(Enum table, int index) {
         fireChangeEvent(table.ordinal(), index);
     }
-    protected void fireChangeEvent(int table, int index) {
+    private void fireChangeEvent(int table, int index) {
         for (PaletteChangeListenerItem i : this.listeners) {
             if (i.table == null) {
                 if (!locked) i.listener.paletteChanged();

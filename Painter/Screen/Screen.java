@@ -1,7 +1,6 @@
 package Painter.Screen;
 
 import Painter.Screen.Palette.Palette;
-import Painter.Screen.UndoRedo.UndoRedo;
 
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
@@ -19,7 +18,7 @@ public abstract class Screen implements ImageSupplier {
     protected Palette palette;
     protected PixelProcessing pixelProcessor = null;
     private Collection<ImageChangeListener> listeners = new ArrayList<>();
-    protected final UndoRedo undo = new UndoRedo();
+    private final UndoRedo undo = new UndoRedo();
     protected int[] enhancedColors;
     protected Dimension GRID_FACTOR = new Dimension();
     protected Dimension pixelFactor = new Dimension();
@@ -138,41 +137,11 @@ public abstract class Screen implements ImageSupplier {
 
     public void undoDraw() {
         undo.undo();
-/*        if (null != elements) {
-            ListIterator<UndoRedo.Entry> i = elements.listIterator(elements.size());
-            while (i.hasPrevious()) {
-                UndoRedo.Entry e = i.previous();
-                if (e instanceof UndoPixelElement) {
-                    UndoPixelElement ee = (UndoPixelElement) e;
-                    image.putPixel(ee.pos.x, ee.pos.y, ee.pixel, ee.attr);
-                } else if (e instanceof UndoColorElement) {
-                    UndoColorElement ee = (UndoColorElement) e;
-                    palette.setColorCell(ee.oldValue, ee.table, ee.index);
-                } else if (e instanceof UndoAttrElement) {
-                    UndoAttrElement ee = (UndoAttrElement) e;
-                    image.putAttr(ee.pos.x, ee.pos.y, ee.attr);
-                }
-            }
-        }
-*/    }
+    }
 
     public void redoDraw() {
         undo.redo();
-/*        if (null != elements) {
-            for (UndoRedo.Entry e : elements) {
-                if (e instanceof UndoPixelElement) {
-                    UndoPixelElement ee = (UndoPixelElement) e;
-                    image.putPixel(ee.pos.x, ee.pos.y, ee.newPixel, ee.newAttr);
-                } else if (e instanceof UndoColorElement) {
-                    UndoColorElement ee = (UndoColorElement) e;
-                    palette.setColorCell(ee.newValue, ee.table, ee.index);
-                } else if (e instanceof UndoAttrElement) {
-                    UndoAttrElement ee = (UndoAttrElement) e;
-                    image.putAttr(ee.pos.x, ee.pos.y, ee.newAttr);
-                }
-            }
-        }
-*/    }
+    }
 
     protected byte getPixelData(Point pos) {
         final int xx = pos.x / pixelFactor.width;

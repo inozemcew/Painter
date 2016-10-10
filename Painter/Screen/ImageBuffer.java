@@ -1,9 +1,5 @@
 package Painter.Screen;
 
-import Painter.Screen.UndoRedo.UndoAttrElement;
-import Painter.Screen.UndoRedo.UndoPixelElement;
-import Painter.Screen.UndoRedo.UndoRedo;
-
 import java.awt.*;
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -38,27 +34,48 @@ public class ImageBuffer {
     }
 
     private UndoRedo undo = null;
-    private UndoRedo.Client<UndoPixelElement> pixelUndoClient = new UndoRedo.Client<UndoPixelElement>() {
-        @Override
-        public void undo(UndoPixelElement element) {
-            putPixel(element.pos.x, element.pos.y, element.pixel, element.attr);
-        }
-        @Override
-        public void redo(UndoPixelElement element) {
-            putPixel(element.pos.x, element.pos.y, element.newPixel, element.newAttr);
-        }
-    };
+    private class UndoPixelItem implements UndoRedo.Item {
+        private final Point pos;
+        private final byte pixel, attr;
+        private final byte newPixel, newAttr;
 
-    private UndoRedo.Client<UndoAttrElement> attrUndoClient = new UndoRedo.Client<UndoAttrElement>() {
-        @Override
-        public void undo(UndoAttrElement element) {
-            putAttr(element.pos.x, element.pos.y, element.attr);
+        UndoPixelItem(int x, int y, byte pixel, byte attr,
+                      byte newPixel, byte newAttr) {
+            this.pos = new Point(x,y);
+            this.pixel = pixel;
+            this.attr = attr;
+            this.newPixel = newPixel;
+            this.newAttr = newAttr;
         }
         @Override
-        public void redo(UndoAttrElement element) {
-            putAttr(element.pos.x, element.pos.y, element.newAttr);
+        public void undo() {
+            putPixel(this.pos.x, this.pos.y, this.pixel, this.attr);
         }
-    };
+        @Override
+        public void redo() {
+            putPixel(this.pos.x, this.pos.y, this.newPixel, this.newAttr);
+        }
+    }
+
+    private class UndoAttrItem implements UndoRedo.Item {
+        public final Point pos;
+        public final byte attr, newAttr;
+
+        UndoAttrItem(int x, int y, byte attr, byte newAttr) {
+            this.pos = new Point(x, y);
+            this.attr = attr;
+            this.newAttr = newAttr;
+        }
+
+        @Override
+        public void undo() {
+            putAttr(this.pos.x, this.pos.y, this.attr);
+        }
+        @Override
+        public void redo() {
+            putAttr(this.pos.x, this.pos.y, this.newAttr);
+        }
+    }
 
     public void setUndo(UndoRedo undo) {
         this.undo = undo;
@@ -74,14 +91,14 @@ public class ImageBuffer {
     void putAttr(int x, int y, byte attr) {
         byte oldAttr = getAttr(x, y);
         attrbuf[x / ATTR_FACTOR_X][y / ATTR_FACTOR_Y] = attr;
-        if (undo != null) undo.addAttr(attrUndoClient, x, y, oldAttr, attr);
+        if (undo != null) undo.add(new UndoAttrItem(x, y, oldAttr, attr));
     }
 
     public void putPixel(int x, int y, byte pixel) {
         byte attr = getAttr(x, y);
         byte oldPixel = getPixel(x, y);
         this.pixbuf[x][y] = pixel;
-        if (undo != null) undo.addPixel(pixelUndoClient, x, y, oldPixel, attr, pixel, attr);
+        if (undo != null) undo.add(new UndoPixelItem(x, y, oldPixel, attr, pixel, attr));
     }
 
     public void putPixel(int x, int y, byte pixel, byte attr) {
@@ -89,7 +106,7 @@ public class ImageBuffer {
         byte oldPixel = getPixel(x, y);
         this.pixbuf[x][y] = pixel;
         this.attrbuf[x / ATTR_FACTOR_X][y / ATTR_FACTOR_Y] = attr;
-        if (undo != null) undo.addPixel(pixelUndoClient, x, y, oldPixel, oldAttr, pixel, attr);
+        if (undo != null) undo.add(new UndoPixelItem(x, y, oldPixel, oldAttr, pixel, attr));
     }
 
     void shift (int dx, int dy) {
