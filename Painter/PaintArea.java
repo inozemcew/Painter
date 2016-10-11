@@ -220,8 +220,8 @@ public class PaintArea extends JComponent implements Scrollable {
         @Override
         public void mousePressed(MouseEvent e) {
             pos.setLocation(e.getPoint());
-            final int button = e.getButton();
-            if (isFillMode(button) || isSwapMode(button)) return;
+            final int btn = e.getButton();
+            if (isFillMode(btn) || isSwapMode(btn)) return;
             screen.beginDraw();
             if (isMiddleMouseButton(e)) {
                 if ((e.getModifiersEx() & MouseEvent.SHIFT_DOWN_MASK) == 0) {
@@ -251,6 +251,7 @@ public class PaintArea extends JComponent implements Scrollable {
 
         @Override
         public void mouseDragged(MouseEvent e) {
+            if (mode != Mode.Paint) return;
             if ((e.getModifiersEx() & MouseEvent.SHIFT_DOWN_MASK) == 0 && isMiddleMouseButton(e)) {
                 if (!isInSameCell(e.getPoint())) {
                     Point toPos = new Point(e.getX() / scale, e.getY() / scale);

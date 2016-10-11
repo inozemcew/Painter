@@ -15,6 +15,7 @@ import java.beans.PropertyChangeListener;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Set;
 
 import static javax.swing.Action.ACCELERATOR_KEY;
@@ -37,6 +38,8 @@ public abstract class PainterApp extends JFrame {
 
     private Actions actions;
     private HashMap<String,PropertyChangeListener> propertyChangeListeners = new HashMap<>();
+    private RecentFiles recentFiles = new RecentFiles();
+
     {
         propertyChangeListeners.put(PaintArea.OP_STATUS, evt -> statusBar.setText(evt.getNewValue().toString()));
         propertyChangeListeners.put(PaintArea.OP_SCALE, evt -> scaleSlider.setValue((Integer)evt.getNewValue()));
@@ -154,6 +157,11 @@ public abstract class PainterApp extends JFrame {
         file.add(actions.fileSaveAs);
         file.add(actions.fileImportSCR);
         file.add(actions.fileImportPNG);
+        file.addSeparator();
+        for (Iterator<String> s = recentFiles.getIterator(); s.hasNext(); ) {
+            String i = s.next();
+            file.add(new JMenuItem(i)).addActionListener(e -> load(i));
+        }
         file.addSeparator();
         file.add(actions.fileExit);
 
@@ -298,18 +306,26 @@ public abstract class PainterApp extends JFrame {
         fileChooser.setFileFilter(filter);
         if (JFileChooser.APPROVE_OPTION == fileChooser.showDialog(this, "Load")) {
             File file = fileChooser.getSelectedFile();
-            try {
-                final FileInputStream fs = new FileInputStream(file);
-                InputStream stream = new BufferedInputStream(fs);
-                screen.load(stream, fs.getChannel().size() == 50266);
-            } catch (Exception e) {
-                JOptionPane.showMessageDialog(this,
-                        "Cannot load " + file,
-                        e.getMessage(),
-                        JOptionPane.ERROR_MESSAGE);
-            }
-            repaint();
+            load(file);
         }
+    }
+
+    private void load(File file) {
+        try {
+            final FileInputStream fs = new FileInputStream(file);
+            InputStream stream = new BufferedInputStream(fs);
+            screen.load(stream, fs.getChannel().size() == 50266);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this,
+                    "Cannot load " + file,
+                    e.getMessage(),
+                    JOptionPane.ERROR_MESSAGE);
+        }
+        repaint();
+        recentFiles.add(file.getAbsolutePath());
+    }
+    private void load(String fName) {
+        load(new File(fName));
     }
 
     class Actions {
