@@ -58,8 +58,8 @@ public class ImageBuffer {
     }
 
     private class UndoAttrItem implements UndoRedo.Item {
-        public final Point pos;
-        public final byte attr, newAttr;
+        private final Point pos;
+        private final byte attr, newAttr;
 
         UndoAttrItem(int x, int y, byte attr, byte newAttr) {
             this.pos = new Point(x, y);
@@ -88,6 +88,7 @@ public class ImageBuffer {
     public byte getAttr(int x, int y) {
         return attrbuf[x / ATTR_FACTOR_X][y / ATTR_FACTOR_Y];
     }
+
     void putAttr(int x, int y, byte attr) {
         byte oldAttr = getAttr(x, y);
         attrbuf[x / ATTR_FACTOR_X][y / ATTR_FACTOR_Y] = attr;

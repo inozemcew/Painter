@@ -13,10 +13,8 @@ import java.awt.*;
 import java.awt.event.*;
 import java.beans.PropertyChangeListener;
 import java.io.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Set;
+import java.util.*;
+import java.util.List;
 
 import static javax.swing.Action.ACCELERATOR_KEY;
 import static javax.swing.Action.SELECTED_KEY;
@@ -38,7 +36,7 @@ public abstract class PainterApp extends JFrame {
 
     private Actions actions;
     private HashMap<String,PropertyChangeListener> propertyChangeListeners = new HashMap<>();
-    private RecentFiles recentFiles = new RecentFiles();
+    private RecentFiles recentFiles = new RecentFiles(this);
 
     {
         propertyChangeListeners.put(PaintArea.OP_STATUS, evt -> statusBar.setText(evt.getNewValue().toString()));
@@ -145,6 +143,7 @@ public abstract class PainterApp extends JFrame {
         return toolbar;
     }
 
+    private RecentFilesMenuItems recentFilesMenuItems;
     private JMenuBar createMenuBar() {
         JMenuBar menuBar = new JMenuBar();
 
@@ -158,10 +157,8 @@ public abstract class PainterApp extends JFrame {
         file.add(actions.fileImportSCR);
         file.add(actions.fileImportPNG);
         file.addSeparator();
-        for (Iterator<String> s = recentFiles.getIterator(); s.hasNext(); ) {
-            String i = s.next();
-            file.add(new JMenuItem(i)).addActionListener(e -> load(i));
-        }
+        recentFilesMenuItems = new RecentFilesMenuItems(file);
+        recentFilesMenuItems.getMenuItems().forEach(file::add);
         file.addSeparator();
         file.add(actions.fileExit);
 
@@ -215,6 +212,48 @@ public abstract class PainterApp extends JFrame {
             actions.screenModes.forEach(action -> g.add(options.add(new JRadioButtonMenuItem(action))));
         }
         return menuBar;
+
+    }
+
+    private class RecentFilesMenuItems implements Observer {
+        private JMenu parent;
+        private int position;
+        private List<JMenuItem> menuItems = new ArrayList<>(5);
+
+        RecentFilesMenuItems(JMenu parent) {
+            this.parent = parent;
+            this.position = parent.getItemCount();
+            updateItems();
+            recentFiles.addObserver(this);
+        }
+
+        List<JMenuItem> getMenuItems() {
+            return menuItems;
+        }
+
+        void updateItems() {
+            menuItems.clear();
+            for (Iterator<String> s = recentFiles.getIterator(); s.hasNext(); ) {
+                String i = s.next();
+                final JMenuItem item = new JMenuItem(i);
+                item.addActionListener(e -> load(i));
+                menuItems.add(item);
+            }
+
+        }
+
+        void updateMenu() {
+            menuItems.forEach(parent::remove);
+            updateItems();
+            for (int i = 0; i < menuItems.size(); i++) {
+                parent.insert(menuItems.get(i), position + i);
+            }
+        }
+
+        @Override
+        public void update(Observable o, Object arg) {
+            updateMenu();
+        }
     }
 
     private void newScreen(int x, int y) {
@@ -295,6 +334,8 @@ public abstract class PainterApp extends JFrame {
                         JOptionPane.ERROR_MESSAGE);
             }
             repaint();
+            recentFiles.add(file.getAbsolutePath());
+            recentFilesMenuItems.updateMenu();
         }
     }
 
@@ -323,6 +364,7 @@ public abstract class PainterApp extends JFrame {
         }
         repaint();
         recentFiles.add(file.getAbsolutePath());
+        recentFilesMenuItems.updateMenu();
     }
     private void load(String fName) {
         load(new File(fName));

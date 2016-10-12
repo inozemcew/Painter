@@ -52,7 +52,8 @@ public class UndoRedo {
         if (!redoStack.isEmpty() && current == null) {
             Vector<Item> e = redoStack.removeFirst();
             undoStack.addFirst(e);
-            e.forEach(Item::redo);
+            for (ListIterator<Item> l = e.listIterator(); l.hasNext(); )
+                l.next().redo();
         }
     }
 
