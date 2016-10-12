@@ -419,6 +419,7 @@ public abstract class PainterApp extends JFrame {
         Action editRedo = new AbstractAction("Redo") {
             {
                 putValue(ACCELERATOR_KEY, KeyStroke.getKeyStroke('Y', InputEvent.CTRL_DOWN_MASK));
+                setEnabled(false);
             }
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -427,6 +428,12 @@ public abstract class PainterApp extends JFrame {
             }
         };
 
+        {
+            screen.addUndoListener((o, arg) -> {
+                editRedo.setEnabled(screen.isRedoEnabled());
+                editUndo.setEnabled(screen.isUndoEnabled());
+            });
+        }
 
         EditModeActionList editModes = new EditModeActionList(paintArea);
         {

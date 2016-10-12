@@ -139,6 +139,18 @@ public abstract class Screen implements ImageSupplier {
         undo.undo();
     }
 
+    public boolean isUndoEnabled() {
+        return !undo.isUndoEmpty();
+    }
+
+    public boolean isRedoEnabled() {
+        return !undo.isRedoEmpty();
+    }
+
+    public void addUndoListener(Observer listener) {
+        undo.addObserver(listener);
+    }
+
     public void redoDraw() {
         undo.redo();
     }
