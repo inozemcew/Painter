@@ -167,6 +167,13 @@ public abstract class Screen implements ImageSupplier {
         return image.getAttr(xx, yy);
     }
 
+    private void putAttr(Point pos, byte attr) {
+        final int xx = pos.x / pixelFactor.width;
+        final int yy = pos.y / pixelFactor.height;
+        image.putAttr(xx, yy, attr);
+
+    }
+
     protected void putPixelData(Point pos, byte pixel, byte attr) {
         final int xx = pos.x / pixelFactor.width;
         final int yy = pos.y / pixelFactor.height;
@@ -271,6 +278,8 @@ public abstract class Screen implements ImageSupplier {
             beginDraw();
             int xx = alignX(pos.x);
             int yy = alignY(pos.y);
+            if (pixel.index >= 0)
+                putAttr(pos, pixelProcessor.packAttr(pixel, getAttr(pos), pos));
             Pixel old = getPixel(pos);
             HashMap<Point, Pixel> pixels = new HashMap<>(64);
             for (int i = 0; i < GRID_FACTOR.width; i++) {
