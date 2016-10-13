@@ -6,6 +6,7 @@ import Painter.Screen.PixelProcessing;
 import Painter.Screen.Screen;
 
 import javax.swing.*;
+import javax.swing.border.EtchedBorder;
 import javax.swing.event.MenuKeyEvent;
 import javax.swing.event.MenuKeyListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -24,7 +25,7 @@ import static javax.swing.Action.SELECTED_KEY;
  */
 
 public abstract class PainterApp extends JFrame {
-    JLabel statusBar = new JLabel(" ");
+    StatusBar statusBar = new StatusBar(2);
 
     protected Screen screen = createScreen();
     private final JFileChooser fileChooser = new JFileChooser();
@@ -36,10 +37,11 @@ public abstract class PainterApp extends JFrame {
 
     private Actions actions;
     private HashMap<String,PropertyChangeListener> propertyChangeListeners = new HashMap<>();
+
     private RecentFiles recentFiles = new RecentFiles(this);
 
     {
-        propertyChangeListeners.put(PaintArea.OP_STATUS, evt -> statusBar.setText(evt.getNewValue().toString()));
+        propertyChangeListeners.put(PaintArea.OP_STATUS, evt -> statusBar.setText(evt.getNewValue().toString(), 0));
         propertyChangeListeners.put(PaintArea.OP_SCALE, evt -> scaleSlider.setValue((Integer)evt.getNewValue()));
         propertyChangeListeners.put(PaintArea.OP_FILL, evt ->  actions.editModes.reset());
         propertyChangeListeners.put(PaintArea.OP_SWAP, evt ->  actions.editModes.reset());
@@ -153,6 +155,7 @@ public abstract class PainterApp extends JFrame {
         screen.getResolutions().forEach((s,d)-> n.add(s).addActionListener(e -> newScreen(d.width,d.height)));
         file.add(n);
         file.add(actions.fileLoad);
+        file.add(actions.fileSave);
         file.add(actions.fileSaveAs);
         file.add(actions.fileImportSCR);
         file.add(actions.fileImportPNG);
@@ -256,6 +259,13 @@ public abstract class PainterApp extends JFrame {
         }
     }
 
+    private File currentFile = null;
+    private void setCurrentFile(File currentFile) {
+        this.currentFile = currentFile;
+        statusBar.setText((currentFile != null) ? currentFile.getName():"",1);
+    }
+
+
     private void newScreen(int x, int y) {
         screen.newImageBuffer(x, y);
         interlacedView.updatePreferredSize();
@@ -264,6 +274,7 @@ public abstract class PainterApp extends JFrame {
         interlacedView.getParent().getParent().setPreferredSize(preferredSize);
         paintArea.updatePreferredSize();
         splitPane.resetToPreferredSizes();
+        setCurrentFile(null);
     }
 
     private void importSCR() {
@@ -285,6 +296,7 @@ public abstract class PainterApp extends JFrame {
                         JOptionPane.ERROR_MESSAGE);
             }
             repaint();
+            setCurrentFile(null);
         }
     }
     private void importPNG() {
@@ -309,11 +321,18 @@ public abstract class PainterApp extends JFrame {
                         JOptionPane.ERROR_MESSAGE);
             }
             repaint();
+            setCurrentFile(null);
         }
     }
 
     protected abstract DataInputStream convertPNGStream(FileInputStream stream) throws IOException;
 
+    private void save() {
+        if (currentFile == null)
+            saveAs();
+        else
+            saveAs(currentFile);
+    }
 
     private void saveAs() {
         fileChooser.setDialogTitle("Save As");
@@ -323,20 +342,25 @@ public abstract class PainterApp extends JFrame {
         fileChooser.setFileFilter(filter);
         if (JFileChooser.APPROVE_OPTION == fileChooser.showDialog(this, "Save")) {
             File file = fileChooser.getSelectedFile();
-            try {
-                ObjectOutputStream stream = new ObjectOutputStream(new FileOutputStream(file));
-                screen.save(stream);
-                stream.close();
-            } catch (IOException e) {
-                JOptionPane.showMessageDialog(this,
-                        "Cannot save " + file,
-                        "Save error",
-                        JOptionPane.ERROR_MESSAGE);
-            }
-            repaint();
-            recentFiles.add(file.getAbsolutePath());
-            recentFilesMenuItems.updateMenu();
+            saveAs(file);
         }
+    }
+
+    private void saveAs(File file) {
+        try {
+            ObjectOutputStream stream = new ObjectOutputStream(new FileOutputStream(file));
+            screen.save(stream);
+            stream.close();
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(this,
+                    "Cannot save " + file,
+                    "Save error",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+        repaint();
+        recentFiles.add(file.getAbsolutePath());
+        recentFilesMenuItems.updateMenu();
+        setCurrentFile(file);
     }
 
     private void load() {
@@ -365,7 +389,9 @@ public abstract class PainterApp extends JFrame {
         repaint();
         recentFiles.add(file.getAbsolutePath());
         recentFilesMenuItems.updateMenu();
+        setCurrentFile(file);
     }
+
     private void load(String fName) {
         load(new File(fName));
     }
@@ -385,6 +411,12 @@ public abstract class PainterApp extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 load();
+            }
+        };
+        Action fileSave = new AbstractAction("Save") {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                save();
             }
         };
         Action fileSaveAs = new AbstractAction("Save as..") {
@@ -438,8 +470,8 @@ public abstract class PainterApp extends JFrame {
         EditModeActionList editModes = new EditModeActionList(paintArea);
         {
             editModes.addAction("Paint", PaintArea.Mode.Paint, "A");
-            editModes.addAction("Fill", PaintArea.Mode.Fill, "Z");
             editModes.addAction("Swap", PaintArea.Mode.Swap, "S");
+            editModes.addAction("Flood", PaintArea.Mode.Fill, "D");
         }
 
 
@@ -507,6 +539,7 @@ class EditModeActionList extends ArrayList<EditModeActionList.Action> {
             this(name, mode);
             putValue(SELECTED_KEY, Boolean.FALSE);
             putValue(ACCELERATOR_KEY, KeyStroke.getKeyStroke(acc));
+            putValue(MNEMONIC_KEY, KeyEvent.getExtendedKeyCodeForChar(acc.charAt(0)));
         }
 
         @Override
@@ -537,5 +570,33 @@ class EditModeActionList extends ArrayList<EditModeActionList.Action> {
         final EditModeActionList.Action paintAction = get(0);
         paintAction.putValue(SELECTED_KEY, Boolean.TRUE);
         paintArea.setMode(paintAction.mode);
+    }
+}
+
+class StatusBar extends Box {
+    StatusBar(int panesCount) {
+        super(BoxLayout.LINE_AXIS);
+        Dimension d = new Dimension();
+//        setLayout(new BoxLayout(this, BoxLayout.LINE_AXIS));
+        for (int i = 0; i < panesCount; i++) {
+            final JComponent c = new JPanel(new FlowLayout(FlowLayout.LEFT,0,0));
+
+
+            final JLabel label = new JLabel();
+            c.add(label);
+            c.setBorder(BorderFactory.createEtchedBorder(EtchedBorder.LOWERED));
+            d.setSize(64, label.getFontMetrics(label.getFont()).getHeight());
+            c.setMinimumSize(d);
+            label.setMinimumSize(d);
+            add(c);
+            label.setText(" ");
+        }
+        add(Box.createHorizontalGlue());
+    }
+
+    void setText(String text, int n) {
+        final JComponent c = (JComponent) getComponent(n);
+        final JLabel label = (JLabel) c.getComponent(0);
+        label.setText(text);
     }
 }
