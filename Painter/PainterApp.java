@@ -6,6 +6,7 @@ import Painter.Screen.PixelProcessing;
 import Painter.Screen.Screen;
 
 import javax.swing.*;
+import javax.swing.border.BevelBorder;
 import javax.swing.border.EtchedBorder;
 import javax.swing.event.MenuKeyEvent;
 import javax.swing.event.MenuKeyListener;
@@ -396,6 +397,18 @@ public abstract class PainterApp extends JFrame {
         load(new File(fName));
     }
 
+    private class ColorChangeAdapter extends ChangeAdapter {
+        public ColorChangeAdapter() {
+            super(screen);
+        }
+
+        @Override
+        public void colorChanged(int table, int index) {
+            super.colorChanged(table, index);
+            paintArea.colorChanged(table, index);
+        }
+    }
+
     class Actions {
         final ChangeAdapter changeAdapter = new ColorChangeAdapter();
         Action fileExit = new AbstractAction("Exit") {
@@ -507,19 +520,6 @@ public abstract class PainterApp extends JFrame {
 
     }
 
-
-
-    private class ColorChangeAdapter extends ChangeAdapter {
-        public ColorChangeAdapter() {
-            super(screen);
-        }
-
-        @Override
-        public void colorChanged(int table, int index) {
-            super.colorChanged(table, index);
-            paintArea.colorChanged(table, index);
-        }
-    }
 }
 
 class EditModeActionList extends ArrayList<EditModeActionList.Action> {
@@ -574,29 +574,33 @@ class EditModeActionList extends ArrayList<EditModeActionList.Action> {
 }
 
 class StatusBar extends Box {
+
     StatusBar(int panesCount) {
         super(BoxLayout.LINE_AXIS);
         Dimension d = new Dimension();
 //        setLayout(new BoxLayout(this, BoxLayout.LINE_AXIS));
         for (int i = 0; i < panesCount; i++) {
-            final JComponent c = new JPanel(new FlowLayout(FlowLayout.LEFT,0,0));
+            //final JComponent c = new JPanel(new FlowLayout(FlowLayout.LEFT,0,0));
 
 
             final JLabel label = new JLabel();
-            c.add(label);
-            c.setBorder(BorderFactory.createEtchedBorder(EtchedBorder.LOWERED));
-            d.setSize(64, label.getFontMetrics(label.getFont()).getHeight());
-            c.setMinimumSize(d);
+            //c.add(label);
+            label.setBorder(BorderFactory.createEtchedBorder(EtchedBorder.LOWERED));
+            //label.setBorder(BorderFactory.createBevelBorder(BevelBorder.LOWERED));
+            d.setSize(128, label.getFontMetrics(label.getFont()).getHeight());
+            //c.setMinimumSize(d);
+            label.setPreferredSize(d);
             label.setMinimumSize(d);
-            add(c);
-            label.setText(" ");
+            label.setText("--- ");
+            add(label);
+            add(Box.createHorizontalStrut(4));
         }
-        add(Box.createHorizontalGlue());
+        //add(Box.createHorizontalGlue());
     }
 
     void setText(String text, int n) {
-        final JComponent c = (JComponent) getComponent(n);
-        final JLabel label = (JLabel) c.getComponent(0);
+        //final JComponent c = (JComponent) getComponent(n);
+        final JLabel label = (JLabel) getComponent(n);
         label.setText(text);
     }
 }
