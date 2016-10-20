@@ -6,7 +6,6 @@ import Painter.Screen.PixelProcessing;
 import Painter.Screen.Screen;
 
 import javax.swing.*;
-import javax.swing.border.BevelBorder;
 import javax.swing.border.EtchedBorder;
 import javax.swing.event.MenuKeyEvent;
 import javax.swing.event.MenuKeyListener;
@@ -26,7 +25,7 @@ import static javax.swing.Action.SELECTED_KEY;
  */
 
 public abstract class PainterApp extends JFrame {
-    StatusBar statusBar = new StatusBar(2);
+    StatusBar statusBar = new StatusBar(160,16,400);
 
     protected Screen screen = createScreen();
     private final JFileChooser fileChooser = new JFileChooser();
@@ -42,7 +41,7 @@ public abstract class PainterApp extends JFrame {
     private RecentFiles recentFiles = new RecentFiles(this);
 
     {
-        propertyChangeListeners.put(PaintArea.OP_STATUS, evt -> statusBar.setText(evt.getNewValue().toString(), 0));
+        propertyChangeListeners.put(PaintArea.OP_STATUS, evt -> statusBar.setText(evt.getNewValue().toString(), StatusBar.POSITION));
         propertyChangeListeners.put(PaintArea.OP_SCALE, evt -> scaleSlider.setValue((Integer)evt.getNewValue()));
         propertyChangeListeners.put(PaintArea.OP_FILL, evt ->  actions.editModes.reset());
         propertyChangeListeners.put(PaintArea.OP_SWAP, evt ->  actions.editModes.reset());
@@ -263,11 +262,17 @@ public abstract class PainterApp extends JFrame {
     private File currentFile = null;
     private void setCurrentFile(File currentFile) {
         this.currentFile = currentFile;
-        statusBar.setText((currentFile != null) ? currentFile.getName():"",1);
+        statusBar.setText((currentFile != null) ? currentFile.getName():"",StatusBar.FILENAME);
     }
 
+    private boolean modified = false;
+    private void setModified(boolean modified) {
+        this.modified = modified;
+        statusBar.setText(modified? "*":" ", StatusBar.MODIFIED);
+    }
 
     private void newScreen(int x, int y) {
+        if (!canContinueIfModified()) return;
         screen.newImageBuffer(x, y);
         interlacedView.updatePreferredSize();
         Dimension preferredSize = interlacedView.getPreferredSize();
@@ -279,6 +284,7 @@ public abstract class PainterApp extends JFrame {
     }
 
     private void importSCR() {
+        if (!canContinueIfModified()) return;
         fileChooser.setDialogTitle("Choose spectrum screen to import");
         FileNameExtensionFilter filter = new FileNameExtensionFilter("Spectrum screen", "scr");
         fileChooser.resetChoosableFileFilters();
@@ -298,9 +304,11 @@ public abstract class PainterApp extends JFrame {
             }
             repaint();
             setCurrentFile(null);
+            setModified(true);
         }
     }
     private void importPNG() {
+        if (!canContinueIfModified()) return;
         fileChooser.setDialogTitle("Choose PNG-image to import");
         FileNameExtensionFilter filter = new FileNameExtensionFilter("PNG-image", "png");
         fileChooser.resetChoosableFileFilters();
@@ -323,6 +331,7 @@ public abstract class PainterApp extends JFrame {
             }
             repaint();
             setCurrentFile(null);
+            setModified(true);
         }
     }
 
@@ -362,9 +371,11 @@ public abstract class PainterApp extends JFrame {
         recentFiles.add(file.getAbsolutePath());
         recentFilesMenuItems.updateMenu();
         setCurrentFile(file);
+        setModified(false);
     }
 
     private void load() {
+        if (!canContinueIfModified()) return;
         fileChooser.setDialogTitle("Load screen");
         FileNameExtensionFilter filter = screen.getFileNameExtensionFilter();
         fileChooser.resetChoosableFileFilters();
@@ -377,6 +388,7 @@ public abstract class PainterApp extends JFrame {
     }
 
     private void load(File file) {
+        if (!canContinueIfModified()) return;
         try {
             final FileInputStream fs = new FileInputStream(file);
             InputStream stream = new BufferedInputStream(fs);
@@ -391,10 +403,24 @@ public abstract class PainterApp extends JFrame {
         recentFiles.add(file.getAbsolutePath());
         recentFilesMenuItems.updateMenu();
         setCurrentFile(file);
+        setModified(false);
     }
 
     private void load(String fName) {
         load(new File(fName));
+    }
+
+    boolean canContinueIfModified() {
+        if (!modified) return true;
+        String[] msg = { "Current screen is modified.", "Do you want to save it?"};
+        int result = JOptionPane.showConfirmDialog(this, msg, "Unsaved changes present.", JOptionPane.YES_NO_CANCEL_OPTION);
+        if (result == JOptionPane.CANCEL_OPTION) return false;
+        if (result == JOptionPane.YES_OPTION) {
+            save();
+            return true;
+        }
+        modified = false;
+        return true;
     }
 
     private class ColorChangeAdapter extends ChangeAdapter {
@@ -476,7 +502,9 @@ public abstract class PainterApp extends JFrame {
         {
             screen.addUndoListener((o, arg) -> {
                 editRedo.setEnabled(screen.isRedoEnabled());
-                editUndo.setEnabled(screen.isUndoEnabled());
+                final boolean undoEnabled = screen.isUndoEnabled();
+                editUndo.setEnabled(undoEnabled);
+                setModified(undoEnabled);
             });
         }
 
@@ -573,29 +601,18 @@ class EditModeActionList extends ArrayList<EditModeActionList.Action> {
     }
 }
 
-class StatusBar extends Box {
-
-    StatusBar(int panesCount) {
-        super(BoxLayout.LINE_AXIS);
-        Dimension d = new Dimension();
-//        setLayout(new BoxLayout(this, BoxLayout.LINE_AXIS));
-        for (int i = 0; i < panesCount; i++) {
-            //final JComponent c = new JPanel(new FlowLayout(FlowLayout.LEFT,0,0));
+class StatusBar extends JPanel {
+    static final int POSITION = 0, MODIFIED = 1, FILENAME = 2;
 
 
+    StatusBar(int... panesWidths) {
+        super(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        for (int i = 0; i < panesWidths.length; i++) {
             final JLabel label = new JLabel();
-            //c.add(label);
             label.setBorder(BorderFactory.createEtchedBorder(EtchedBorder.LOWERED));
-            //label.setBorder(BorderFactory.createBevelBorder(BevelBorder.LOWERED));
-            d.setSize(128, label.getFontMetrics(label.getFont()).getHeight());
-            //c.setMinimumSize(d);
-            label.setPreferredSize(d);
-            label.setMinimumSize(d);
-            label.setText("--- ");
+            label.setPreferredSize(new Dimension(panesWidths[i], label.getFontMetrics(label.getFont()).getHeight()));
             add(label);
-            add(Box.createHorizontalStrut(4));
         }
-        //add(Box.createHorizontalGlue());
     }
 
     void setText(String text, int n) {
