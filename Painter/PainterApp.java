@@ -47,15 +47,8 @@ public abstract class PainterApp extends JFrame {
         propertyChangeListeners.put(PaintArea.OP_SWAP, evt ->  actions.editModes.reset());
     }
 
-    public static void run(PainterApp app) {
-        SwingUtilities.invokeLater(new Runnable() {
-                                       @Override
-                                       public void run() {
-                                           JFrame frame = app.createMainForm();
-                                           frame.setVisible(true);
-                                       }
-                                   }
-        );
+    protected static void run(PainterApp app) {
+        SwingUtilities.invokeLater( () -> app.createMainForm().setVisible(true) );
     }
 
     public PainterApp() throws HeadlessException {
@@ -66,8 +59,18 @@ public abstract class PainterApp extends JFrame {
     protected abstract Screen createScreen();
 
     protected JFrame createMainForm() {
-        setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         setTitle("Painter for new screen");
+
+        setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                if (canContinueIfModified()) {
+                    dispose();
+                    System.exit(0);
+                }
+            }
+        });
 
         JPanel form = new JPanel(new BorderLayout());
 
@@ -443,7 +446,7 @@ public abstract class PainterApp extends JFrame {
             }
             @Override
             public void actionPerformed(ActionEvent e) {
-                System.exit(0);
+                dispatchEvent(new WindowEvent(PainterApp.this, WindowEvent.WINDOW_CLOSING));
             }
         };
         Action fileLoad = new AbstractAction("Load ..") {
