@@ -7,8 +7,6 @@ import Painter.Screen.Screen;
 
 import javax.swing.*;
 import javax.swing.border.EtchedBorder;
-import javax.swing.event.MenuKeyEvent;
-import javax.swing.event.MenuKeyListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.awt.event.*;
@@ -155,7 +153,7 @@ public abstract class PainterApp extends JFrame {
         JMenu file = menuBar.add(new JMenu("File"));
         file.setMnemonic('F');
         JMenu n = new JMenu("New");
-        screen.getResolutions().forEach((s,d)-> n.add(s).addActionListener(e -> newScreen(d.width,d.height)));
+        actions.resolutions.forEach(n::add);
         file.add(n);
         file.add(actions.fileLoad);
         file.add(actions.fileSave);
@@ -174,31 +172,8 @@ public abstract class PainterApp extends JFrame {
         edit.add(actions.editRedo);
         edit.addSeparator();
 
-
-
         ButtonGroup group = new ButtonGroup();
-        actions.editModes.forEach(action -> {
-            JRadioButtonMenuItem menuItem = new JRadioButtonMenuItem(action);
-            menuItem.addMenuKeyListener(new MenuKeyListener() {
-                @Override
-                public void menuKeyTyped(MenuKeyEvent e) {
-
-                }
-
-                @Override
-                public void menuKeyPressed(MenuKeyEvent e) {
-                    if (e.getKeyChar() == ((KeyStroke)(action.getValue(ACCELERATOR_KEY))).getKeyChar()
-                            && e.getModifiers() == KeyEvent.SHIFT_DOWN_MASK)
-                        menuItem.doClick();
-                }
-
-                @Override
-                public void menuKeyReleased(MenuKeyEvent e) {
-
-                }
-            });
-            group.add(edit.add(menuItem));
-        });
+        actions.editModes.forEach(action -> group.add(edit.add(new JRadioButtonMenuItem(action))));
 
         edit.addSeparator();
 
@@ -531,12 +506,23 @@ public abstract class PainterApp extends JFrame {
             }) );
         }
 
+        ArrayList<Action> resolutions = new ArrayList<>();
+        {
+            screen.getResolutions().forEach((s,d)-> resolutions.add(new AbstractAction(s) {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    newScreen(d.width,d.height);
+                }
+            }));
+        }
+
         ArrayList<Action> screenModes = new ArrayList<>();
         {
             final PixelProcessing pixelProcessor = screen.getPixelProcessor();
-            final Set<? extends PixelProcessing> mode = pixelProcessor.enumPixelModes();
-            if (mode != null)
-                for (PixelProcessing m: mode ) {
+            final Set<? extends PixelProcessing> modes = pixelProcessor.enumPixelModes();
+            if (modes != null) {
+                char k = '1';
+                for (PixelProcessing m: modes ) {
                     Action c = new AbstractAction(m.toString()) {
                         @Override
                         public void actionPerformed(ActionEvent e) {
@@ -544,7 +530,9 @@ public abstract class PainterApp extends JFrame {
                         }
                     };
                     c.putValue(SELECTED_KEY, (m == pixelProcessor));
+                    c.putValue(ACCELERATOR_KEY, KeyStroke.getKeyStroke(k++, InputEvent.ALT_DOWN_MASK));
                     screenModes.add(c);
+                }
             }
 
         }
