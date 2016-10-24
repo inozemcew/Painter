@@ -21,7 +21,19 @@ public class PaintArea extends JComponent implements Scrollable {
     private int scale = 2;
     private int[] currentColors;
     private ClipCell clipCell;
-    public enum Mode {Paint, Fill, Swap}
+    public enum Mode { Paint("pencil.png"), Fill("flood.png"), Swap("double_pencil.png");
+        private Cursor cursor;
+        Mode (String fName) {
+            cursor = Toolkit.getDefaultToolkit().createCustomCursor(
+                    new ImageIcon(PaintArea.class.getResource("/resource/cursors/" + fName)).getImage(),
+                    new Point(2,30),
+                    this.name());
+        }
+
+        public Cursor getCursor() {
+            return cursor;
+        }
+    }
 
     private Mode mode = Mode.Paint;
 
@@ -34,6 +46,7 @@ public class PaintArea extends JComponent implements Scrollable {
         this.addMouseListener(l);
         this.addMouseMotionListener(l);
         this.addMouseWheelListener(l);
+        setCursor(mode.getCursor());
     }
 
     void setScreen(Screen screen) {
@@ -148,6 +161,7 @@ public class PaintArea extends JComponent implements Scrollable {
 
     public void setMode(Mode mode) {
         this.mode = mode;
+        setCursor(mode.getCursor());
     }
 
     public Mode getMode() {
@@ -297,4 +311,3 @@ public class PaintArea extends JComponent implements Scrollable {
     }
 
 }
-
