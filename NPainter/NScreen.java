@@ -22,6 +22,12 @@ import static NPainter.PixelProcessor.*;
 public class NScreen extends Screen {
 
 
+    private final HashMap<String, Dimension> resolutions = new HashMap<>(); {
+        resolutions.put("256x192", new Dimension(256, 192));
+        resolutions.put("320x200", new Dimension(320, 200));
+        resolutions.put("320x240", new Dimension(320, 240));
+    }
+
     public enum Table {INK, PAPER}
 
     @Override
@@ -69,13 +75,10 @@ public class NScreen extends Screen {
         fireImageChanged();
     }
 
+
     @Override
     public Map<String, Dimension> getResolutions() {
-        HashMap<String, Dimension> m = new HashMap<>();
-        m.put("256x192", new Dimension(256, 192));
-        m.put("320x200", new Dimension(320, 200));
-        m.put("320x240", new Dimension(320, 240));
-        return m;
+        return resolutions;
     }
 
     @Override
@@ -103,7 +106,6 @@ public class NScreen extends Screen {
                 }
             }
         }
-
 
         int[] ink = {0x00, 0x14, 0x18, 0x1e, 0x1c, 0x1a, 0x16, 0x12};
         for (int i = 1; i < 8; i++) ink[i] += (ink[i] + 0x10) << 6;
