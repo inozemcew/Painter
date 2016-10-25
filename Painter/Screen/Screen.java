@@ -319,9 +319,10 @@ public abstract class Screen implements ImageSupplier {
                     ff.setLocation(f.x + x, f.y + y);
                     tt.setLocation(t.x + x, t.y + y);
                     byte b = source.getPixelData(ff);
-                    putPixelData(tt,b, a);
+                    putPixelData(tt, b);
                 }
             }
+            putAttr(tt, a);
             endDraw();
             unlock();
             fireImageChanged(t.x, t.y, GRID_FACTOR.width, GRID_FACTOR.height);

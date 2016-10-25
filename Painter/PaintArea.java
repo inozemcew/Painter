@@ -132,13 +132,28 @@ public class PaintArea extends JComponent implements Scrollable {
     }
 
     public void setScale(int scale) {
+        final Rectangle r = getVisibleRect();
+        setScale(scale, new Point(r.x + r.width / 2, r.y + r.height / 2));
+    }
+
+    public void setScale(int scale, Point fixedPoint) {
+        final int s = this.scale;
+        Rectangle r = getVisibleRect();
         this.scale = scale;
         updatePreferredSize();
+        int xx = fixedPoint.x * (scale - s) / s + r.x;
+        int yy = fixedPoint.y * (scale - s) / s + r.y;
+        final Rectangle bounds = new Rectangle(0,0, getWidth()-1,getHeight()-1);
+        final Rectangle intersection = new Rectangle(xx, yy, r.width, r.height).intersection(bounds);
+        scrollRectToVisible(intersection);
+        scrollRectToVisible(intersection);
         repaint();
     }
 
     void updatePreferredSize() {
-        this.setPreferredSize(new Dimension(screen.getImageWidth() * scale, screen.getImageHeight() * scale));
+        final Dimension size = new Dimension(screen.getImageWidth() * scale, screen.getImageHeight() * scale);
+        this.setPreferredSize(size);
+        this.setSize(size);
         this.revalidate();
     }
 
@@ -303,9 +318,10 @@ public class PaintArea extends JComponent implements Scrollable {
         public void mouseWheelMoved(MouseWheelEvent e) {
             if (e.isControlDown()) {
                 final int s = PaintArea.this.scale;
-                if (e.getWheelRotation()>0 && s >1) setScale(s -1);
-                if (e.getWheelRotation()<0 && s <16) setScale(s +1);
+                if (e.getWheelRotation()>0 && s >1)  setScale(s -1, e.getPoint());
+                if (e.getWheelRotation()<0 && s <16) setScale(s +1, e.getPoint());
                 firePropertyChange(OP_SCALE,s,scale);
+                mouseMoved(e);
             } else getParent().dispatchEvent(e);
         }
     }

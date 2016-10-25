@@ -255,6 +255,11 @@ class Pair {
     }
 
     @Override
+    public int hashCode() {
+        return (this.first+13) * (this.second+13);
+    }
+
+    @Override
     public boolean equals(Object obj) {
         if (!(obj instanceof Pair)) return false;
         Pair o = (Pair) obj;
