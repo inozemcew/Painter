@@ -53,47 +53,11 @@ public class AScreen extends Screen {
         return PixelProcessor.createPixelProcessor();
     }
 
-    /*
-        @Override
-        protected byte attrFromDesc(Pixel pixel, byte oldAttr) {
-            return (pixel.table == Table.Fore) ? (byte) pixel.index : oldAttr;
-        }
-
-        @Override
-        public Color getPixelColor(int x, int y) {
-            Pixel p = getPixelDescriptor(x, y);
-            return (p.table == Table.Back) ? Color.BLACK : palette.getRGBColor(Table.Fore, p.index, 0);
-        }
-    */
     @Override
     public Status getStatus(Point pos) {
         return Status.Normal;
     }
-/*
-    @Override
-    public Pixel getPixelDescriptor(int x, int y) {
-        final int xx = x / pixelFactor.width;
-        final int yy = y / pixelFactor.height;
 
-        byte b = getPixelData(xx, yy);
-        byte c = font.getRasterLine(b, y % fontHeight);
-        byte attr = getAttr(xx, yy);
-        boolean isPaper = ((c & (32 >> (x % 6))) == 0);
-        if (isPaper) return new Pixel(Table.Back, 0, 0);
-        return new Pixel(Table.Fore, attr, 0);
-    }
-*/
-/*
-    @Override
-    protected byte pixelFromDesc(Pixel pixel, byte oldPixel, int x, int y) {
-        int b = oldPixel;
-        if (oldPixel >= 64) b = 0;
-        final int m = 1 << (x / 2 % 3 + y / 2 % 2 * 3);
-        if (pixel.table == Table.Fore) b = b | m;
-        else b = b & (255 - m);
-        return (byte) b;
-    }
-*/
     @Override
     public Enum mapColorTable(int table) {
         return (table == 0) ? Table.Fore : Table.Back;

@@ -20,6 +20,9 @@ import java.util.Map;
  * Created by ainozemtsev on 30.06.16.
  */
 public class APainter extends PainterApp {
+
+    private final CharScreen charScreen = new CharScreen();
+
     @Override
     protected Screen createScreen() {
         return new AScreen();
@@ -28,17 +31,26 @@ public class APainter extends PainterApp {
     @Override
     protected JFrame createMainForm() {
         JFrame frame = super.createMainForm();
-        CharScreen screen = new CharScreen();
-        final InterlacedView view = new InterlacedView(screen);
+        final InterlacedView view = new InterlacedView(charScreen);
         view.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                screen.setAttr(paintArea.getCurrentColorIndex(AScreen.Table.Fore));
-                paintArea.getClipCell().setLocation(screen,e.getX()/view.getScale(),e.getY()/view.getScale());
+                paintArea.getClipCell().setLocation(charScreen, e.getX() / view.getScale(), e.getY() / view.getScale());
             }
         });
         frame.add(view, BorderLayout.LINE_END);
         return frame;
+    }
+
+    @Override
+    protected ColorChangeAdapter createColorChangeAdapter() {
+        return new ColorChangeAdapter() {
+            @Override
+            public void colorChanged(int table, int index) {
+                super.colorChanged(table, index);
+                charScreen.setAttr(paintArea.getCurrentColorIndex(AScreen.Table.Fore));
+            }
+        };
     }
 
     public static void main(String[] argv) {

@@ -23,6 +23,8 @@ import static javax.swing.Action.SELECTED_KEY;
  */
 
 public abstract class PainterApp extends JFrame {
+    public static final String RESOURCE_CURSORS = "/resource/cursors/";
+
     StatusBar statusBar = new StatusBar(160,16,400);
 
     protected Screen screen = createScreen();
@@ -401,7 +403,7 @@ public abstract class PainterApp extends JFrame {
         return true;
     }
 
-    private class ColorChangeAdapter extends ChangeAdapter {
+    protected class ColorChangeAdapter extends ChangeAdapter {
         public ColorChangeAdapter() {
             super(screen);
         }
@@ -413,8 +415,12 @@ public abstract class PainterApp extends JFrame {
         }
     }
 
+    protected ColorChangeAdapter createColorChangeAdapter() {
+        return new ColorChangeAdapter();
+    }
+
     class Actions {
-        final ChangeAdapter changeAdapter = new ColorChangeAdapter();
+        final ChangeAdapter changeAdapter = createColorChangeAdapter();
         Action fileExit = new AbstractAction("Exit") {
             {
                 putValue(ACCELERATOR_KEY, KeyStroke.getKeyStroke('Q', InputEvent.CTRL_DOWN_MASK));

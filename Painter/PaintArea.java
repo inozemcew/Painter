@@ -21,11 +21,13 @@ public class PaintArea extends JComponent implements Scrollable {
     private int scale = 2;
     private int[] currentColors;
     private ClipCell clipCell;
+
     public enum Mode { Paint("pencil.png"), Fill("flood.png"), Swap("double_pencil.png");
         private Cursor cursor;
+
         Mode (String fName) {
             cursor = Toolkit.getDefaultToolkit().createCustomCursor(
-                    new ImageIcon(PaintArea.class.getResource("/resource/cursors/" + fName)).getImage(),
+                    new ImageIcon(PaintArea.class.getResource(PainterApp.RESOURCE_CURSORS + fName)).getImage(),
                     new Point(2,30),
                     this.name());
         }
