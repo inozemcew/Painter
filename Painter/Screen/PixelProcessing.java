@@ -15,4 +15,7 @@ public interface PixelProcessing {
     byte packAttr(Pixel pixel, byte oldAttrData, Point pos);
     Pixel unpackPixel(byte pixelData, byte attrData, Point pos);
     Color getPixelColor(Pixel pixel, Palette palette);
+    default ImageSupplier.Status getPixelStatus(Pixel pixel, int[] enhancedColors) {
+        return ImageSupplier.Status.Normal;
+    };
 }

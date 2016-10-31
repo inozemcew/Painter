@@ -54,11 +54,10 @@ public class NScreen extends Screen {
 
     @Override
     public Status getStatus(Point pos) {
-        if (enhancedColors[0] == -1 && enhancedColors[1] == -1) return Status.Normal;
         byte attr = getAttr(pos);
         byte pix = getPixelData(pos);
         Pixel pixel = pixelProcessor.unpackPixel(pix, attr, pos);
-        return (pixel.index == enhancedColors[pixel.table.ordinal()]) ? Status.Enhanced : Status.Dimmed;
+        return pixelProcessor.getPixelStatus(pixel, enhancedColors);
     }
 
     @Override

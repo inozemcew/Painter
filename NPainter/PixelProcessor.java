@@ -1,5 +1,6 @@
 package NPainter;
 
+import Painter.Screen.ImageSupplier;
 import Painter.Screen.Palette.Palette;
 import Painter.Screen.Pixel;
 import Painter.Screen.PixelProcessing;
@@ -53,6 +54,13 @@ public enum  PixelProcessor implements PixelProcessing {
                 return new Pixel(Table.PAPER, paperFromAttr(attrData), (pix1 & 2) == 2 ? 2 : 3);
             return MODE4.unpackPixel(pixelData, attrData, pos);
         }
+
+/*        @Override
+        public ImageSupplier.Status getPixelStatus(Pixel pixel, int[] enhancedColors) {
+            if (pixel.shift > 1 && pixel.table == Table.PAPER)
+                return (pixel.index == enhancedColors[1]) ? ImageSupplier.Status.Enhanced : ImageSupplier.Status.Normal;
+            return super.getPixelStatus(pixel, enhancedColors);
+        } */
     },
 
     MODE8("8 colors mode") {
@@ -172,6 +180,14 @@ public enum  PixelProcessor implements PixelProcessing {
         return palette.getRGBColor(table, pixel.index, shift-2);
     }
 
+    @Override
+    public ImageSupplier.Status getPixelStatus(Pixel pixel, int[] enhancedColors) {
+        if (enhancedColors[0] == -1 && enhancedColors[1] == -1) return ImageSupplier.Status.Normal;
+        if (pixel.index == enhancedColors[pixel.table.ordinal()])
+            return ImageSupplier.Status.Enhanced;
+        else return ImageSupplier.Status.Dimmed;
+    }
+
 
     @Override
     public String toString() {
@@ -190,6 +206,8 @@ public enum  PixelProcessor implements PixelProcessing {
         else
             return paperToAttr(oldAttrData,pixel.index);
     }
+
+
 
     public static byte paperToAttr(byte attr, int paper) { return (byte) ((attr & 7) | (paper<<3));}
 
