@@ -19,19 +19,16 @@ public class Palette {
     private int[][] colorTables;
     private int[] cellsSizes;
 
-    public interface PaletteChangeListener {
-        void paletteChanged();
-    }
-
+    private ArrayList<PaletteChangeListenerItem> listeners = new ArrayList<>();
     private static class PaletteChangeListenerItem {
         private Integer table;
         private int index;
+
         private PaletteChangeListener listener;
 
         public PaletteChangeListenerItem(Enum table, int index, PaletteChangeListener listener) {
             this(table == null ? null : table.ordinal(), index, listener);
         }
-
         public PaletteChangeListenerItem(Integer table, int index, PaletteChangeListener listener) {
             this.table = table;
             this.index = index;
@@ -39,7 +36,6 @@ public class Palette {
         }
     }
 
-    private ArrayList<PaletteChangeListenerItem> listeners = new ArrayList<>();
     private boolean locked = false;
 
     public Palette(int tableCount, int[] tableSizes, int[] cellsSizes ) {
@@ -231,10 +227,7 @@ public class Palette {
                     n += f;
                 }
             }
-            int[] b = Arrays.copyOf(i,i.length); //new int[i.length];
-            /*for (int t = 0; t < i.length; t++) {
-                b[t] = i[t];
-            }*/
+            int[] b = Arrays.copyOf(i,i.length);
             if (n == 0) return b;
             if (n < bestN) {
                 bestN = n;

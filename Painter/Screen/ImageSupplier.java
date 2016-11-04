@@ -1,6 +1,6 @@
 package Painter.Screen;
 
-import Painter.Screen.Palette.Palette;
+import Painter.Screen.Palette.PaletteChangeListener;
 
 import java.awt.*;
 
@@ -9,7 +9,7 @@ import java.awt.*;
  */
 public interface ImageSupplier {
 
-    interface ImageChangeListener extends Palette.PaletteChangeListener {
+    interface ImageChangeListener extends PaletteChangeListener {
         void imageChanged(int x, int y, int w, int h);
         void imageChanged();
     }

@@ -48,8 +48,8 @@ public class InterlacedView extends JComponent {
     @Override
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
-        g.setColor(new Color(140,140,100));
-        //g.fillRect(getX(), getY(), scale *imageSupplier.getImageWidth(), scale *imageSupplier.getImageHeight());
+        g.setColor(new Color(100,100,70));
+        g.fillRect(0, 0, scale *imageSupplier.getImageWidth(), scale *imageSupplier.getImageHeight());
         Rectangle r = g.getClipBounds();
         final int sx = Integer.max(0, r.x / scale);
         final int fx = sx + Integer.min(imageSupplier.getImageWidth() - sx, r.width / scale + 1);

@@ -1,6 +1,7 @@
 package Painter.PaletteControls;
 
 import Painter.Screen.Palette.Palette;
+import Painter.Screen.Palette.PaletteChangeListener;
 
 import javax.swing.*;
 import java.awt.*;
@@ -10,7 +11,7 @@ import java.awt.*;
  * Button for selection current colors
  */
 public class PaletteButton extends JToggleButton
-        implements Palette.PaletteChangeListener, PalettePopup.ColorIndexSupplier {
+        implements PaletteChangeListener, PalettePopup.ColorIndexSupplier {
     private final Palette palette;
     private final int table;
     private final int index;
