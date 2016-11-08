@@ -6,7 +6,7 @@ import java.awt.*;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.Iterator;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -20,6 +20,7 @@ public class Palette {
     private int[] cellsSizes;
 
     private ArrayList<PaletteChangeListenerItem> listeners = new ArrayList<>();
+
     private static class PaletteChangeListenerItem {
         private Integer table;
         private int index;
@@ -29,6 +30,7 @@ public class Palette {
         public PaletteChangeListenerItem(Enum table, int index, PaletteChangeListener listener) {
             this(table == null ? null : table.ordinal(), index, listener);
         }
+
         public PaletteChangeListenerItem(Integer table, int index, PaletteChangeListener listener) {
             this.table = table;
             this.index = index;
@@ -38,7 +40,7 @@ public class Palette {
 
     private boolean locked = false;
 
-    public Palette(int tableCount, int[] tableSizes, int[] cellsSizes ) {
+    public Palette(int tableCount, int[] tableSizes, int[] cellsSizes) {
         this.colorTables = new int[tableCount][];
         this.cellsSizes = new int[tableCount];
         for (int t = 0; t < tableCount; t++) {
@@ -54,11 +56,21 @@ public class Palette {
             result |= f[i] << (6 * i);
         return result;
     }
-    public static int split  (int c, int shift) { return (c>>(6*shift)&63); }
-    public static int first  (int c)            { return split(c,0); }
-    public static int second (int c)            { return split(c,1); }
-    public static int replace (int cc, int c, int shift) {
-        return (cc & (~(63<<(6*shift)))) | (c << (6 * shift));
+
+    public static int split(int c, int shift) {
+        return (c >> (6 * shift) & 63);
+    }
+
+    public static int first(int c) {
+        return split(c, 0);
+    }
+
+    public static int second(int c) {
+        return split(c, 1);
+    }
+
+    public static int replace(int cc, int c, int shift) {
+        return (cc & (~(63 << (6 * shift)))) | (c << (6 * shift));
     }
 
 
@@ -69,6 +81,7 @@ public class Palette {
     public int getColorsCount(Enum table) {
         return getColorsCount(table.ordinal());
     }
+
     public int getColorsCount(int table) {
         return colorTables[table].length;
     }
@@ -76,6 +89,7 @@ public class Palette {
     public int getCellSize(Enum table) {
         return getCellSize(table.ordinal());
     }
+
     public int getCellSize(int table) {
         return cellsSizes[table];
     }
@@ -83,6 +97,7 @@ public class Palette {
     public int getColorCell(Enum table, int index) {
         return getColorCell(table.ordinal(), index);
     }
+
     public int getColorCell(int table, int index) {
         return colorTables[table][index];
     }
@@ -90,6 +105,7 @@ public class Palette {
     public void setColorCell(int value, Enum table, int index) {
         setColorCell(value, table.ordinal(), index);
     }
+
     public void setColorCell(int value, int table, int index) {
         int oldValue = getColorCell(table, index);
         colorTables[table][index] = value;
@@ -118,7 +134,8 @@ public class Palette {
         public void redo() {
             setColorCell(this.newValue, this.table, this.index);
         }
-    };
+    }
+
 
     public void setUndo(UndoRedo undo) {
         this.undo = undo;
@@ -133,17 +150,18 @@ public class Palette {
     }
 
     public void addChangeListener(PaletteChangeListener listener, int table, int index) {
-        this.listeners.add(new PaletteChangeListenerItem(table,index,listener));
+        this.listeners.add(new PaletteChangeListenerItem(table, index, listener));
     }
 
     public void addChangeListener(PaletteChangeListener listener) {
         final Integer t = null;
-        this.listeners.add(new PaletteChangeListenerItem(t,-1,listener));
+        this.listeners.add(new PaletteChangeListenerItem(t, -1, listener));
     }
 
     private void fireChangeEvent(Enum table, int index) {
         fireChangeEvent(table.ordinal(), index);
     }
+
     private void fireChangeEvent(int table, int index) {
         for (PaletteChangeListenerItem i : this.listeners) {
             if (i.table == null) {
@@ -204,50 +222,71 @@ public class Palette {
     }
 
     public Color getRGBColor(Enum table, int index, int fs) {
-        return toRGB(split(getColorCell(table, index),fs));
+        return toRGB(split(getColorCell(table, index), fs));
     }
 
     public int[] findAttr(Integer[] s) {
+
+        class IndexIterator implements Iterator<int[]> {
+            private int[] counters, ranges;
+            private boolean counting = true;
+
+            public IndexIterator(int[] ranges) {
+                this.counters = new int[ranges.length];
+                this.ranges = ranges;
+            }
+
+            @Override
+            public boolean hasNext() {
+                return counting;
+            }
+
+            @Override
+            public int[] next() {
+                int[] values = Arrays.copyOf(counters, counters.length);
+                for (int j = 0; j < counters.length; j++) {
+                    if (++counters[j] < ranges[j]) return values;
+                    counters[j] = 0;
+                }
+                counting = false;
+                return values;
+            }
+        }
+
         double bestN = Integer.MAX_VALUE;
 
-        int[] i = new int[colorTables.length];
-        int[] best = Arrays.copyOf(i,i.length);
-        int j;
-        do {
+        Iterator<int[]> iterator = new IndexIterator(Arrays.stream(colorTables).mapToInt(x -> x.length).toArray());
+        int[] best = new int[colorTables.length];
+        while (iterator.hasNext()) {
+            int[] i = iterator.next();
             double n = 0;
             for (int k : s) {
                 if (k != -2) {
-                    double f = Integer.MAX_VALUE;
-                    for (int t = 0; t < i.length; t++) {
-                        for (int m = 0; m < cellsSizes[t]; m++) {
-                            final int color = split(colorTables[t][i[t]], m);
-                            f = Double.min(f, getColorDiff(k, color));
-                        }
-                    }
-                    n += f;
+                    n += IntStream.range(0, colorTables.length)
+                            .flatMap(t -> {
+                                        final int cell = getColorCell(t, i[t]);
+                                        return IntStream.range(0, getCellSize(t))
+                                                .map(m -> split(cell, m));
+                                    })
+                            .mapToDouble(c -> getColorDiff(k, c))
+                            .min()
+                            .orElse(Integer.MAX_VALUE);
                 }
             }
-            int[] b = Arrays.copyOf(i,i.length);
-            if (n == 0) return b;
+            if (n == 0) return i;
             if (n < bestN) {
                 bestN = n;
-                best = b;
+                best = i;
             }
-
-            for (j = 0; j < i.length; j++) {
-                i[j]++;
-                if (i[j] < colorTables[j].length) break;
-                i[j] = 0;
-            }
-
-        } while (j<i.length);
+        }
 
         return best;
     }
 
-    public void reorder (Enum table, int[] order) {
+    public void reorder(Enum table, int[] order) {
         reorder(table.ordinal(), order);
     }
+
     public void reorder(int table, int[] order) {
         final int[] p = colorTables[table];
         int[] cells = Arrays.copyOf(p, p.length);
@@ -258,27 +297,76 @@ public class Palette {
     }
 
     static Color toRGB2(int index) {
-        float x=1,y=0,z=0,r,g,b;
+        float x = 1, y = 0, z = 0, r, g, b;
         if ((index & 1) != 0) y = 0.5f;
-        if ((index & 2) != 0) { x=1-x; y=1-y; z=1-z; }
-        switch (index & 12) {
-            case 0: { r=y; g=y; b=y; break;}
-            case 4: { r=y; g=z; b=x; break;}
-            case 8: { r=x; g=y; b=z; break;}
-            default:{ r=z; g=x; b=y; break;}
+        if ((index & 2) != 0) {
+            x = 1 - x;
+            y = 1 - y;
+            z = 1 - z;
         }
-        float l = (index & 48)/96.0f+0.5f;
-        return new Color(r*l, g*l, b*l);
-    }
-    public static Color toRGB1(int index) {
-        float x=1,y=0,z=0,r,g,b;
-        if ((index & 1) != 0) y = 0.5f;
-        if ((index & 2) != 0) { x=1-x; y=1-y; z=1-z; }
         switch (index & 12) {
-            case 0: { r=z; g=y; b=y; break;}
-            case 4: { r=y; g=z; b=x; break;}
-            case 8: { r=x; g=y; b=z; break;}
-            default:{ r=z; g=x; b=y; break;}
+            case 0: {
+                r = y;
+                g = y;
+                b = y;
+                break;
+            }
+            case 4: {
+                r = y;
+                g = z;
+                b = x;
+                break;
+            }
+            case 8: {
+                r = x;
+                g = y;
+                b = z;
+                break;
+            }
+            default: {
+                r = z;
+                g = x;
+                b = y;
+                break;
+            }
+        }
+        float l = (index & 48) / 96.0f + 0.5f;
+        return new Color(r * l, g * l, b * l);
+    }
+
+    public static Color toRGB1(int index) {
+        float x = 1, y = 0, z = 0, r, g, b;
+        if ((index & 1) != 0) y = 0.5f;
+        if ((index & 2) != 0) {
+            x = 1 - x;
+            y = 1 - y;
+            z = 1 - z;
+        }
+        switch (index & 12) {
+            case 0: {
+                r = z;
+                g = y;
+                b = y;
+                break;
+            }
+            case 4: {
+                r = y;
+                g = z;
+                b = x;
+                break;
+            }
+            case 8: {
+                r = x;
+                g = y;
+                b = z;
+                break;
+            }
+            default: {
+                r = z;
+                g = x;
+                b = y;
+                break;
+            }
         }
         //float l = (index & 48)/96.0f+0.5f;
         //return new Color(r*l, g*l, b*l);
@@ -286,42 +374,63 @@ public class Palette {
         //float m =  (index & 16) == 0  ? 0 : 0.25f;
         //float l = 0.8125f - ( (index & 32) == 0  ? 0.375f: 0f);
         //float m =  (index & 16) == 0  ? 0 : 0.1875f;
-        float l = 0.8f - ( (index & 32) == 0  ? 0.33f: 0f);
-        float m =  (index & 16) == 0  ? 0 : 0.25f;
+        float l = 0.8f - ((index & 32) == 0 ? 0.33f : 0f);
+        float m = (index & 16) == 0 ? 0 : 0.25f;
         //return new Color(r*l+m,g*l+m,b*l+m);
-        return new Color(l*(r+m),l*(g+m),l*(b+m));
+        return new Color(l * (r + m), l * (g + m), l * (b + m));
     }
 
     private static Color[] colorCache = new Color[64];
     private static double[][] colorDiff = new double[64][];
 
     static {
-        for (int index = 0; index<64; index++) {
+        for (int index = 0; index < 64; index++) {
             int xh = 1, yh = 0, zh = 0;
             int xl = 1, yl = 0, zl = 1;
             int r, g, b;
             yh = index & 1;
             yl = 1 - yh;
-            if ((index & 2) != 0) { xh=1-xh; yh=yl^yh; zh=1-zh;}
-            switch (index & 12) {
-                case 0: { r = zh*(1+zl); g = yh*(1+yl); b = yh*(1+yl); break;}
-                case 4: { r = yh*(1+yl); g = zh*(1+zl); b = xh*(1+xl); break;}
-                case 8: { r = xh*(1+xl); g = yh*(1+yl); b = zh*(1+zl); break;}
-                default:{ r = zh*(1+zl); g = xh*(1+xl); b = yh*(1+yl); break;}
+            if ((index & 2) != 0) {
+                xh = 1 - xh;
+                yh = yl ^ yh;
+                zh = 1 - zh;
             }
-            int l = (index & 48) == 0  ? 64: 80;
-            int m = (index & 48)*2;
-            m = m>95 ? 95:m;
-            //return new Color(r*l+m,g*l+m,b*l+m);
-            colorCache[index] = new Color(l*r+m,l*g+m,l*b+m);
+            switch (index & 12) {
+                case 0: {
+                    r = zh * (1 + zl);
+                    g = yh * (1 + yl);
+                    b = yh * (1 + yl);
+                    break;
+                }
+                case 4: {
+                    r = yh * (1 + yl);
+                    g = zh * (1 + zl);
+                    b = xh * (1 + xl);
+                    break;
+                }
+                case 8: {
+                    r = xh * (1 + xl);
+                    g = yh * (1 + yl);
+                    b = zh * (1 + zl);
+                    break;
+                }
+                default: {
+                    r = zh * (1 + zl);
+                    g = xh * (1 + xl);
+                    b = yh * (1 + yl);
+                    break;
+                }
+            }
+            int l = (index & 48) == 0 ? 64 : 80;
+            int m = (index & 48) * 2;
+            m = m > 95 ? 95 : m;
+            colorCache[index] = new Color(l * r + m, l * g + m, l * b + m);
         }
 
         for (int i = 0; i < 64; i++) {
             colorDiff[i] = new double[64];
-            for (int j = 0; j < 64; j++) {
-                colorDiff[i][j] = calcYuvDiff(toRGB(i),j);
-            }
-
+            for (int j = 0; j < 64; j++)
+                colorDiff[i][j] = calcYuvDiff(toRGB(i), j);
         }
     }
 
@@ -340,14 +449,10 @@ public class Palette {
 */
 
 
-    public static Converter createConverter() {
-        return new Converter();
-    }
-
-    public static int fromRGB(Color color,int[] indices){
+    public static int fromRGB(Color color, int[] indices) {
         int bestIndex = 0;
         double bestYUV = Integer.MAX_VALUE;
-        for (int i = 0; i < indices.length; i++){
+        for (int i = 0; i < indices.length; i++) {
             final double yuv = calcYuvDiff(color, indices[i]);
             if (yuv < bestYUV) {
                 bestYUV = yuv;
@@ -357,10 +462,10 @@ public class Palette {
         return bestIndex;
     }
 
-    private static int[] allColorIndices = IntStream.range(0,64).toArray();
+    private static int[] allColorIndices = IntStream.range(0, 64).toArray();
 
     public static int fromRGB(Color color) {
-        return fromRGB(color,allColorIndices);
+        return fromRGB(color, allColorIndices);
     }
 
     private static double calcYuvDiff(Color color, int i) {
@@ -368,53 +473,47 @@ public class Palette {
         final int dg = color.getGreen() - toRGB(i).getGreen();
         final int db = color.getBlue() - toRGB(i).getBlue();
         final double y = 0.299 * dr + 0.587 * dg + 0.114 * db;
-        final double u = -0.14713 * dr - 0.28886 * dg + 0.436 *db;
-        final double v = 0.615 * dr  - 0.51499 * dg - 0.10001 * db;
+        final double u = -0.14713 * dr - 0.28886 * dg + 0.436 * db;
+        final double v = 0.615 * dr - 0.51499 * dg - 0.10001 * db;
         //final int d = dr * dr + dg * dg + db * db;
-        return (y*y)/2 +  u*u + v*v;
+        return (y * y) / 2 + u * u + v * v;
     }
 
     public static int fromRGB1(Color color) {
-        int b=color.getBlue(), r = color.getRed(), g = color.getGreen();
-        int l = Integer.max(g,Integer.max(r,b));
-        if (Integer.max(Math.abs(g-r), Math.abs(g-b))<16) {
-            final Integer m = (r+g+b)/3;
-            int[][] t = {{0,0},{32,16},{64,32},{96,48},{144,2},{192,18},{224,34},{255,50}};
-            return Stream.of(t).filter(x -> m <= x[0]+16).mapToInt(x->x[1]).findFirst().orElse(50);
+        int b = color.getBlue(), r = color.getRed(), g = color.getGreen();
+        int l = Integer.max(g, Integer.max(r, b));
+        if (Integer.max(Math.abs(g - r), Math.abs(g - b)) < 16) {
+            final Integer m = (r + g + b) / 3;
+            int[][] t = {{0, 0}, {32, 16}, {64, 32}, {96, 48}, {144, 2}, {192, 18}, {224, 34}, {255, 50}};
+            return Stream.of(t).filter(x -> m <= x[0] + 16).mapToInt(x -> x[1]).findFirst().orElse(50);
         }
 
 
-        final int m = (l<160) ? 0 : ( (l<208) ? 16 : ( (l<240) ? 32 : 48) );
+        final int m = (l < 160) ? 0 : ((l < 208) ? 16 : ((l < 240) ? 32 : 48));
         if (l == b) {
-            if (b-r < 16) return m + 14;
-            if (b-g < 16) return m + 10;
-            if (Math.abs(r-g)>l/8) return (r<g) ? m + 11 : m + 5;
+            if (b - r < 16) return m + 14;
+            if (b - g < 16) return m + 10;
+            if (Math.abs(r - g) > l / 8) return (r < g) ? m + 11 : m + 5;
             return m + 4;
         }
-        if (l == r){
-            if (r-g <32) return m + 6;
-            if (r-b <20) return m + 14;
-            if (b>r/2 && g> r/2) return m+3;
-            if (Math.abs(b-g)>l/8) return (b<g) ? m + 9 : m + 15;
+        if (l == r) {
+            if (r - g < 32) return m + 6;
+            if (r - b < 20) return m + 14;
+            if (b > r / 2 && g > r / 2) return m + 3;
+            if (Math.abs(b - g) > l / 8) return (b < g) ? m + 9 : m + 15;
             return m + 8;
         }
-        if (Math.abs(r-b)<16) return m+12;
-        return (r<b) ? m + 13 : m + 7;
+        if (Math.abs(r - b) < 16) return m + 12;
+        return (r < b) ? m + 13 : m + 7;
     }
 
-    public static void main (String[] argv) {
+    public static void main(String[] argv) {
         for (int i = 0; i < 64; i++) {
             final Color rgb = toRGB(i);
-            System.out.printf("%2d %3d %3d %3d %2d|", i, rgb.getBlue(), rgb.getRed(), rgb.getGreen(),fromRGB(rgb));
+            System.out.printf("%2d %3d %3d %3d %2d|", i, rgb.getBlue(), rgb.getRed(), rgb.getGreen(), fromRGB(rgb));
             if (i % 8 == 7) System.out.println();
             if (i % 16 == 15) System.out.println();
         }
     }
 }
 
-class Converter implements ColorConverting {
-    HashMap<Color,Integer> cache = new HashMap<>(16);
-    public int fromRGB(Color color) {
-        return cache.computeIfAbsent(color, Palette::fromRGB);
-    }
-}
