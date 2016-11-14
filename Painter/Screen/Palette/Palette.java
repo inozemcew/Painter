@@ -7,6 +7,7 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -225,7 +226,7 @@ public class Palette {
         return toRGB(split(getColorCell(table, index), fs));
     }
 
-    public int[] findAttr(Integer[] s) {
+    public int[] findAttr(List<Integer> s) {
 
         class IndexIterator implements Iterator<int[]> {
             private int[] counters, ranges;

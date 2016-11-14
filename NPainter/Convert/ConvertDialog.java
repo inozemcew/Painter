@@ -22,12 +22,12 @@ import java.util.stream.IntStream;
  * Created by aleksey on 24.01.16.
  */
 public class ConvertDialog {
-    enum Result {OK, CANCEL, BACK, NEXT}
+    private enum Result {OK, CANCEL, BACK, NEXT}
 
-    Result result;
-    Screen screen = new NScreen();
-    ImageConverter converter;
-    JDialog dialog1, dialog2;
+    private Result result;
+    private Screen screen = new NScreen();
+    private ImageConverter converter;
+    private JDialog dialog1, dialog2;
 
     public ConvertDialog(ImageConverter converter) {
         this.converter = converter;
@@ -50,10 +50,10 @@ public class ConvertDialog {
     }
 
 
-    class ConvertDialog1 extends JDialog {
+    private class ConvertDialog1 extends JDialog {
         List<Color> colors = new ArrayList<>();
 
-        public ConvertDialog1() {
+        ConvertDialog1() {
             super();
             setTitle("Image conversion - phase 1");
             setModal(true);
@@ -148,11 +148,11 @@ public class ConvertDialog {
             pack();
         }
 
-        class ColorCellModel extends AbstractTableModel {
+        private class ColorCellModel extends AbstractTableModel {
             ArrayList<ColorIcon> fromIcons = new ArrayList<>();
             ArrayList<ColorIndexIcon> toIcons = new ArrayList<>();
 
-            public ColorCellModel(List<Color> colors) {
+            ColorCellModel(List<Color> colors) {
                 super();
                 colors.forEach(c -> this.fromIcons.add(new ColorIcon(c)));
                 IntStream.range(0, 64).forEach(i -> toIcons.add(new ColorIndexIcon(i)));
@@ -201,9 +201,9 @@ public class ConvertDialog {
         }
     }
 
-    class ConvertDialog2 extends JDialog {
+    private class ConvertDialog2 extends JDialog {
 
-        public ConvertDialog2() {
+        ConvertDialog2() {
             super();
             setTitle("Image conversion - phase 2");
             setModal(true);
@@ -282,9 +282,9 @@ public class ConvertDialog {
 }
 
 class ColorIcon implements Icon {
-    Color color;
+    private Color color;
 
-    public ColorIcon(Color color) {
+    ColorIcon(Color color) {
         this.color = color;
     }
 
@@ -310,9 +310,9 @@ class ColorIcon implements Icon {
 }
 
 class ColorIndexIcon extends ColorIcon {
-    int index;
+    private int index;
 
-    public ColorIndexIcon(int index) {
+    ColorIndexIcon(int index) {
         super(Palette.toRGB(index));
         this.index = index;
     }

@@ -207,6 +207,11 @@ public enum  PixelProcessor implements PixelProcessing {
         return (table == NScreen.Table.INK) ? inkToAttr(attr,value) : paperToAttr(attr,value);
     }
 
+    public static byte packAttr(int ink, int paper) {
+        return  (byte) (ink | paper <<3);
+    }
+
+
     public static class PixelDataList extends AbstractList<Integer> {
         private final int SIZE = 2;
         byte pixelData;
