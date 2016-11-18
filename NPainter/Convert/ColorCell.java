@@ -1,6 +1,7 @@
 package NPainter.Convert;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Created by ainozemtsev on 09.11.16.
@@ -8,9 +9,11 @@ import java.util.*;
 public class ColorCell {
     private Set<Integer> colors = new HashSet<>();
     private int count;
+    private int hashCode;
 
     public ColorCell(Integer... colors) {
         this.colors.addAll(Arrays.asList(colors));
+        this.hashCode = this.colors.hashCode();
         this.count = 0;
     }
 
@@ -31,6 +34,14 @@ public class ColorCell {
 
     public int getCount() {
         return count;
+    }
+
+    int getSize() {
+        return colors.size();
+    }
+
+    void merge(ColorCell that) {
+        colors.addAll(that.colors);
     }
 
     boolean isEmpty() {
@@ -57,7 +68,7 @@ public class ColorCell {
 
     @Override
     public int hashCode() {
-        return this.colors.hashCode();
+        return this.hashCode;
     }
 
     @Override
@@ -73,24 +84,16 @@ public class ColorCell {
         return p;
     }
 
-    ColorCell complement(List<Integer> s) {
-        return new ColorCell(s.stream().filter(c -> !colors.contains(c)).toArray(Integer[]::new));
-    }
-
-    int rank(List<Integer> s, Collection<ColorCell> ink, Collection<ColorCell> paper) {
-        final ColorCell complement = this.complement(s);
-        final boolean inkContains = ink.stream().anyMatch(c-> c.contains(this));
-        final boolean paperContains = paper.stream().anyMatch(c -> c.contains(complement));
-        if (inkContains && paperContains) return 0;
-        if (inkContains || paperContains) return 1;
-        return 2;
-    }
-
-    int compareTo(ColorCell y, List<Integer> s) {
-        return (y.count + y.complement(s).count) - (this.count + this.complement(s).count);
+    ColorCell complement(List<Integer> s, List<ColorCell> cells) {
+        return new ColorCell(cells, s.stream().filter(c -> !colors.contains(c)).toArray(Integer[]::new));
     }
 
     int[] asArray() {
         return colors.stream().mapToInt(i -> i).toArray();
+    }
+
+    @Override
+    public String toString() {
+        return colors.stream().map(i -> String.valueOf(i) + ", ").collect(Collectors.joining()) + "count = " + count ;
     }
 }
