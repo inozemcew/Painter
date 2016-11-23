@@ -71,13 +71,13 @@ public class ConvertTest {
             Set<ColorCell> ink = new HashSet<>(Arrays.asList(new ColorCell(1, 2), new ColorCell(3, 4)));
             Set<ColorCell> paper = new HashSet<>(Arrays.asList(new ColorCell(4, 5)));
             Integer[] list = {1, 2, 4};
-            testRank(ink, paper, list, 0);
+            testRank(ink, paper, list, Combinator.Match.All);
         }
         {
             Set<ColorCell> ink = new HashSet<>(Arrays.asList(new ColorCell(1), new ColorCell(2)));
             Set<ColorCell> paper = new HashSet<>(Arrays.asList(new ColorCell(0, 6)));
             Integer[] list = {0, 4};
-            List<ColorCell> cells = testRank(ink, paper, list, 0);
+            List<ColorCell> cells = testRank(ink, paper, list, Combinator.Match.All);
             final ColorCell cell = cells.get(0);
             Combinator.addTo(ink, cell);
             assertEquals(ink.size(), 2);
@@ -88,12 +88,11 @@ public class ConvertTest {
 
     }
 
-    private List<ColorCell> testRank(Set<ColorCell> ink, Set<ColorCell> paper, Integer[] l, int key ) {
+    private List<ColorCell> testRank(Set<ColorCell> ink, Set<ColorCell> paper, Integer[] l, Combinator.Match key ) {
         List<Integer> list = Arrays.asList(l);
         ComplementMaps map = Combinator.createComplementMaps(Arrays.asList(list),null);
-        //Combinator combinator = new Combinator(ink, paper);
         Stream<ColorCell> ps = Combinator.getColorPairsStream(list, null);
-        Map<Integer, List<ColorCell>> m = ps.collect(Collectors.groupingBy(c -> Combinator.rank(c, map.get(list), ink, paper)));
+        Map<Combinator.Match, List<ColorCell>> m = ps.collect(Collectors.groupingBy(c -> Combinator.rank(c, map.get(list), ink, paper)));
         assertTrue(m.containsKey(key));
         return m.get(key);
     }

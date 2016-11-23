@@ -6,24 +6,24 @@ import java.util.stream.Collectors;
 /**
  * Created by ainozemtsev on 09.11.16.
  */
-public class ColorCell {
+class ColorCell {
     private Set<Integer> colors = new HashSet<>();
     private int count;
     private int hashCode;
 
-    public ColorCell(Integer... colors) {
+    ColorCell(Integer... colors) {
         this.colors.addAll(Arrays.asList(colors));
         this.hashCode = this.colors.hashCode();
         this.count = 0;
     }
 
-    public ColorCell(Collection<ColorCell> colorCells, Integer... colors) {
+    ColorCell(Collection<ColorCell> colorCells, Integer... colors) {
         this(colors);
         if (colorCells == null) return;
         this.count = colorCells.stream().filter(this::equals).mapToInt(p -> p.count).findFirst().orElse(0);
     }
 
-    public ColorCell(ColorCell that) {
+    ColorCell(ColorCell that) {
         this.colors = new HashSet<>(that.colors);
         this.count = that.getCount();
     }
