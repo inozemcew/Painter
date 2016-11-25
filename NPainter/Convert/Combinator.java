@@ -112,14 +112,17 @@ class Combinator {
 
     enum Match { All, OneHalf, One, None}
 
-    static Match rank(ColorCell cell, Map<ColorCell, ColorCell> complements,
+    static Match rank(ColorCell cell, ColorCell complement,
                       Collection<ColorCell> ink, Collection<ColorCell> paper) {
-        final ColorCell complement = complements.get(cell);
-        final boolean b1 = cell.getSize() == 1;
-        final boolean inkContains = ink.stream().anyMatch(c -> c.contains(cell) || (b1 && c.getSize() < 2));
-        final boolean b2 = complement.getSize() == 1;
-        final boolean paperContains = paper.stream().anyMatch(c -> c.contains(complement) || (b2 && c.getSize() < 2));
+        final boolean inkContains = ink.stream().anyMatch(c -> c.contains(cell));
+        final boolean paperContains = paper.stream().anyMatch(c -> c.contains(complement));
         if (inkContains && paperContains) return Match.All;
+
+        final boolean b1 = cell.getSize() == 1;
+        final boolean containsInk = ink.stream().anyMatch(c -> cell.contains(c) || (c.getSize() == 1 && b1));
+        final boolean b2 = complement.getSize() == 1;
+        final boolean containsPaper = paper.stream().anyMatch(c -> complement.contains(c) || (c.getSize() == 1 && b2));
+        if ((inkContains||containsInk) && (paperContains||containsPaper)) return Match.OneHalf;
 
         if (inkContains || paperContains) return Match.One;
         return Match.None;
@@ -131,26 +134,28 @@ class Combinator {
 //
 //    }
 //
-    int compareTo(ColorCell x, ColorCell y, Map<ColorCell, ColorCell> complements) {
+    int compare(ColorCell x, ColorCell y, Map<ColorCell, ColorCell> complements) {
         return (y.getCount() + complements.get(y).getCount()) - (x.getCount() + complements.get(x).getCount());
     }
 
 
     List<ColorCell> sortPairs(Map<ColorCell, ColorCell> map) {
-        Stream<ColorCell> ps = map.keySet().stream();
-        Map<Match, List<ColorCell>> m = ps.collect(Collectors.groupingBy(p -> rank(p, map, ink, paper)));
+        Map<Match, List<ColorCell>> m = map.keySet().stream()
+                .collect(Collectors.groupingBy(p -> rank(p, map.get(p), ink, paper)));
         if (m.containsKey(Match.All))
             return m.get(Match.All);
-        return Stream.concat(
-                m.getOrDefault(Match.One, new ArrayList<>()).stream()
-                    .sorted((x,y) -> y.asArray().length - x.asArray().length),
+        return Stream.concat(Stream.concat(
+                    m.getOrDefault(Match.One, new ArrayList<>()).stream()
+                            .sorted((x, y) -> compare(x, y, map)),
+                    m.getOrDefault(Match.OneHalf, new ArrayList<>()).stream()
+                            .sorted((x, y) -> compare(x, y, map))),
                 m.getOrDefault(Match.None, new ArrayList<>()).stream()
-                    .sorted((x, y) -> compareTo(x, y, map))
+                        .sorted((x, y) -> compare(x, y, map))
             ).collect(Collectors.toList());
         /*if (m.containsKey(1))
             return m.get(1).stream().sorted((x,y) -> y.asArray().length - x.asArray().length).collect(Collectors.toList());
         if (m.containsKey(2))
-            return m.get(2).stream().sorted((x, y) -> compareTo(x, y, map)).collect(Collectors.toList());
+            return m.get(2).stream().sorted((x, y) -> compare(x, y, map)).collect(Collectors.toList());
         return new ArrayList<>();*/
     }
 
