@@ -9,6 +9,9 @@ import java.util.stream.Stream;
 /**
  * Created by ainozemtsev on 21.11.16.
  */
+
+class ComplementMaps extends HashMap<List<Integer>, Map<ColorCell,ColorCell>> { }
+
 class Combinator {
     private Set<ColorCell> ink, paper;
     private static int tries = 0;
@@ -30,10 +33,6 @@ class Combinator {
         bestCount = Integer.MAX_VALUE;
         best = new Combinator(new HashSet<>(8), new HashSet<>(8), complementMaps);
         Combinator comb = best.next(stat);
-                /*stat.stream()
-                        .sorted((x, y) -> y.size() - x.size())
-                        .collect(Collectors.toCollection(LinkedList<List<Integer>>::new)),
-                colorCells);*/
         return (comb != null) ? comb : best;
     }
 
@@ -95,7 +94,6 @@ class Combinator {
                             .inc());
         }
         allPairs.sort((ColorCell f, ColorCell s) -> s.getCount() - f.getCount());
-        //allPairs.forEach(p -> System.out.println(p.toString()));
         return allPairs;
     }
 
@@ -128,12 +126,6 @@ class Combinator {
         return Match.None;
     }
 
-//    static int rank(ColorCell cell, Map<ColorCell, ColorCell> complements,
-//                    Collection<ColorCell> ink, Collection<ColorCell> paper) {
-//        final ColorCell complement = complements.get(cell);
-//
-//    }
-//
     int compare(ColorCell x, ColorCell y, Map<ColorCell, ColorCell> complements) {
         return (y.getCount() + complements.get(y).getCount()) - (x.getCount() + complements.get(x).getCount());
     }
@@ -152,11 +144,6 @@ class Combinator {
                 m.getOrDefault(Match.None, new ArrayList<>()).stream()
                         .sorted((x, y) -> compare(x, y, map))
             ).collect(Collectors.toList());
-        /*if (m.containsKey(1))
-            return m.get(1).stream().sorted((x,y) -> y.asArray().length - x.asArray().length).collect(Collectors.toList());
-        if (m.containsKey(2))
-            return m.get(2).stream().sorted((x, y) -> compare(x, y, map)).collect(Collectors.toList());
-        return new ArrayList<>();*/
     }
 
     static void addTo(Set<ColorCell> set, ColorCell p) {

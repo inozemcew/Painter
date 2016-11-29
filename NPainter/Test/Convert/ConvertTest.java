@@ -93,7 +93,7 @@ public class ConvertTest {
         ComplementMaps maps = Combinator.createComplementMaps(Arrays.asList(list),null);
         Map<ColorCell, ColorCell> map = maps.get(list);
         Stream<ColorCell> ps = Combinator.getColorPairsStream(list, null);
-        Map<Combinator.Match, List<ColorCell>> m = ps.collect(Collectors.groupingBy(c -> Combinator.rank(c, map.get(list), ink, paper)));
+        Map<Combinator.Match, List<ColorCell>> m = ps.collect(Collectors.groupingBy(c -> Combinator.rank(c, map.get(c), ink, paper)));
         assertTrue(m.containsKey(key));
         return m.get(key);
     }

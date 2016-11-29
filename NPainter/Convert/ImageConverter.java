@@ -189,5 +189,5 @@ class ColorMatrix extends ArrayList<List<Integer>> {
     }
 }
 
-class ComplementMaps extends HashMap<List<Integer>, Map<ColorCell,ColorCell>> { };
+
 
