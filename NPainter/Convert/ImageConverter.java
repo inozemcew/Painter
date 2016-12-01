@@ -116,7 +116,14 @@ public class ImageConverter implements ImageSupplier {
 
     void calcPalette() {
         colors4Tiles = getColors4Tiles(sizeXCells, sizeYCells, image);
-        Combinator comb = Combinator.createCombinator(colors4Tiles);
+        Combinator comb = new Combinator();
+        comb.run(colors4Tiles);
+        while (comb.isRunning())
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                ;
+            }
         comb.fillPalette(palette);
         isPaletteCalculated = true;
     }

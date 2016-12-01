@@ -13,36 +13,105 @@ import java.util.stream.Stream;
 class ComplementMaps extends HashMap<List<Integer>, Map<ColorCell,ColorCell>> { }
 
 class Combinator {
-    private Set<ColorCell> ink, paper;
-    private static int tries = 0;
-    private static final int maxTries = 555000;
-    private static int bestCount;
-    private static Combinator best;
 
-    private ComplementMaps complementMaps;
+    private int tries = 0;
+    private static final int maxTries = 555000;
+    private int bestCount;
+    private Recurse best;
+
 
     private final int SIZE  = 8; //TODO: rework!
 
-    static Combinator createCombinator(ColorMatrix colors4Tiles) {
-        Deque<List<Integer>> stat = Combinator.getStat(colors4Tiles);
+    private Thread thread;
 
-        List<ColorCell> colorCells = Combinator.getAllPairs(stat);
-
-        ComplementMaps complementMaps = Combinator.createComplementMaps(stat, colorCells);
+    Combinator () {
         tries = 0;
         bestCount = Integer.MAX_VALUE;
-        best = new Combinator(new HashSet<>(8), new HashSet<>(8), complementMaps);
-        Combinator comb = best.next(stat);
-        return (comb != null) ? comb : best;
+        best = null;
     }
 
-    private Combinator(Set<ColorCell> ink, Set<ColorCell> paper, ComplementMaps complementMaps) {
-        this.ink = new HashSet<>(ink);
-        this.paper = new HashSet<>(paper);
-        this.complementMaps = complementMaps;
+    void run(ColorMatrix colors4Tiles) {
+        thread = new Thread(() -> {
+            Deque<List<Integer>> stat = getStat(colors4Tiles);
+            List<ColorCell> colorCells = getAllPairs(stat);
+            ComplementMaps complementMaps = createComplementMaps(stat, colorCells);
+            best = new Recurse(new HashSet<>(8), new HashSet<>(8), complementMaps);
+            Recurse result = best.next(stat);
+            if (result != null) best = result;
+        });
+        thread.run();
     }
 
-    static Deque<List<Integer>> getStat(ColorMatrix tilesColors) {
+    boolean isRunning() {
+        return thread.isAlive();
+    }
+
+    void fillPalette(Palette palette) {
+        if (best != null)
+            best.fillPalette(palette);
+    }
+
+    private class Recurse {
+        private Set<ColorCell> ink, paper;
+        private ComplementMaps complementMaps;
+
+        private Recurse(Set<ColorCell> ink, Set<ColorCell> paper, ComplementMaps complementMaps) {
+            this.ink = new HashSet<>(ink);
+            this.paper = new HashSet<>(paper);
+            this.complementMaps = complementMaps;
+        }
+        int compare(ColorCell x, ColorCell y, Map<ColorCell, ColorCell> complements) {
+            return (y.getCount() + complements.get(y).getCount()) - (x.getCount() + complements.get(x).getCount());
+        }
+
+
+        List<ColorCell> sortPairs(Map<ColorCell, ColorCell> map) {
+            Map<Match, List<ColorCell>> m = map.keySet().stream()
+                    .collect(Collectors.groupingBy(p -> rank(p, map.get(p), ink, paper)));
+            if (m.containsKey(Match.All))
+                return m.get(Match.All);
+            return Stream.concat(Stream.concat(
+                    m.getOrDefault(Match.One, new ArrayList<>()).stream()
+                            .sorted((x, y) -> compare(x, y, map)),
+                    m.getOrDefault(Match.OneHalf, new ArrayList<>()).stream()
+                            .sorted((x, y) -> compare(x, y, map))),
+                    m.getOrDefault(Match.None, new ArrayList<>()).stream()
+                            .sorted((x, y) -> compare(x, y, map))
+            ).collect(Collectors.toList());
+        }
+
+        Recurse next(Deque<List<Integer>> uniqueColorsStack) {
+            if (uniqueColorsStack.isEmpty()) return this;
+            final List<Integer> s = uniqueColorsStack.pop();
+            final Map<ColorCell, ColorCell> map = complementMaps.get(s);
+            for (ColorCell p : sortPairs(map) ) {
+                Recurse n = new Recurse(this.ink, this.paper, this.complementMaps);
+                addTo(n.ink, p);
+                addTo(n.paper, map.get(p));
+                if (n.ink.size() <= SIZE && n.paper.size() <= SIZE) {
+                    Recurse r = n.next(uniqueColorsStack);
+                    if (r != null) return r;
+                } else {
+                    tries++;
+                    if (tries >= maxTries) return best;
+                }
+            }
+            if (uniqueColorsStack.size() < bestCount) {
+                bestCount = uniqueColorsStack.size();
+                best = this;
+            }
+            uniqueColorsStack.push(s);
+            return null;
+        }
+
+        void fillPalette(Palette palette) {
+            int[] ink =Arrays.copyOf(this.ink.stream().mapToInt(c -> Palette.combine(c.asArray())).toArray(),SIZE);
+            int[] paper =Arrays.copyOf(this.paper.stream().mapToInt(c -> Palette.combine(c.asArray())).toArray(),SIZE);
+            palette.setPalette(ink, paper);
+        }
+    }
+
+    Deque<List<Integer>> getStat(ColorMatrix tilesColors) {
         Map<Set<Integer>, Integer> count = new HashMap<>();
         tilesColors.forEach(l -> {
             if (l != null) {
@@ -69,7 +138,7 @@ class Combinator {
                 .collect(Collectors.toCollection(LinkedList<List<Integer>>::new));
     }
 
-    static Stream<ColorCell> getColorPairsStream(List<Integer> st, Collection<ColorCell> colorCells) {
+    Stream<ColorCell> getColorPairsStream(List<Integer> st, Collection<ColorCell> colorCells) {
         Stream.Builder<ColorCell> b = Stream.builder();
         for (int j = 0; j < st.size() - 1; j++) {
             Integer first = st.get(j);
@@ -83,10 +152,10 @@ class Combinator {
         return b.build();
     }
 
-    static List<ColorCell> getAllPairs(Deque<List<Integer>> stat) {
+    List<ColorCell> getAllPairs(Deque<List<Integer>> stat) {
         List<ColorCell> allPairs = new ArrayList<>();
         for (List<Integer> st : stat) {
-            Combinator.getColorPairsStream(st, null).forEach(c ->
+            getColorPairsStream(st, null).forEach(c ->
                     allPairs.stream()
                             .filter(cell -> cell.contains(c))
                             .findFirst()
@@ -97,10 +166,10 @@ class Combinator {
         return allPairs;
     }
 
-    static ComplementMaps createComplementMaps(Collection<List<Integer>> stat, List<ColorCell> pairs) {
+    ComplementMaps createComplementMaps(Collection<List<Integer>> stat, List<ColorCell> pairs) {
         ComplementMaps m = new ComplementMaps();
         for (List<Integer> st : stat) {
-            m.put(st, Combinator.getColorPairsStream(st, pairs)
+            m.put(st, getColorPairsStream(st, pairs)
                     .collect(HashMap<ColorCell, ColorCell>::new,
                             (h,p) -> h.put(p, p.complement(st, pairs)),
                             HashMap::putAll));
@@ -126,26 +195,6 @@ class Combinator {
         return Match.None;
     }
 
-    int compare(ColorCell x, ColorCell y, Map<ColorCell, ColorCell> complements) {
-        return (y.getCount() + complements.get(y).getCount()) - (x.getCount() + complements.get(x).getCount());
-    }
-
-
-    List<ColorCell> sortPairs(Map<ColorCell, ColorCell> map) {
-        Map<Match, List<ColorCell>> m = map.keySet().stream()
-                .collect(Collectors.groupingBy(p -> rank(p, map.get(p), ink, paper)));
-        if (m.containsKey(Match.All))
-            return m.get(Match.All);
-        return Stream.concat(Stream.concat(
-                    m.getOrDefault(Match.One, new ArrayList<>()).stream()
-                            .sorted((x, y) -> compare(x, y, map)),
-                    m.getOrDefault(Match.OneHalf, new ArrayList<>()).stream()
-                            .sorted((x, y) -> compare(x, y, map))),
-                m.getOrDefault(Match.None, new ArrayList<>()).stream()
-                        .sorted((x, y) -> compare(x, y, map))
-            ).collect(Collectors.toList());
-    }
-
     static void addTo(Set<ColorCell> set, ColorCell p) {
         if (p.isEmpty()) return;
         if (!set.contains(p)) {
@@ -165,33 +214,4 @@ class Combinator {
         }
     }
 
-    Combinator next(Deque<List<Integer>> uniqueColorsStack) {
-        if (uniqueColorsStack.isEmpty()) return this;
-        final List<Integer> s = uniqueColorsStack.pop();
-        final Map<ColorCell, ColorCell> map = complementMaps.get(s);
-        for (ColorCell p : sortPairs(map) ) {
-            Combinator n = new Combinator(this.ink, this.paper, this.complementMaps);
-            addTo(n.ink, p);
-            addTo(n.paper, map.get(p));
-            if (n.ink.size() <= SIZE && n.paper.size() <= SIZE) {
-                Combinator r = n.next(uniqueColorsStack);
-                if (r != null) return r;
-            } else {
-                tries++;
-                if (tries >= maxTries) return best;
-            }
-        }
-        if (uniqueColorsStack.size() < bestCount) {
-            bestCount = uniqueColorsStack.size();
-            best = this;
-        }
-        uniqueColorsStack.push(s);
-        return null;
-    }
-
-    void fillPalette(Palette palette) {
-        int[] ink =Arrays.copyOf(this.ink.stream().mapToInt(c -> Palette.combine(c.asArray())).toArray(),SIZE);
-        int[] paper =Arrays.copyOf(this.paper.stream().mapToInt(c -> Palette.combine(c.asArray())).toArray(),SIZE);
-        palette.setPalette(ink, paper);
-    }
 }

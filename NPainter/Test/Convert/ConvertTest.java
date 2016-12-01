@@ -61,7 +61,8 @@ public class ConvertTest {
         mat.put(0,2, Arrays.asList(5,6,7,8));
         mat.put(1,1, Arrays.asList(8));
         mat.put(1,1, Arrays.asList(2));
-        Deque<List<Integer>> stat = Combinator.getStat(mat);
+        Combinator comb = new Combinator();
+        Deque<List<Integer>> stat = comb.getStat(mat);
         assertEquals(stat.size(),2);
     }
 
@@ -89,10 +90,11 @@ public class ConvertTest {
     }
 
     private List<ColorCell> testRank(Set<ColorCell> ink, Set<ColorCell> paper, Integer[] l, Combinator.Match key ) {
+        Combinator comb = new Combinator();
         List<Integer> list = Arrays.asList(l);
-        ComplementMaps maps = Combinator.createComplementMaps(Arrays.asList(list),null);
+        ComplementMaps maps = comb.createComplementMaps(Arrays.asList(list),null);
         Map<ColorCell, ColorCell> map = maps.get(list);
-        Stream<ColorCell> ps = Combinator.getColorPairsStream(list, null);
+        Stream<ColorCell> ps = comb.getColorPairsStream(list, null);
         Map<Combinator.Match, List<ColorCell>> m = ps.collect(Collectors.groupingBy(c -> Combinator.rank(c, map.get(c), ink, paper)));
         assertTrue(m.containsKey(key));
         return m.get(key);

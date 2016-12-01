@@ -273,6 +273,12 @@ public class ConvertDialog {
             super.setVisible(visible);
         }
 
+        Timer timer = new Timer(200, event -> this.reload());
+
+        private void startReload() {
+            timer.start();
+        }
+
         private void reload() {
              try {
                 screen.importImage(converter.asTileStream());
