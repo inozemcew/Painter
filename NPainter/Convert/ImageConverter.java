@@ -6,6 +6,7 @@ import Painter.Screen.ImageSupplier;
 import Painter.Screen.Palette.ColorConverter;
 import Painter.Screen.Palette.Palette;
 
+import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
@@ -24,6 +25,12 @@ import static Painter.Screen.Palette.Palette.split;
  * Created by aleksey on 23.01.16.
  * Converter for images into screen format
  */
+
+interface ConvertProgress {
+    void run();
+    void ended();
+}
+
 public class ImageConverter implements ImageSupplier {
     private BufferedImage image = null;
     private ColorConverter converter = new ColorConverter();
@@ -34,11 +41,17 @@ public class ImageConverter implements ImageSupplier {
     private Palette palette = new NPalette();
     private boolean isPaletteCalculated = false;
 
+    private ConvertProgress progress = null;
+
     public ImageConverter(BufferedImage image) {
         this.image = image;
         sizeXCells = image.getWidth() / 8;
         sizeYCells = image.getHeight() / 8;
         loadColorMap();
+    }
+
+    void setProgress(ConvertProgress progress) {
+        this.progress = progress;
     }
 
     void loadColorMap() {
@@ -115,17 +128,21 @@ public class ImageConverter implements ImageSupplier {
     }
 
     void calcPalette() {
+        isPaletteCalculated = true;
         colors4Tiles = getColors4Tiles(sizeXCells, sizeYCells, image);
         Combinator comb = new Combinator();
         comb.run(colors4Tiles);
-        while (comb.isRunning())
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                ;
+        Timer timer = new Timer(200,e -> {
+            comb.fillPalette(palette);
+            if (comb.isRunning()) {
+                if (progress != null) progress.run();
+            } else {
+                ((Timer)(e.getSource())).stop();
+                if (progress != null) progress.ended();
             }
+        });
         comb.fillPalette(palette);
-        isPaletteCalculated = true;
+        timer.start();
     }
 
     public DataInputStream asTileStream() throws IOException {

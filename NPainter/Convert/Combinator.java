@@ -17,7 +17,7 @@ class Combinator {
     private int tries = 0;
     private static final int maxTries = 555000;
     private int bestCount;
-    private Recurse best;
+    private volatile Recurse best;
 
 
     private final int SIZE  = 8; //TODO: rework!
@@ -39,7 +39,7 @@ class Combinator {
             Recurse result = best.next(stat);
             if (result != null) best = result;
         });
-        thread.run();
+        thread.start();
     }
 
     boolean isRunning() {

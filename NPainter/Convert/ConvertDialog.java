@@ -41,7 +41,10 @@ public class ConvertDialog {
             dialog1.setVisible(true);
             if (result == Result.CANCEL) return false;
 
-            if (result == Result.OK) converter.calcPalette(screen.getPalette());
+            if (result == Result.OK) {
+                dialog2.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+                converter.calcPalette(screen.getPalette());
+            }
             result = Result.CANCEL;
             dialog2.setVisible(true);
             if (result == Result.CANCEL) return false;
@@ -264,7 +267,18 @@ public class ConvertDialog {
                 add(p, BorderLayout.PAGE_END);
             }
             pack();
+            converter.setProgress(new ConvertProgress() {
+                @Override
+                public void run() {
+                    reload();
+                }
 
+                @Override
+                public void ended() {
+                    reload();
+                    setCursor(Cursor.getDefaultCursor());
+                }
+            });
         }
 
         @Override
@@ -273,16 +287,13 @@ public class ConvertDialog {
             super.setVisible(visible);
         }
 
-        Timer timer = new Timer(200, event -> this.reload());
-
-        private void startReload() {
-            timer.start();
-        }
-
         private void reload() {
              try {
                 screen.importImage(converter.asTileStream());
-            } catch (IOException e) { }
+                repaint();
+            } catch (IOException e) {
+                 System.err.println(e.getMessage());
+             }
         }
     }
 }
