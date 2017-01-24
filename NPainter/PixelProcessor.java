@@ -80,6 +80,33 @@ public enum  PixelProcessor implements PixelProcessing {
         }
     },
 
+    MODE12("1+2 bits mode") {
+        @Override
+        public byte packPixel(Pixel pixel, byte oldPixelData, Point pos) {
+            int t = (pixel.table == Table.INK) ? 2:0;
+            int p1 = pixel.shift & 1;
+            int p2 = split(oldPixelData,(pos.x ^ 1) & 1 ) & 1;
+            if ((pos.x & 1) == 0 ) {
+                p1 |= (pixel.shift & 2) ;
+                p2 |= t;
+                return combine(p1,p2);
+            } else {
+                p2 |= (pixel.shift & 2) ;
+                p1 |= t;
+                return combine(p2,p1);
+            }
+        }
+
+        @Override
+        public Pixel unpackPixel(byte pixelData, byte attrData, Point pos) {
+            final int p = split(pixelData, pos.x & 1) & 1;
+            int shift = (split(pixelData, 0) & 2)  |  p;
+            Table table = ((split(pixelData, 1) & 2)== 0) ? Table.PAPER : Table.INK;
+            int index = fromAttr(attrData, table);
+            return new Pixel(table, index, shift);
+        }
+    },
+
     MODE5("5+1 colors mode") {
         @Override
         public byte packPixel(Pixel pixel, byte oldPixelData, Point pos) {
