@@ -11,7 +11,7 @@ import java.io.OutputStream;
  * Image buffer for 2 bitplanes
  */
 public class ImageBuffer {
-    public final int SIZE_X, SIZE_Y;
+    private final int SIZE_X, SIZE_Y;
     //private final Dimension pixelFactor;
     private final int ATTR_SIZE_X, ATTR_SIZE_Y;
     private final int ATTR_FACTOR_X, ATTR_FACTOR_Y;
@@ -89,7 +89,7 @@ public class ImageBuffer {
         return attrbuf[x / ATTR_FACTOR_X][y / ATTR_FACTOR_Y];
     }
 
-    void putAttr(int x, int y, byte attr) {
+    public void putAttr(int x, int y, byte attr) {
         byte oldAttr = getAttr(x, y);
         attrbuf[x / ATTR_FACTOR_X][y / ATTR_FACTOR_Y] = attr;
         if (undo != null) undo.add(new UndoAttrItem(x, y, oldAttr, attr));

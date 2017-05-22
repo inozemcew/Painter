@@ -2,6 +2,7 @@ package Painter;
 
 import Painter.PaletteControls.ChangeAdapter;
 import Painter.PaletteControls.PaletteToolPanel;
+import Painter.Screen.Palette.Palette;
 import Painter.Screen.PixelProcessing;
 import Painter.Screen.Screen;
 
@@ -151,48 +152,56 @@ public abstract class PainterApp extends JFrame {
     private RecentFilesMenuItems recentFilesMenuItems;
     private JMenuBar createMenuBar() {
         JMenuBar menuBar = new JMenuBar();
+        {
+            JMenu file = menuBar.add(new JMenu("File"));
+            file.setMnemonic('F');
+            JMenu n = new JMenu("New");
+            actions.resolutions.forEach(n::add);
+            file.add(n);
+            file.add(actions.fileLoad);
+            file.add(actions.fileSave);
+            file.add(actions.fileSaveAs);
+            file.add(actions.fileImportSCR);
+            file.add(actions.fileImportPNG);
+            file.addSeparator();
+            recentFilesMenuItems = new RecentFilesMenuItems(file);
+            recentFilesMenuItems.getMenuItems().forEach(file::add);
+            file.addSeparator();
+            file.add(actions.fileExit);
+        }
+        {
+            JMenu edit = menuBar.add(new JMenu("Edit"));
+            edit.setMnemonic('E');
+            edit.add(actions.editUndo);
+            edit.add(actions.editRedo);
+            edit.addSeparator();
 
-        JMenu file = menuBar.add(new JMenu("File"));
-        file.setMnemonic('F');
-        JMenu n = new JMenu("New");
-        actions.resolutions.forEach(n::add);
-        file.add(n);
-        file.add(actions.fileLoad);
-        file.add(actions.fileSave);
-        file.add(actions.fileSaveAs);
-        file.add(actions.fileImportSCR);
-        file.add(actions.fileImportPNG);
-        file.addSeparator();
-        recentFilesMenuItems = new RecentFilesMenuItems(file);
-        recentFilesMenuItems.getMenuItems().forEach(file::add);
-        file.addSeparator();
-        file.add(actions.fileExit);
+            ButtonGroup group = new ButtonGroup();
+            actions.editModes.forEach(action -> group.add(edit.add(new JRadioButtonMenuItem(action))));
 
-        JMenu edit = menuBar.add(new JMenu("Edit"));
-        edit.setMnemonic('E');
-        edit.add(actions.editUndo);
-        edit.add(actions.editRedo);
-        edit.addSeparator();
+            edit.addSeparator();
 
-        ButtonGroup group = new ButtonGroup();
-        actions.editModes.forEach(action -> group.add(edit.add(new JRadioButtonMenuItem(action))));
+            actions.specialMethods.forEach(edit::add);
+            edit.addSeparator();
 
-        edit.addSeparator();
-
-        actions.specialMethods.forEach(edit::add);
-        edit.addSeparator();
-
-        JMenu sh = new JMenu("Shift");
-        sh.add("Left").addActionListener(e -> screen.shift(Screen.Shift.Left));
-        sh.add("Right").addActionListener(e -> screen.shift(Screen.Shift.Right));
-        sh.add("Up").addActionListener(e -> screen.shift(Screen.Shift.Up));
-        sh.add("Down").addActionListener(e -> screen.shift(Screen.Shift.Down));
-        edit.add(sh);
-
-        if (!actions.screenModes.isEmpty()) {
+            JMenu sh = new JMenu("Shift");
+            sh.add("Left").addActionListener(e -> screen.shift(Screen.Shift.Left));
+            sh.add("Right").addActionListener(e -> screen.shift(Screen.Shift.Right));
+            sh.add("Up").addActionListener(e -> screen.shift(Screen.Shift.Up));
+            sh.add("Down").addActionListener(e -> screen.shift(Screen.Shift.Down));
+            edit.add(sh);
+        }
+        {
+            //if (!actions.screenModes.isEmpty()) {
             JMenu options = menuBar.add(new JMenu("Options"));
             ButtonGroup g = new ButtonGroup();
             actions.screenModes.forEach(action -> g.add(options.add(new JRadioButtonMenuItem(action))));
+            //}
+            JMenu palettes = new JMenu("Palettes");
+            ButtonGroup group = new ButtonGroup();
+            actions.palettes.forEach(action -> group.add(palettes.add(new JRadioButtonMenuItem(action))));
+            options.addSeparator();
+            options.add(palettes);
         }
         return menuBar;
 
@@ -541,6 +550,19 @@ public abstract class PainterApp extends JFrame {
                 }
             }
 
+        }
+
+        ArrayList<Action> palettes = new ArrayList<>();
+        {
+            for (Palette.ColorSpace cs: Palette.ColorSpace.values()) {
+                palettes.add(new AbstractAction(cs.getName()) {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        screen.getPalette().activateColorSpace(cs);
+                        repaint();
+                    }
+                });
+            }
         }
 
     }

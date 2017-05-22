@@ -14,6 +14,7 @@ import java.util.function.Consumer;
  * Unites screen buffer and palette
  */
 public abstract class Screen implements ImageSupplier {
+    private int sizeX, sizeY;
     protected ImageBuffer image;
     protected Palette palette;
     protected PixelProcessing pixelProcessor = null;
@@ -31,6 +32,8 @@ public abstract class Screen implements ImageSupplier {
     }
 
     public Screen(int w, int h) {
+        sizeX = w;
+        sizeY = h;
         setFactors();
         image = createImageBuffer(w,h);
         palette = createPalette();
@@ -63,12 +66,12 @@ public abstract class Screen implements ImageSupplier {
 
     @Override // in ImageSupplier
     public int getImageHeight() {
-        return image.SIZE_Y * pixelFactor.height;
+        return sizeY;
     }
 
     @Override // in ImageSupplier
     public int getImageWidth() {
-        return image.SIZE_X * pixelFactor.width;
+        return sizeX;
     }
 
     @Override
@@ -113,6 +116,8 @@ public abstract class Screen implements ImageSupplier {
     }
 
     public void newImageBuffer(int sizeX, int sizeY) {
+        this.sizeX = sizeX;
+        this.sizeY = sizeY;
         this.image = createImageBuffer(sizeX, sizeY);
         this.image.setUndo(undo);
         undo.clear();
@@ -329,11 +334,11 @@ public abstract class Screen implements ImageSupplier {
         }
     }
 
-    public int alignX(int x) {
+    private int alignX(int x) {
         return x / GRID_FACTOR.width * GRID_FACTOR.width;
     }
 
-    public int alignY(int y) {
+    private int alignY(int y) {
         return y / GRID_FACTOR.height * GRID_FACTOR.height;
     }
 
@@ -405,8 +410,8 @@ public abstract class Screen implements ImageSupplier {
 
     public void save(ObjectOutputStream stream) throws IOException {
         palette.savePalette(stream);
-        stream.writeInt(image.SIZE_X);
-        stream.writeInt(image.SIZE_Y);
+        stream.writeInt(sizeX / pixelFactor.width);
+        stream.writeInt(sizeY / pixelFactor.height);
         image.store(stream);
     }
 

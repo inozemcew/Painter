@@ -71,9 +71,10 @@ public class ClipCell {
             if (screen.isInImage(clip.x, clip.y)) {
                 Dimension gf = screen.getGridFactor();
                 Point p = new Point();
+                Point ap = screen.align(clip);
                 for (int xx = 0; xx < gf.width; xx++) {
                     for (int yy = 0; yy < gf.height; yy++) {
-                        p.setLocation(screen.alignX(clip.x) + xx, screen.alignY(clip.y) + yy);
+                        p.setLocation(ap.x + xx, ap.y + yy);
                         g.setColor(screen.getPixelColor(p));
                         g.fillRect(x + xx * 4, y + yy * 4, 4, 4);
                     }

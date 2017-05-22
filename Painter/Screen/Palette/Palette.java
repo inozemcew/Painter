@@ -179,6 +179,11 @@ public class Palette {
         this.locked = locked;
     }
 
+    private void unlockAndUpdateAll() {
+        listeners.forEach(i -> i.listener.paletteChanged());
+        this.locked = false;
+    }
+
     public void loadPalette(DataInputStream stream) throws IOException {
         setLocked(true);
         try {
@@ -385,53 +390,161 @@ public class Palette {
     private static double[][] colorDiff = new double[64][];
 
     static {
-        for (int index = 0; index < 64; index++) {
-            int xh = 1, yh = 0, zh = 0;
-            int xl = 1, yl = 0, zl = 1;
-            int r, g, b;
-            yh = index & 1;
-            yl = 1 - yh;
-            if ((index & 2) != 0) {
-                xh = 1 - xh;
-                yh = yl ^ yh;
-                zh = 1 - zh;
+        ColorSpace.MyPal.activate();
+    }
+
+    public void activateColorSpace(ColorSpace colorSpace) {
+        setLocked(true);
+        colorSpace.activate();
+        unlockAndUpdateAll();
+    }
+
+    public enum ColorSpace {
+        MyPal("64 colors") {
+            @Override
+            protected void activate() {
+                for (int index = 0; index < 64; index++) {
+                    int xh = 1, yh = 0, zh = 0;
+                    int xl = 1, yl = 0, zl = 1;
+                    int r, g, b;
+                    yh = index & 1;
+                    yl = 1 - yh;
+                    if ((index & 2) != 0) {
+                        xh = 1 - xh;
+                        yh = yl ^ yh;
+                        zh = 1 - zh;
+                    }
+                    switch (index & 12) {
+                        case 0: {
+                            r = zh * (1 + zl);
+                            g = yh * (1 + yl);
+                            b = yh * (1 + yl);
+                            break;
+                        }
+                        case 4: {
+                            r = yh * (1 + yl);
+                            g = zh * (1 + zl);
+                            b = xh * (1 + xl);
+                            break;
+                        }
+                        case 8: {
+                            r = xh * (1 + xl);
+                            g = yh * (1 + yl);
+                            b = zh * (1 + zl);
+                            break;
+                        }
+                        default: {
+                            r = zh * (1 + zl);
+                            g = xh * (1 + xl);
+                            b = yh * (1 + yl);
+                            break;
+                        }
+                    }
+                    int l = (index & 48) / 3 + 64; //(index & 32) == 0 ? 64 : 80;
+                    int m = (index & 48) * 2;
+                    m = m > 95 ? 95 : m;
+                    colorCache[index] = new Color(l * r + m, l * g + m, l * b + m);
+                }
+                super.activate();
             }
-            switch (index & 12) {
-                case 0: {
-                    r = zh * (1 + zl);
-                    g = yh * (1 + yl);
-                    b = yh * (1 + yl);
-                    break;
+        },
+
+        Pure64("Pure 64 colors") {
+            @Override
+            protected void activate() {
+                int[][] fc = {{0,0,0},{1,0,0},{0,1,0},{0,0,1}};
+                int[][] hc = {{1,0,1},{0,1,0},{0,0,1},{1,0,0}};
+                for (int j = 0; j < 64; j++ ) {
+                    int l = 3 - (j >> 4);
+                    int c = j & 0xf;
+                    int b = c >> 2;
+                    int i = ((c>>1) & 1);
+                    int h = (c & 1);
+                    int hb = hc[b][0] & h, hr = hc[b][1] & h, hg =hc[b][2] & h;
+                    int fb = (fc[b][0]^i)|hb, fr = (fc[b][1]^i)|hr, fg =(fc[b][2]^i)|hg;
+
+                    int bb = (255*fb  - l*42) / (hb+1);
+                    bb = (bb<0)?0:bb;
+                    int rr = (255*fr  -l*42) / (hr+1);
+                    rr = (rr<0)?0:rr;
+                    int gg = (255*fg  -l*42) / (hg+1);
+                    gg = (gg<0)?0:gg;
+                    colorCache[j] = new Color(rr,gg,bb);
                 }
-                case 4: {
-                    r = yh * (1 + yl);
-                    g = zh * (1 + zl);
-                    b = xh * (1 + xl);
-                    break;
-                }
-                case 8: {
-                    r = xh * (1 + xl);
-                    g = yh * (1 + yl);
-                    b = zh * (1 + zl);
-                    break;
-                }
-                default: {
-                    r = zh * (1 + zl);
-                    g = xh * (1 + xl);
-                    b = yh * (1 + yl);
-                    break;
-                }
+                super.activate();
             }
-            int l = (index & 48) == 0 ? 64 : 80;
-            int m = (index & 48) * 2;
-            m = m > 95 ? 95 : m;
-            colorCache[index] = new Color(l * r + m, l * g + m, l * b + m);
+        },
+
+        Pure64of512 ("64 of 512 colors") {
+            @Override
+            protected void activate() {
+                int[][] fc = {{0,0,0},{1,0,0},{0,1,0},{0,0,1}};
+                int[][] hc = {{1,0,1},{0,1,0},{0,0,1},{1,0,0}};
+                for (int j = 0; j < 64; j++ ) {
+                    int l = (j >> 4);
+                    int c = j & 0xf;
+                    int b = c >> 2;
+                    int i = ((c>>1) & 1);
+                    int h = (c & 1);
+                    int hb = hc[b][0] & h, hr = hc[b][1] & h, hg =hc[b][2] & h;
+                    int fb = (fc[b][0]^i)|hb, fr = (fc[b][1]^i)|hr, fg =(fc[b][2]^i)|hg;
+
+                    int k = 36;
+                    //int bb = (fb * (4  + l)) / (hb+1) +hb*(l&1);
+                    //int rr = (fr * (4  + l)) / (hr+1) +hr*(l&1);
+                    //int gg = (fg * (4  + l)) / (hg+1) +hg*(l&1);
+                    int bb = (fb&~hb)*4 + l*fb + hb*2;
+                    int rr = (fr&~hr)*4 + l*fr + hr*2;
+                    int gg = (fg&~hg)*4 + l*fg + hg*2;
+                    if (c==0) {
+                        bb=l; rr=l; gg=l;
+                    }
+                    colorCache[j] = new Color(rr*k, gg*k, bb*k);
+                }
+                super.activate();
+            }
+        },
+
+        Pal3x2("2bit per component"){
+            @Override
+            protected void activate() {
+                int[] r = {0,0,1,1, 0,0,1,1, 1,1,0,0, 0,0,1,1,
+                           0,0,2,2, 1,1,2,1, 2,2,1,0, 1,0,2,2,
+                           1,0,2,3, 0,1,2,2, 2,2,0,0, 0,0,2,2,
+                           1,0,3,3, 0,2,3,2, 3,3,0,0, 0,0,3,3};
+                int[] g = {0,1,1,0, 0,0,1,2, 0,0,1,0, 1,1,0,0,
+                           0,2,2,1, 1,0,2,2, 1,1,2,1, 2,2,1,0,
+                           1,2,2,1, 0,0,2,3, 0,1,2,1, 2,2,0,0,
+                           1,3,3,2, 0,0,3,3, 0,2,3,2, 3,3,0,0};
+                int[] b = {0,1,1,0, 1,1,0,0, 0,0,1,1, 0,0,1,0,
+                           0,2,3,1, 2,2,1,1, 1,0,2,2, 1,1,2,1,
+                           1,2,2,1, 2,2,0,1, 0,0,2,2, 0,1,2,2,
+                           2,3,3,2, 3,3,0,0, 0,0,3,3, 0,2,3,3};
+
+                int[] l = {0,128,192,255};
+
+                for (int i = 0; i <64; i++)
+                    colorCache[i] = new Color(l[r[i]], l[g[i]],l[b[i]]);
+                super.activate();
+            }
+        };
+
+        private String name;
+        ColorSpace(String name) {
+            this.name = name;
         }
 
-        for (int i = 0; i < 64; i++) {
-            colorDiff[i] = new double[64];
-            for (int j = 0; j < 64; j++)
-                colorDiff[i][j] = calcYuvDiff(toRGB(i), j);
+        public String getName() {
+            return this.name;
+        }
+
+        protected void activate(){
+            for (int i = 0; i < 64; i++) {
+                colorDiff[i] = new double[64];
+                for (int j = 0; j < 64; j++)
+                    colorDiff[i][j] = calcYuvDiff(toRGB(i), j);
+            }
+
         }
     }
 
