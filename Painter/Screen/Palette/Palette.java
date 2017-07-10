@@ -478,26 +478,25 @@ public class Palette {
         Pure64of512 ("64 of 512 colors") {
             @Override
             protected void activate() {
-                int[][] fc = {{0,0,0},{1,0,0},{0,1,0},{0,0,1}};
-                int[][] hc = {{1,0,1},{0,1,0},{0,0,1},{1,0,0}};
+                int[][] fc = {{0,0,0,1},{1,0,0,0},{0,1,0,0},{0,0,1,0}};
+                int[] hc = {0,2,3,1};
+                //int[][] hc = {{1,0,1},{0,1,0},{0,0,1},{1,0,0}};
                 for (int j = 0; j < 64; j++ ) {
-                    int l = (j >> 4);
+                    int luma = (j >> 4);
                     int c = j & 0xf;
                     int b = c >> 2;
-                    int i = ((c>>1) & 1);
-                    int h = (c & 1);
-                    int hb = hc[b][0] & h, hr = hc[b][1] & h, hg =hc[b][2] & h;
-                    int fb = (fc[b][0]^i)|hb, fr = (fc[b][1]^i)|hr, fg =(fc[b][2]^i)|hg;
+                    int bh = hc[b];
+                    int inv = ((c>>1) & 1);
+                    int halfbr = (c & 1);
+                    int hb = (fc[bh][0] | fc[bh][3]) & halfbr, hr = fc[bh][1] & halfbr, hg = (fc[bh][2]| fc[bh][3]) & halfbr;
+                    int fb = (fc[b][0]^inv)|hb, fr = (fc[b][1]^inv)|hr, fg =(fc[b][2]^inv)|hg;
 
                     int k = 36;
-                    //int bb = (fb * (4  + l)) / (hb+1) +hb*(l&1);
-                    //int rr = (fr * (4  + l)) / (hr+1) +hr*(l&1);
-                    //int gg = (fg * (4  + l)) / (hg+1) +hg*(l&1);
-                    int bb = (fb&~hb)*4 + l*fb + hb*2;
-                    int rr = (fr&~hr)*4 + l*fr + hr*2;
-                    int gg = (fg&~hg)*4 + l*fg + hg*2;
+                    int bb = (fb&~hb)*4 + luma*fb + hb*2;
+                    int rr = (fr&~hr)*4 + luma*fr + hr*2;
+                    int gg = (fg&~hg)*4 + luma*fg + hg*2;
                     if (c==0) {
-                        bb=l; rr=l; gg=l;
+                        bb=luma; rr=luma; gg=luma;
                     }
                     colorCache[j] = new Color(rr*k, gg*k, bb*k);
                 }
