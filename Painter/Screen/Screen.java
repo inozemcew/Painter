@@ -1,5 +1,6 @@
 package Painter.Screen;
 
+import Painter.Screen.Mapper.DefaultScreenMapper;
 import Painter.Screen.Palette.Palette;
 
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -14,7 +15,7 @@ import java.util.function.Consumer;
  * Unites screen buffer and palette
  */
 public abstract class Screen implements ImageSupplier {
-    private int sizeX, sizeY;
+    protected int sizeX, sizeY;
     protected ImageBuffer image;
     protected Palette palette;
     protected PixelProcessing pixelProcessor = null;
@@ -26,6 +27,7 @@ public abstract class Screen implements ImageSupplier {
     protected Dimension attrFactor = new Dimension();
 
     private int locked = 0;
+    private DefaultScreenMapper screenMapper;
 
     public Screen() {
         this(320,240);
@@ -45,7 +47,8 @@ public abstract class Screen implements ImageSupplier {
     }
 
     protected ImageBuffer createImageBuffer(int w, int h) {
-        return new ImageBuffer(w, h, pixelFactor, attrFactor);
+        screenMapper = new DefaultScreenMapper(w, h, pixelFactor, attrFactor);
+        return new ImageBuffer(screenMapper);
     }
 
     abstract protected Palette createPalette();
@@ -423,9 +426,10 @@ public abstract class Screen implements ImageSupplier {
 
         } else {
             getPalette().loadPalette(oStream);
-            int x = oStream.readInt();
-            int y = oStream.readInt();
-            image.load(oStream,x,y);
+            int w = oStream.readInt();
+            int h = oStream.readInt();
+            image = createImageBuffer(w, h);
+            image.load(oStream);
         }
         oStream.close();
         undo.clear();

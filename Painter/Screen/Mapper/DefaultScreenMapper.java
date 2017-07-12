@@ -7,56 +7,64 @@ import java.awt.*;
 /**
  * Created by ainozemtsev on 24.01.17.
  */
-public class DefaultScreenMapper {
-    protected ImageBuffer image;
+public class DefaultScreenMapper implements ScreenMapper {
+    private final Dimension size, attrSize;
     protected Dimension tileFactor = new Dimension();
     protected Dimension pixelFactor = new Dimension();
     protected Dimension attrFactor = new Dimension();
+    private int pixelToAttrRatio;
 
-    public DefaultScreenMapper(int width, int height) {
-        initFactors();
-        this.image = createImageBuffer(width, height);
+    public DefaultScreenMapper(int width, int height, Dimension pixelFactor, Dimension attrFactor) {
+        this.pixelFactor.setSize(pixelFactor);
+        this.attrFactor.setSize(attrFactor);
+        this.size = new Dimension(width / pixelFactor.width, height / pixelFactor.height);
+        this.attrSize = new Dimension(width / attrFactor.width, height / attrFactor.height);
+        this.pixelToAttrRatio = attrFactor.width * attrFactor.height / pixelFactor.width / pixelFactor.height;
     }
 
-    protected void initFactors() {
-        tileFactor.setSize(8, 8);
-        pixelFactor.setSize(2, 1);
-        attrFactor.setSize(8, 8);
+    @Override
+    public int getPixelBufferSize() {
+        return size.width * size.height;
     }
 
-    protected ImageBuffer createImageBuffer(int width, int height) {
-        return new ImageBuffer(width, height, pixelFactor, attrFactor);
+    @Override
+    public Dimension getSizes() {
+        return this.size;
     }
 
-    protected byte getPixelData(Point pos) {
-        final int xx = pos.x / pixelFactor.width;
-        final int yy = pos.y / pixelFactor.height;
-        return image.getPixel(xx,yy);
+    @Override
+    public Dimension getAttrSizes() {
+        return this.attrSize;
     }
 
-    protected byte getAttr(Point pos) {
-        final int xx = pos.x / pixelFactor.width;
-        final int yy = pos.y / pixelFactor.height;
-        return image.getAttr(xx, yy);
+    @Override
+    public int getAttrBufferSize() {
+        return attrSize.width * attrSize.height;
     }
 
-    private void putAttr(Point pos, byte attr) {
-        final int xx = pos.x / pixelFactor.width;
-        final int yy = pos.y / pixelFactor.height;
-        image.putAttr(xx, yy, attr);
-
+    public Dimension getAttrFactor() {
+        return attrFactor;
     }
 
-    protected void putPixelData(Point pos, byte pixel, byte attr) {
-        final int xx = pos.x / pixelFactor.width;
-        final int yy = pos.y / pixelFactor.height;
-        image.putPixel(xx, yy, pixel, attr);
+    /*    protected ImageBuffer createImageBuffer(int width, int height) {
+                final int size = width * height / pixelFactor.width / pixelFactor.height;
+                final int aSize = width * height / attrFactor.height / attrFactor.width;
+                return new ImageBuffer(size, aSize);
+            }
+        */
+    @Override
+    public int pixelOffset(int x, int y) {
+        return (x + size.width * y );
     }
 
-    protected void putPixelData(Point pos, byte pixel) {
-        final int xx = pos.x / pixelFactor.width;
-        final int yy = pos.y / pixelFactor.height;
-        image.putPixel(xx, yy, pixel);
+    @Override
+    public int attrOffset(int x, int y) {
+        return (x + attrSize.width * y);
+    }
+
+    @Override
+    public int attrOffsetFromPixelOffset(int offset) {
+        return offset / pixelToAttrRatio;
     }
 
     public int alignX(int x) {

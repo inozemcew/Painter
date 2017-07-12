@@ -65,7 +65,7 @@ public class NScreen extends Screen {
     public void rearrangeColorTable(int t, int[] order) {
         Table table = mapColorTable(t);
         beginDraw();
-        image.forEachAttr((x, y, attr) -> {
+        image.forEachAttr((attr, offset) -> {
             final int a = PixelProcessor.fromAttr(attr, table);
             final byte b = PixelProcessor.toAttr(attr, order[a], table);
             return b;
@@ -194,7 +194,7 @@ public class NScreen extends Screen {
         private void flipColorCell(Table table, int index) {
             beginDraw();
             PixelProcessor.PixelDataList l = new PixelProcessor.PixelDataList();
-            image.forEachPixel((x, y, b, a) -> {
+            image.forEachPixel((b, a, offset) -> {
                 l.setPixelData(b);
                 for (int i = 0; i < l.size(); i++) {
                     final Integer e = l.get(i);
@@ -213,8 +213,8 @@ public class NScreen extends Screen {
 
         private void inverseColors() {
             beginDraw();
-            image.forEachPixel((x, y, b, a) -> (byte) (b ^ 0x22));
-            image.forEachAttr((x, y, a) -> paperToAttr(inkToAttr((byte) 0, paperFromAttr(a)), inkFromAttr(a)));
+            image.forEachPixel((b, a, offset) -> (byte) (b ^ 0x22));
+            image.forEachAttr((a, offset) -> paperToAttr(inkToAttr((byte) 0, paperFromAttr(a)), inkFromAttr(a)));
             int l = Integer.min(palette.getColorsCount(Table.INK), palette.getColorsCount(Table.PAPER));
             int[] ink = new int[palette.getColorsCount(Table.INK)];
             int[] paper = new int[palette.getColorsCount(Table.PAPER)];

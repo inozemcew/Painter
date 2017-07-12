@@ -86,8 +86,8 @@ public class AScreen extends Screen {
         byte rev[] = {0, 4, 2, 6, 1, 5, 3, 7};
         int[] bs = new int[6];
         //scr.setOffset(8,8);
-        for (int y = 0; y < image.SIZE_Y; y++) {
-            for (int x = 0; x < image.SIZE_X; x++) {
+        for (int y = 0; y < this.sizeY; y++) {
+            for (int x = 0; x < this.sizeX; x++) {
                 for (int yy = 0; yy < 2; yy++)
                     for (int xx = 0; xx < 3; xx++) {
                         final SpectrumScreen.Pixel p = scr.getPixel(x * 3 + xx, y * 2 + yy);
