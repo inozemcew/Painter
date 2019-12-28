@@ -63,7 +63,7 @@ public class ConvertDialog {
             final InterlacedView interlacedView = new InterlacedView(converter);
             add(interlacedView);
 
-            converter.getColorMap().keySet().forEach(colors::add);
+            colors.addAll(converter.getColorMap().keySet());
 
             ColorCellModel model = new ColorCellModel(colors);
             model.addTableModelListener(e1 -> {
@@ -284,6 +284,7 @@ public class ConvertDialog {
         @Override
         public void setVisible(boolean visible) {
             if (visible) reload();
+                else converter.cancel();
             super.setVisible(visible);
         }
 

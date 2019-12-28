@@ -14,6 +14,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.ToDoubleBiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -42,6 +46,7 @@ public class ImageConverter implements ImageSupplier {
     private boolean isPaletteCalculated = false;
 
     private ConvertProgress progress = null;
+    private Combinator combinator;
 
     public ImageConverter(BufferedImage image) {
         this.image = image;
@@ -114,9 +119,9 @@ public class ImageConverter implements ImageSupplier {
                             cnt.merge(i, 1, (o, n) -> o + n);
                         }
                     }
-                c.put(x, y, cnt.keySet().stream()
-                        .sorted((f, g) -> cnt.get(g) - cnt.get(f))
-                        .limit(4).sorted().collect(Collectors.toList()));
+                c.put(x, y, cnt); //.keySet().stream()
+                        //.sorted((f, g) -> cnt.get(g) - cnt.get(f))
+                        //.limit(4).sorted().collect(Collectors.toList()));
             }
         }
         return c;
@@ -130,19 +135,23 @@ public class ImageConverter implements ImageSupplier {
     void calcPalette() {
         isPaletteCalculated = true;
         colors4Tiles = getColors4Tiles(sizeXCells, sizeYCells, image);
-        Combinator comb = new Combinator();
-        comb.run(colors4Tiles);
+        combinator = new Combinator();
+        combinator.run(colors4Tiles);
         Timer timer = new Timer(200,e -> {
-            comb.fillPalette(palette);
-            if (comb.isRunning()) {
+            combinator.fillPalette(palette);
+            if (combinator.isRunning()) {
                 if (progress != null) progress.run();
             } else {
                 ((Timer)(e.getSource())).stop();
                 if (progress != null) progress.ended();
             }
         });
-        comb.fillPalette(palette);
+        combinator.fillPalette(palette);
         timer.start();
+    }
+
+    void cancel() {
+        combinator.stop();
     }
 
     public DataInputStream asTileStream() throws IOException {
@@ -188,28 +197,65 @@ public class ImageConverter implements ImageSupplier {
         final int paperSize = palette.getCellSize(PAPER);
         for (int i = 0; i < paperSize; i++)
             l[i] = split(paper, i);
-        for (int i = 0; i < palette.getCellSize(PAPER); i++)
+        for (int i = 0; i < palette.getCellSize(PAPER); i++) //TODO: MAYBE ERROR!!!
             l[i + paperSize] = split(ink, i);
         return l;
     }
 
 }
 
-class ColorMatrix extends ArrayList<List<Integer>> {
+class ColorMatrix {
+    private final int sizeX, sizeY;
+    private final ArrayList<List<Integer>> colorIndicesList;
+    private final ArrayList<Map<Integer,Integer>> count;
     private int stride;
 
     ColorMatrix(int x, int y) {
-        super(x*y);
-        IntStream.range(0, x*y).forEach(i -> add(null));
+        sizeX = x;
+        sizeY = y;
+        colorIndicesList = new ArrayList<>(x*y);
+        count = new ArrayList<>(x*y);
+        IntStream.range(0, x*y).forEach(i -> {
+            colorIndicesList.add(null);
+            count.add(null);
+        });
         stride = y;
     }
 
     List<Integer> get(int x, int y) {
-        return super.get(x * stride + y);
+        return colorIndicesList.get(x * stride + y);
     }
 
     void put(int x, int y, List<Integer> e) {
-        super.set(x * stride + y, e);
+        colorIndicesList.set(x * stride + y, e);
+    }
+
+    void put(int x, int y, Map<Integer, Integer> cnt) {
+        List<Integer> colorIndices = cnt.keySet().stream()
+                .sorted((f, g) -> cnt.get(g) - cnt.get(f))
+                .limit(4).sorted().collect(Collectors.toList());
+        this.put(x, y, colorIndices);
+        count.set(x * stride + y, cnt);
+    }
+
+    int getCount(int x, int y, int colorIndex) {
+        return count.get(x*stride + y).getOrDefault(colorIndex,0);
+    }
+
+    void summarize(Consumer<? super List<Integer>> consumer) {
+        colorIndicesList.forEach(consumer);
+    }
+
+    double summarize(ToDoubleBiFunction<Point, ? super List<Integer>> consumer) {
+        Point p = new Point();
+        double d = 0;
+        for (int x = 0; x < sizeX; x++) {
+            for (int y = 0; y < sizeY; y++) {
+                p.setLocation(x,y);
+                d += consumer.applyAsDouble(p, get(x, y));
+            }
+        }
+        return d;
     }
 }
 

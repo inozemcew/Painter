@@ -45,6 +45,7 @@ public class PaletteButton extends JToggleButton
         return this.table;
     }
 
+    @Override
     public void setColorCell(int value) {
         palette.beginUpdate();
         palette.setColorCell(value,this.table,this.index);

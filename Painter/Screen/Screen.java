@@ -14,7 +14,7 @@ import java.util.function.Consumer;
  * Unites screen buffer and palette
  */
 public abstract class Screen implements ImageSupplier {
-    private int sizeX, sizeY;
+    protected int sizeX, sizeY;
     protected ImageBuffer image;
     protected Palette palette;
     protected PixelProcessing pixelProcessor = null;
@@ -161,9 +161,9 @@ public abstract class Screen implements ImageSupplier {
     }
 
     protected byte getPixelData(Point pos) {
-        final int xx = pos.x / pixelFactor.width;
-        final int yy = pos.y / pixelFactor.height;
-        return image.getPixel(xx,yy);
+            final int xx = pos.x / pixelFactor.width;
+            final int yy = pos.y / pixelFactor.height;
+            return image.getPixel(xx, yy);
     }
 
     protected byte getAttr(Point pos) {
