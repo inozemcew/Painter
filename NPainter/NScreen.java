@@ -129,15 +129,16 @@ public class NScreen extends Screen {
         } else {
             pal.loadPalette(iStream);
             x = iStream.readInt();
-            if (x<255) {
-                stream.reset();
-                super.load(stream, old);
-                return;
+            if (x<255) {                    // old storage format was unpacked, one pixel per byte
+                stream.reset();             // new storage format is packed, two pixels per byte
+                super.load(stream, old);    // so in new format the value of width is halved
+                return;                     // and we don't need recoding if width less than 255
             }
             y = iStream.readInt();
             img = new ImageBuffer(x, y, new Dimension(1, 1), new Dimension(8, 8));
             img.load(iStream, x, y);
         }
+        // do recoding using ByteArrayStream
         ObjectOutputStream os = new ObjectOutputStream(bs);
         pal.savePalette(os);
         os.writeInt(x / 2);
@@ -159,7 +160,7 @@ public class NScreen extends Screen {
         }
         os.close();
 
-        super.load(new ByteArrayInputStream(bs.toByteArray()), false);
+        super.load(new ByteArrayInputStream(bs.toByteArray()));
         stream.close();
     }
 

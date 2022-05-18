@@ -14,7 +14,7 @@ import java.util.function.Consumer;
  * Unites screen buffer and palette
  */
 public abstract class Screen implements ImageSupplier {
-    private int sizeX, sizeY;
+    protected int sizeX, sizeY;
     protected ImageBuffer image;
     protected Palette palette;
     protected PixelProcessing pixelProcessor = null;
@@ -28,14 +28,14 @@ public abstract class Screen implements ImageSupplier {
     private int locked = 0;
 
     public Screen() {
-        this(320,240);
+        this(320, 240);
     }
 
     public Screen(int w, int h) {
         sizeX = w;
         sizeY = h;
         setFactors();
-        image = createImageBuffer(w,h);
+        image = createImageBuffer(w, h);
         palette = createPalette();
         palette.setUndo(this.undo);
         image.setUndo(this.undo);
@@ -75,7 +75,7 @@ public abstract class Screen implements ImageSupplier {
     }
 
     @Override
-    public Color getPixelColor(Point pos){
+    public Color getPixelColor(Point pos) {
         Pixel pixel = getPixel(pos);
         return pixelProcessor.getPixelColor(pixel, palette);
     }
@@ -98,7 +98,7 @@ public abstract class Screen implements ImageSupplier {
 
     public void resetEnhanced() {
         int[] e = new int[enhancedColors.length];
-        Arrays.fill(e,-1);
+        Arrays.fill(e, -1);
         setEnhanced(e);
     }
 
@@ -123,6 +123,14 @@ public abstract class Screen implements ImageSupplier {
         undo.clear();
         fireImageChanged();
     }
+
+    public void changeResolution(int sizeX, int sizeY) throws IOException, ClassNotFoundException {
+        final ByteArrayOutputStream bs = new ByteArrayOutputStream();
+        save(bs);
+        newImageBuffer(sizeX, sizeY);
+        load(new ByteArrayInputStream(bs.toByteArray()), false, false);
+    }
+
 
     public boolean isInImage(Point p) {
         return isInImage(p.x, p.y);
@@ -163,7 +171,7 @@ public abstract class Screen implements ImageSupplier {
     protected byte getPixelData(Point pos) {
         final int xx = pos.x / pixelFactor.width;
         final int yy = pos.y / pixelFactor.height;
-        return image.getPixel(xx,yy);
+        return image.getPixel(xx, yy);
     }
 
     protected byte getAttr(Point pos) {
@@ -194,11 +202,11 @@ public abstract class Screen implements ImageSupplier {
 
     public void setPixel(Pixel pixel, Point pos) {
         if (isInImage(pos)) {
-            byte a =  getAttr(pos);
+            byte a = getAttr(pos);
             if (pixel.index >= 0)
-                a = pixelProcessor.packAttr(pixel, a,pos);
+                a = pixelProcessor.packAttr(pixel, a, pos);
             byte oldPixelData = getPixelData(pos);
-            byte b = pixelProcessor.packPixel(pixel, oldPixelData,pos);
+            byte b = pixelProcessor.packPixel(pixel, oldPixelData, pos);
             putPixelData(pos, b, a);
             fireImageChanged(alignX(pos.x), alignY(pos.y), GRID_FACTOR.width, GRID_FACTOR.height);
         }
@@ -253,7 +261,7 @@ public abstract class Screen implements ImageSupplier {
             lock();
             beginDraw();
             Stack<Point> stack = new Stack<>();
-            HashMap<Point,Pixel> pixels = new HashMap<>(256);
+            HashMap<Point, Pixel> pixels = new HashMap<>(256);
             final int ss = 1;
             Point pos = new Point(x, y);
             stack.push(pos);
@@ -305,7 +313,7 @@ public abstract class Screen implements ImageSupplier {
     }
 
     public void copyCell(Point from, Point to) {
-        copyCell(this,from, to);
+        copyCell(this, from, to);
     }
 
 
@@ -351,7 +359,7 @@ public abstract class Screen implements ImageSupplier {
     }
 
     private boolean isLocked() {
-        return locked !=0;
+        return locked != 0;
     }
 
     private void lock() {
@@ -377,7 +385,8 @@ public abstract class Screen implements ImageSupplier {
         int[] order = new int[length];
         int j = 0;
         for (int i = 0; i < length; i++) {
-            if (i == from) order[i] = to; else {
+            if (i == from) order[i] = to;
+            else {
                 if (j == to) j++;
                 order[i] = j;
                 j++;
@@ -387,8 +396,9 @@ public abstract class Screen implements ImageSupplier {
     }
 
     public enum Shift {
-        Left(-1,0), Right(1,0), Up(0,-1), Down(0,1);
+        Left(-1, 0), Right(1, 0), Up(0, -1), Down(0, 1);
         private int dx, dy;
+
         Shift(int x, int y) {
             this.dx = x;
             this.dy = y;
@@ -400,24 +410,35 @@ public abstract class Screen implements ImageSupplier {
         fireImageChanged();
     }
 
-    public  Map<String, Consumer<Integer[]>> getSpecialMethods() {
+    public Map<String, Consumer<Integer[]>> getSpecialMethods() {
         return new HashMap<>();
     }
 
-    abstract public Map<String,Dimension> getResolutions();
+    abstract public Map<String, Dimension> getResolutions();
 
     abstract public FileNameExtensionFilter getFileNameExtensionFilter();
 
-    public void save(ObjectOutputStream stream) throws IOException {
-        palette.savePalette(stream);
-        stream.writeInt(sizeX / pixelFactor.width);
-        stream.writeInt(sizeY / pixelFactor.height);
-        image.store(stream);
+    public void save(OutputStream stream) throws IOException {
+        try (ObjectOutputStream s = new ObjectOutputStream(stream)) {
+            palette.savePalette(s);
+            s.writeInt(sizeX / pixelFactor.width);
+            s.writeInt(sizeY / pixelFactor.height);
+            image.store(s);
+        }
+    }
+    public void load(InputStream stream) throws IOException, ClassNotFoundException {
+        load(stream,false);
     }
 
     public void load(InputStream stream, boolean old) throws IOException, ClassNotFoundException {
+        load(stream, false, true);
+    }
+
+    public void load(InputStream stream, boolean old, boolean newSize)
+            throws IOException, ClassNotFoundException {
         ObjectInputStream oStream = new ObjectInputStream(stream);
         if (old) {
+            if (newSize) newImageBuffer(256, 192);
             image.load(oStream);
             getPalette().loadPalette(oStream);
 
@@ -425,7 +446,8 @@ public abstract class Screen implements ImageSupplier {
             getPalette().loadPalette(oStream);
             int x = oStream.readInt();
             int y = oStream.readInt();
-            image.load(oStream,x,y);
+            if (newSize) newImageBuffer(x * pixelFactor.width, y * pixelFactor.height);
+            image.load(oStream, x, y);
         }
         oStream.close();
         undo.clear();

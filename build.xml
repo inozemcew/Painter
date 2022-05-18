@@ -87,6 +87,7 @@
         <jar jarfile="${dist}/NPainter.jar" manifest="${src}/NPainter/META-INF/MANIFEST.MF">
             <fileset dir="${build}" includes="Painter/**"/>
             <fileset dir="${build}" includes="NPainter/**"/>
+            <fileset dir="${build}" includes="resource/**"/>
         </jar>
     </target>
 

@@ -17,18 +17,18 @@ import java.util.stream.Stream;
  */
 public class Palette {
 
-    private int[][] colorTables;
-    private int[] cellsSizes;
+    private final int[][] colorTables;
+    private final int[] cellsSizes;
 
-    private ArrayList<PaletteChangeListenerItem> listeners = new ArrayList<>();
+    private final ArrayList<PaletteChangeListenerItem> listeners = new ArrayList<>();
 
     private static class PaletteChangeListenerItem {
-        private Integer table;
-        private int index;
+        private final Integer table;
+        private final int index;
 
-        private PaletteChangeListener listener;
+        private final PaletteChangeListener listener;
 
-        public PaletteChangeListenerItem(Enum table, int index, PaletteChangeListener listener) {
+        public PaletteChangeListenerItem(Enum<?> table, int index, PaletteChangeListener listener) {
             this(table == null ? null : table.ordinal(), index, listener);
         }
 
@@ -79,7 +79,7 @@ public class Palette {
         return colorTables.length;
     }
 
-    public int getColorsCount(Enum table) {
+    public int getColorsCount(Enum<?> table) {
         return getColorsCount(table.ordinal());
     }
 
@@ -87,7 +87,7 @@ public class Palette {
         return colorTables[table].length;
     }
 
-    public int getCellSize(Enum table) {
+    public int getCellSize(Enum<?> table) {
         return getCellSize(table.ordinal());
     }
 
@@ -95,7 +95,7 @@ public class Palette {
         return cellsSizes[table];
     }
 
-    public int getColorCell(Enum table, int index) {
+    public int getColorCell(Enum<?> table, int index) {
         return getColorCell(table.ordinal(), index);
     }
 
@@ -103,7 +103,7 @@ public class Palette {
         return colorTables[table][index];
     }
 
-    public void setColorCell(int value, Enum table, int index) {
+    public void setColorCell(int value, Enum<?> table, int index) {
         setColorCell(value, table.ordinal(), index);
     }
 
@@ -155,11 +155,10 @@ public class Palette {
     }
 
     public void addChangeListener(PaletteChangeListener listener) {
-        final Integer t = null;
-        this.listeners.add(new PaletteChangeListenerItem(t, -1, listener));
+        this.listeners.add(new PaletteChangeListenerItem((Enum<?>) null, -1, listener));
     }
 
-    private void fireChangeEvent(Enum table, int index) {
+    private void fireChangeEvent(Enum<?> table, int index) {
         fireChangeEvent(table.ordinal(), index);
     }
 
@@ -227,14 +226,15 @@ public class Palette {
         setLocked(false);
     }
 
-    public Color getRGBColor(Enum table, int index, int fs) {
+    public Color getRGBColor(Enum<?> table, int index, int fs) {
         return toRGB(split(getColorCell(table, index), fs));
     }
 
     public int[] findAttr(List<Integer> s) {
 
         class IndexIterator implements Iterator<int[]> {
-            private int[] counters, ranges;
+            private final int[] counters;
+            private final int[] ranges;
             private boolean counting = true;
 
             public IndexIterator(int[] ranges) {
@@ -289,7 +289,7 @@ public class Palette {
         return best;
     }
 
-    public void reorder(Enum table, int[] order) {
+    public void reorder(Enum<?> table, int[] order) {
         reorder(table.ordinal(), order);
     }
 
@@ -386,8 +386,8 @@ public class Palette {
         return new Color(l * (r + m), l * (g + m), l * (b + m));
     }
 
-    private static Color[] colorCache = new Color[64];
-    private static double[][] colorDiff = new double[64][];
+    private static final Color[] colorCache = new Color[64];
+    private static final double[][] colorDiff = new double[64][];
 
     static {
         ColorSpace.MyPal.activate();
@@ -505,31 +505,59 @@ public class Palette {
             }
         },
 
-        Pal3x2("2bit per component"){
+        Pal3x2("2bit per component") {
             @Override
             protected void activate() {
-                int[] r = {0,0,1,1, 0,0,1,1, 1,1,0,0, 0,0,1,1,
-                           0,0,2,2, 1,1,2,1, 2,2,1,0, 1,0,2,2,
-                           1,0,2,3, 0,1,2,2, 2,2,0,0, 0,0,2,2,
-                           1,0,3,3, 0,2,3,2, 3,3,0,0, 0,0,3,3};
-                int[] g = {0,1,1,0, 0,0,1,2, 0,0,1,0, 1,1,0,0,
-                           0,2,2,1, 1,0,2,2, 1,1,2,1, 2,2,1,0,
-                           1,2,2,1, 0,0,2,3, 0,1,2,1, 2,2,0,0,
-                           1,3,3,2, 0,0,3,3, 0,2,3,2, 3,3,0,0};
-                int[] b = {0,1,1,0, 1,1,0,0, 0,0,1,1, 0,0,1,0,
-                           0,2,3,1, 2,2,1,1, 1,0,2,2, 1,1,2,1,
-                           1,2,2,1, 2,2,0,1, 0,0,2,2, 0,1,2,2,
-                           2,3,3,2, 3,3,0,0, 0,0,3,3, 0,2,3,3};
+                int[] r = {0,0,1,2, 0,1,1,1, 1,2,0,0, 0,0,1,2,
+                           0,0,2,3, 0,1,2,1, 2,3,0,0, 0,0,2,3,
+                           0,0,3,3, 0,2,3,2, 3,3,0,0, 0,0,3,3,
+                           1,0,3,3, 1,2,3,2, 3,3,1,1, 1,1,3,3};
+                int[] g = {0,1,1,1, 0,0,1,2, 0,1,1,1, 1,2,0,0,
+                           0,2,2,1, 0,0,2,3, 0,1,2,1, 2,3,0,0,
+                           1,2,2,2, 0,0,3,3, 0,2,3,2, 3,3,0,0,
+                           1,3,3,2, 1,1,3,3, 1,2,3,2, 3,3,1,1};
+                int[] b = {0,1,1,1, 1,2,0,0, 0,0,1,2, 0,1,1,1,
+                           0,2,2,2, 2,3,0,0, 0,0,2,3, 0,1,2,1,
+                           1,2,3,2, 3,3,0,0, 0,0,3,3, 0,2,3,2,
+                           1,3,3,3, 3,3,1,1, 1,1,3,3, 1,2,3,2};
 
-                int[] l = {0,128,192,255};
+                int[] l = {0, 128, 192, 255};
 
-                for (int i = 0; i <64; i++)
-                    colorCache[i] = new Color(l[r[i]], l[g[i]],l[b[i]]);
+                for (int i = 0; i < 64; i++)
+                    colorCache[i] = new Color(l[r[i]], l[g[i]], l[b[i]]);
+                super.activate();
+            }
+        },
+
+        Dark("Evenly spaced") {
+            @Override
+            protected void activate() {
+                final int[][] fc = {{0,0,0},{1,0,0},{0,1,0},{0,0,1}};
+                final int[][] hc = {{1,0,1},{0,1,0},{0,0,1},{1,0,0}};
+                for (int j = 0; j < 64; j++ ) {
+                    int l = (j >> 4);
+                    int c = j & 0xf;
+                    int b = c >> 2;
+                    int i = ((c>>1) & 1);
+                    int h = (c & 1);
+                    int hb = hc[b][0] & h, hr = hc[b][1] & h, hg =hc[b][2] & h;
+                    int fb = (fc[b][0]^i)|hb, fr = (fc[b][1]^i)|hr, fg =(fc[b][2]^i)|hg;
+
+                    int k = 36;
+                    int bb = (fb&~hb)*4 + l*fb;
+                    int rr = (fr&~hr)*4 + l*fr;
+                    int gg = (fg&~hg)*4 + l*fg;
+                    if (c==0) {
+                        bb=l; rr=l; gg=l;
+                    }
+                    int[] t = {0,63,95,127,63,127,191,255};
+                    colorCache[j] = new Color(t[rr], t[gg], t[bb]);
+                }
                 super.activate();
             }
         };
 
-        private String name;
+        private final String name;
         ColorSpace(String name) {
             this.name = name;
         }
@@ -576,7 +604,7 @@ public class Palette {
         return bestIndex;
     }
 
-    private static int[] allColorIndices = IntStream.range(0, 64).toArray();
+    private static final int[] allColorIndices = IntStream.range(0, 64).toArray();
 
     public static int fromRGB(Color color) {
         return fromRGB(color, allColorIndices);

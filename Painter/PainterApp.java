@@ -13,8 +13,8 @@ import java.awt.*;
 import java.awt.event.*;
 import java.beans.PropertyChangeListener;
 import java.io.*;
-import java.util.*;
 import java.util.List;
+import java.util.*;
 
 import static javax.swing.Action.ACCELERATOR_KEY;
 import static javax.swing.Action.SELECTED_KEY;
@@ -156,7 +156,7 @@ public abstract class PainterApp extends JFrame {
             JMenu file = menuBar.add(new JMenu("File"));
             file.setMnemonic('F');
             JMenu n = new JMenu("New");
-            actions.resolutions.forEach(n::add);
+            actions.newScreens.forEach(n::add);
             file.add(n);
             file.add(actions.fileLoad);
             file.add(actions.fileSave);
@@ -190,6 +190,10 @@ public abstract class PainterApp extends JFrame {
             sh.add("Up").addActionListener(e -> screen.shift(Screen.Shift.Up));
             sh.add("Down").addActionListener(e -> screen.shift(Screen.Shift.Down));
             edit.add(sh);
+
+            JMenu rs = new JMenu("Change resolution");
+            actions.resolutions.forEach(rs::add);
+            edit.add(rs);
         }
         {
             //if (!actions.screenModes.isEmpty()) {
@@ -263,13 +267,30 @@ public abstract class PainterApp extends JFrame {
     private void newScreen(int x, int y) {
         if (!canContinueIfModified()) return;
         screen.newImageBuffer(x, y);
+        updatePreferredSize();
+        setCurrentFile(null);
+    }
+
+    private void changeResolution(int w, int h) {
+        if (!canContinueIfModified()) return;
+        try {
+            screen.changeResolution(w, h);
+            updatePreferredSize();
+        } catch (IOException | ClassNotFoundException e) {
+            JOptionPane.showMessageDialog(this,
+                    "Cannot resize"+e.getMessage(),
+                    "Resize error",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void updatePreferredSize() {
         interlacedView.updatePreferredSize();
         Dimension preferredSize = interlacedView.getPreferredSize();
         preferredSize.setSize(preferredSize.getWidth()+3,preferredSize.getHeight()+3);
         interlacedView.getParent().getParent().setPreferredSize(preferredSize);
         paintArea.updatePreferredSize();
         splitPane.resetToPreferredSizes();
-        setCurrentFile(null);
     }
 
     private void importSCR() {
@@ -347,9 +368,9 @@ public abstract class PainterApp extends JFrame {
 
     private void saveAs(File file) {
         try {
-            ObjectOutputStream stream = new ObjectOutputStream(new FileOutputStream(file));
-            screen.save(stream);
-            stream.close();
+            try (OutputStream stream = new FileOutputStream(file)) {
+                screen.save(stream);
+            }
         } catch (IOException e) {
             JOptionPane.showMessageDialog(this,
                     "Cannot save " + file,
@@ -391,6 +412,7 @@ public abstract class PainterApp extends JFrame {
         repaint();
         recentFiles.add(file.getAbsolutePath());
         recentFilesMenuItems.updateMenu();
+        updatePreferredSize();
         setCurrentFile(file);
         setModified(false);
     }
@@ -521,12 +543,22 @@ public abstract class PainterApp extends JFrame {
             }) );
         }
 
-        ArrayList<Action> resolutions = new ArrayList<>();
+        ArrayList<Action> newScreens = new ArrayList<>();
         {
-            screen.getResolutions().forEach((s,d)-> resolutions.add(new AbstractAction(s) {
+            screen.getResolutions().forEach((s,d)-> newScreens.add(new AbstractAction(s) {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     newScreen(d.width,d.height);
+                }
+            }));
+        }
+
+        ArrayList<Action> resolutions = new ArrayList<>();
+        {
+            screen.getResolutions().forEach( (s, d) -> resolutions.add(new AbstractAction(s) {
+                @Override
+                public void actionPerformed(ActionEvent actionEvent) {
+                    changeResolution(d.width, d.height);
                 }
             }));
         }
@@ -626,10 +658,10 @@ class StatusBar extends JPanel {
 
     StatusBar(int... panesWidths) {
         super(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        for (int i = 0; i < panesWidths.length; i++) {
+        for (int panesWidth : panesWidths) {
             final JLabel label = new JLabel();
             label.setBorder(BorderFactory.createEtchedBorder(EtchedBorder.LOWERED));
-            label.setPreferredSize(new Dimension(panesWidths[i], label.getFontMetrics(label.getFont()).getHeight()));
+            label.setPreferredSize(new Dimension(panesWidth, label.getFontMetrics(label.getFont()).getHeight()));
             add(label);
         }
     }

@@ -7,6 +7,9 @@ import java.io.InputStream;
  * Created by ainozemtsev on 07.07.16.
  */
 public class SpectrumScreen {
+    /**
+     * supplementary class that represents 4 parameters for pixel
+     */
     public class Pixel {
         final public boolean value;
         final public int ink;
@@ -51,6 +54,12 @@ public class SpectrumScreen {
         return y + offsetY;
     }
 
+    /**
+     * returns SpectrumScreen.Pixel at specified location
+     * @param x x-coordinate
+     * @param y y-coordinate
+     * @return pixel at specified coordinate or null if coordinate outside screen
+     */
     public Pixel getPixel(int x, int y) {
         int mx = mapX(x), my = mapY(y);
         if (mx < 0 || mx >= 256 || my < 0 || my >= 192)

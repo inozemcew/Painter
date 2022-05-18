@@ -4,6 +4,11 @@ import Painter.Screen.Palette.Palette;
 
 /**
  * Created by aleksey on 25.09.16.
+ * simple POJO represents screen pixel
+ * has 3 public fields:
+ * <b>table</b> - ink, paper, etc...
+ * <b>index</b> - index in <i>table</i>
+ * <b>shift</b> - color register number at <i>index</i> in <i>table</i>
  */
 public class Pixel {
     public Enum table;
