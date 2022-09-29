@@ -11,11 +11,11 @@ import Painter.Screen.Palette.Palette;
  * <b>shift</b> - color register number at <i>index</i> in <i>table</i>
  */
 public class Pixel {
-    public Enum table;
+    public Enum<?> table;
     public int index;
     public int shift;
 
-    public Pixel(Enum table, int index, int shift) {
+    public Pixel(Enum<?> table, int index, int shift) {
         this.index = index;
         this.shift = shift;
         this.table = table;

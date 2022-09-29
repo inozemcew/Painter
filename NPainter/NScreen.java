@@ -11,6 +11,7 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.io.*;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 
@@ -106,15 +107,30 @@ public class NScreen extends Screen {
                 }
             }
         }
-
-        int[] ink = {0x00, 0x14, 0x18, 0x1e, 0x1c, 0x1a, 0x16, 0x12};
-        for (int i = 1; i < 8; i++) ink[i] += (ink[i] + 0x10) << 6;
-        palette.setPalette(ink, ink);
-
+        setSpectrumPalette();
     }
 
+    private void setSpectrumPalette() {
+        int[] ink = {0x00, 0x24, 0x28, 0x2e, 0x2c, 0x2a, 0x26, 0x22};
+        for (int i = 1; i < 8; i++) ink[i] += (ink[i] + 0x10) << 6;
+        palette.setPalette(ink, ink);
+    }
+
+    private void setExtendedPalette() {
+        int[] paper = {0x00, 0x24, 0x28, 0x2e, 0x2c, 0x2a, 0x26, 0x22};
+        int[] ink = new int[8];
+        ink[0] = 0x20 + ((paper[7] + 0x10) << 6);
+        for (int i = 1; i < 8; i++) {
+            ink[i] = paper[i] + 0x10;
+            if ( i > 3 ) ink[i] +=  (ink[i-4]) << 6;
+        }
+        for (int i = 1; i < 4; i++) ink[i] +=  (ink[7-i]) << 6;
+        palette.setPalette(ink, paper);
+    }
+
+
     @Override
-    public void load(InputStream stream, boolean old) throws IOException, ClassNotFoundException {
+    public void load(InputStream stream, boolean old, boolean resize) throws IOException, ClassNotFoundException {
         final ByteArrayOutputStream bs = new ByteArrayOutputStream();
         ImageBuffer img;
         Palette pal = createPalette();
@@ -131,7 +147,7 @@ public class NScreen extends Screen {
             x = iStream.readInt();
             if (x<255) {                    // old storage format was unpacked, one pixel per byte
                 stream.reset();             // new storage format is packed, two pixels per byte
-                super.load(stream, old);    // so in new format the value of width is halved
+                super.load(stream,old,resize);         // so in new format the value of width is halved
                 return;                     // and we don't need recoding if width less than 255
             }
             y = iStream.readInt();
@@ -173,27 +189,42 @@ public class NScreen extends Screen {
 
     private class SpecialMethods {
 
+        private class Action implements Consumer<Integer[]> {
+            private final Consumer<Integer[]> action;
+
+            public Action(Consumer<Integer[]> action) {
+                this.action = action;
+            }
+
+            public void accept(Integer[] values){
+                beginDraw();
+                action.accept(values);
+                endDraw();
+            };
+        }
+
         Map<String, Consumer<Integer[]>> getList() {
-            Map<String, Consumer<Integer[]>> m = new HashMap<>();
+            Map<String, Consumer<Integer[]>> m = new LinkedHashMap<>();
             final int ink = Table.INK.ordinal();
             final int paper = Table.PAPER.ordinal();
-            m.put("Flip ink", (i) -> flipColorCell(Table.INK, i[ink]));
-            m.put("Flip paper", (i) -> flipColorCell(Table.PAPER, i[paper]));
-            m.put("Flip all inks", (dummy) -> {
+            m.put("Flip ink", new Action( i -> flipColorCell(Table.INK, i[ink])));
+            m.put("Flip paper", new Action( i -> flipColorCell(Table.PAPER, i[paper])));
+            m.put("Flip all inks", new Action( dummy -> {
                 for (int i = 0; i < palette.getColorsCount(Table.INK); i++) flipColorCell(Table.INK, i);
-            });
-            m.put("Flip all papers", (dummy) -> {
+            }));
+            m.put("Flip all papers", new Action( dummy -> {
                 for (int i = 0; i < palette.getColorsCount(Table.PAPER); i++) flipColorCell(Table.PAPER, i);
-            });
-            m.put("Inverse palette", (dummy) -> inverseColors());
-            m.put("Swap ink0 <-> paper0", (c) -> swapInkPaper(c[ink], c[paper], 0));
-            m.put("Swap ink1 <-> paper1", (c) -> swapInkPaper(c[ink], c[paper], 1));
+            }));
+            m.put("Inverse palette", new Action( dummy -> inverseColors()));
+            m.put("Swap ink0 <-> paper0", new Action( c -> swapInkPaper(c[ink], c[paper], 0)));
+            m.put("Swap ink1 <-> paper1", new Action( c -> swapInkPaper(c[ink], c[paper], 1)));
             m.put("Correct X mode", (dummy) -> correctXMode());
+            m.put("Set ZX-Spectrum palette", new Action(dummy -> setSpectrumPalette()));
+            m.put("Set Extended palette", new Action(dummy -> setExtendedPalette()));
             return m;
         }
 
         private void flipColorCell(Table table, int index) {
-            beginDraw();
             PixelProcessor.PixelDataList l = new PixelProcessor.PixelDataList();
             image.forEachPixel((x, y, b, a) -> {
                 l.setPixelData(b);
@@ -209,11 +240,9 @@ public class NScreen extends Screen {
             });
             int c = palette.getColorCell(table, index);
             palette.setColorCell(Palette.combine(Palette.second(c), Palette.first(c)), table, index);
-            endDraw();
         }
 
         private void inverseColors() {
-            beginDraw();
             image.forEachPixel((x, y, b, a) -> (byte) (b ^ 0x22));
             image.forEachAttr((x, y, a) -> paperToAttr(inkToAttr((byte) 0, paperFromAttr(a)), inkFromAttr(a)));
             int l = Integer.min(palette.getColorsCount(Table.INK), palette.getColorsCount(Table.PAPER));
@@ -224,11 +253,9 @@ public class NScreen extends Screen {
             for (int i = 0; i < paper.length; i++)
                 paper[i] = palette.getColorCell(Table.PAPER, i);
             palette.setPalette(paper, ink);
-            endDraw();
         }
 
         private void swapInkPaper(int ink, int paper, int shift) {
-            beginDraw();
             Point pos = new Point();
             Pixel ip = new Pixel(Table.INK, ink, shift);
             Pixel pp = new Pixel(Table.PAPER, paper, shift);
@@ -247,7 +274,6 @@ public class NScreen extends Screen {
             int p1 = Palette.split(p, shift);
             palette.setColorCell(Palette.replace(i, p1, shift), Table.INK, ink);
             palette.setColorCell(Palette.replace(p, i1, shift), Table.PAPER, paper);
-            endDraw();
         }
 
         private void correctXMode() {

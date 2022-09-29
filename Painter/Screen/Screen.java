@@ -426,15 +426,15 @@ public abstract class Screen implements ImageSupplier {
             image.store(s);
         }
     }
-    public void load(InputStream stream) throws IOException, ClassNotFoundException {
+    public final void load(InputStream stream) throws IOException, ClassNotFoundException {
         load(stream,false);
     }
 
-    public void load(InputStream stream, boolean old) throws IOException, ClassNotFoundException {
+    public final void load(InputStream stream, boolean old) throws IOException, ClassNotFoundException {
         load(stream, false, true);
     }
 
-    public void load(InputStream stream, boolean old, boolean newSize)
+    protected void load(InputStream stream, boolean old, boolean newSize)
             throws IOException, ClassNotFoundException {
         ObjectInputStream oStream = new ObjectInputStream(stream);
         if (old) {
