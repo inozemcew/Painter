@@ -169,9 +169,15 @@ public abstract class Screen implements ImageSupplier {
     }
 
     protected byte getPixelData(Point pos) {
+<<<<<<< HEAD
         final int xx = pos.x / pixelFactor.width;
         final int yy = pos.y / pixelFactor.height;
         return image.getPixel(xx, yy);
+=======
+            final int xx = pos.x / pixelFactor.width;
+            final int yy = pos.y / pixelFactor.height;
+            return image.getPixel(xx, yy);
+>>>>>>> 868125baac9b866f1b5f248aa589369420b05f2d
     }
 
     protected byte getAttr(Point pos) {

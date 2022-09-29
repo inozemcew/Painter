@@ -107,8 +107,11 @@ public class TestPalette {
             }
             g.drawOval(248,248,16,16);
             if (selected != null) {
-                g.setColor(YUVtoColor(luma,selected.x/2,255-selected.y/2));
+                final Color color = YUVtoColor(luma, selected.x / 2, 255 - selected.y / 2);
+                g.setColor(color);
                 g.fillRect(0,512,64,64);
+                g.setColor(Color.black);
+                g.drawString(color.toString(),80,528);
             }
         }
 

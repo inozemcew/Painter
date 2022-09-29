@@ -11,6 +11,8 @@ import java.util.List;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import static sun.misc.Version.println;
+
 /**
  * Created by ainozemtsev on 18.11.15.
  * Palette tables
@@ -259,7 +261,7 @@ public class Palette {
             }
         }
 
-        double bestN = Integer.MAX_VALUE;
+        double bestDiff = Integer.MAX_VALUE;
 
         Iterator<int[]> iterator = new IndexIterator(Arrays.stream(colorTables).mapToInt(x -> x.length).toArray());
         int[] best = new int[colorTables.length];
@@ -280,8 +282,8 @@ public class Palette {
                 }
             }
             if (n == 0) return i;
-            if (n < bestN) {
-                bestN = n;
+            if (n < bestDiff) {
+                bestDiff = n;
                 best = i;
             }
         }
@@ -469,6 +471,9 @@ public class Palette {
                     rr = (rr<0)?0:rr;
                     int gg = (255*fg  -l*42) / (hg+1);
                     gg = (gg<0)?0:gg;
+                    if (c==0) {
+                        rr= 96-l*32; gg=rr; bb=rr;
+                    }
                     colorCache[j] = new Color(rr,gg,bb);
                 }
                 super.activate();
@@ -478,26 +483,25 @@ public class Palette {
         Pure64of512 ("64 of 512 colors") {
             @Override
             protected void activate() {
-                int[][] fc = {{0,0,0},{1,0,0},{0,1,0},{0,0,1}};
-                int[][] hc = {{1,0,1},{0,1,0},{0,0,1},{1,0,0}};
+                int[][] fc = {{0,0,0,1},{1,0,0,0},{0,1,0,0},{0,0,1,0}};
+                int[] hc = {0,2,3,1};
+                //int[][] hc = {{1,0,1},{0,1,0},{0,0,1},{1,0,0}};
                 for (int j = 0; j < 64; j++ ) {
-                    int l = (j >> 4);
+                    int luma = (j >> 4);
                     int c = j & 0xf;
                     int b = c >> 2;
-                    int i = ((c>>1) & 1);
-                    int h = (c & 1);
-                    int hb = hc[b][0] & h, hr = hc[b][1] & h, hg =hc[b][2] & h;
-                    int fb = (fc[b][0]^i)|hb, fr = (fc[b][1]^i)|hr, fg =(fc[b][2]^i)|hg;
+                    int bh = hc[b];
+                    int inv = ((c>>1) & 1);
+                    int halfbr = (c & 1);
+                    int hb = (fc[bh][0] | fc[bh][3]) & halfbr, hr = fc[bh][1] & halfbr, hg = (fc[bh][2]| fc[bh][3]) & halfbr;
+                    int fb = (fc[b][0]^inv)|hb, fr = (fc[b][1]^inv)|hr, fg =(fc[b][2]^inv)|hg;
 
                     int k = 36;
-                    //int bb = (fb * (4  + l)) / (hb+1) +hb*(l&1);
-                    //int rr = (fr * (4  + l)) / (hr+1) +hr*(l&1);
-                    //int gg = (fg * (4  + l)) / (hg+1) +hg*(l&1);
-                    int bb = (fb&~hb)*4 + l*fb + hb*2;
-                    int rr = (fr&~hr)*4 + l*fr + hr*2;
-                    int gg = (fg&~hg)*4 + l*fg + hg*2;
+                    int bb = (fb&~hb)*4 + luma*fb + hb*2;
+                    int rr = (fr&~hr)*4 + luma*fr + hr*2;
+                    int gg = (fg&~hg)*4 + luma*fg + hg*2;
                     if (c==0) {
-                        bb=l; rr=l; gg=l;
+                        bb=luma; rr=luma; gg=luma;
                     }
                     colorCache[j] = new Color(rr*k, gg*k, bb*k);
                 }
@@ -555,9 +559,53 @@ public class Palette {
                 }
                 super.activate();
             }
+        },
+
+        Pal64of128("64 of 256 colors") {
+            @Override
+            protected void activate() {
+                int [] cs = {
+                        0000,0202,0444,0242, 0400,0420,0044,0034, 0040,0042,0404,0402, 0004,0204,0440,0240,
+                        0111,0313,0555,0353, 0500,0530,0155,0145, 0150,0153,0505,0503, 0105,0305,0550,0350,
+                        0222,0424,0666,0464, 0600,0640,0066,0056, 0060,0064,0606,0604, 0006,0406,0660,0460,
+                        0333,0535,0777,0575, 0700,0750,0177,0167, 0170,0175,0707,0705, 0107,0507,0770,0570
+                };
+                int[][] fc = {{0,0,0,1},{1,0,0,0},{0,1,0,0},{0,0,1,0}};
+                int[] hc = {0,2,3,1};
+                //int[][] hc = {{1,0,1},{0,1,0},{0,0,1},{1,0,0}};
+                for (int j = 0; j < 64; j++ ) {
+                    int luma = (j >> 4);
+                    int c = j & 0xf;
+                    int b = c >> 2;
+                    int bh = hc[b];
+                    int inv = ((c>>1) & 1);
+                    int halfbr = (c & 1);
+                    int hb = (fc[bh][0] | fc[bh][3]) & halfbr, hr = fc[bh][1] & halfbr, hg = (fc[bh][2]| fc[bh][3]) & halfbr;
+                    int fb = (fc[b][0]^inv)|hb, fr = (fc[b][1]^inv)|hr, fg =(fc[b][2]^inv)|hg;
+
+                    int k = 36;
+                    int bb = (fb&~hb)*4 + ((luma*fb)|(luma&1)) + hb*2;
+                    int rr = (fr&~hr)*4 + (luma*fr) + hr*2;
+                    int gg = (fg&~hg)*4 + (luma*fg) + hg*2;
+                    if (c==0) {
+                        bb=luma; rr=luma; gg=luma;
+                    }
+                    gg = cs[j] % 8;
+                    rr = cs[j] / 8 % 8;
+                    bb = cs[j] / 64;
+
+                    colorCache[j] = new Color(rr*k, gg*k, bb*k);
+                }
+                super.activate();
+            }
         };
 
+<<<<<<< HEAD
         private final String name;
+=======
+
+        private String name;
+>>>>>>> 868125baac9b866f1b5f248aa589369420b05f2d
         ColorSpace(String name) {
             this.name = name;
         }
@@ -650,7 +698,18 @@ public class Palette {
     }
 
     public static void main(String[] argv) {
+        ColorSpace.Pal64of128.activate();
         for (int i = 0; i < 64; i++) {
+            if (i%16 == 0) System.out.println();
+            System.out.printf("\t%02x %x%x%x",i,colorCache[i].getBlue()/36,colorCache[i].getRed()/36,colorCache[i].getGreen()/36);
+            //final Color rgb = toRGB(i);
+            //System.out.printf("%2d %3d %3d %3d %2d|", i, rgb.getBlue(), rgb.getRed(), rgb.getGreen(), fromRGB(rgb));
+            //if (i % 8 == 7) System.out.println();
+            //if (i % 16 == 15) System.out.println();
+        }
+        System.out.println();
+        for (int i = 0; i < 64; i++) {
+            if (i%16 == 0) System.out.println();
             final Color rgb = toRGB(i);
             System.out.printf("%2d %3d %3d %3d %2d|", i, rgb.getBlue(), rgb.getRed(), rgb.getGreen(), fromRGB(rgb));
             if (i % 8 == 7) System.out.println();

@@ -1,10 +1,13 @@
 package NPainter.Convert;
 
+import NPainter.NPalette;
 import Painter.Screen.Palette.Palette;
 
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import static Painter.Screen.Palette.Palette.split;
 
 /**
  * Created by ainozemtsev on 21.11.16.
@@ -14,10 +17,12 @@ class ComplementMaps extends HashMap<List<Integer>, Map<ColorCell,ColorCell>> { 
 
 class Combinator {
 
+    ColorMatrix colors4Tiles;
     private int tries = 0;
     private static final int maxTries = 555000;
     private int bestCount;
     private volatile Recurse best;
+    private double bestDiff;
 
 
     private final int SIZE  = 8; //TODO: rework!
@@ -27,10 +32,12 @@ class Combinator {
     Combinator () {
         tries = 0;
         bestCount = Integer.MAX_VALUE;
+        bestDiff = Integer.MAX_VALUE;
         best = null;
     }
 
     void run(ColorMatrix colors4Tiles) {
+        this.colors4Tiles = colors4Tiles;
         thread = new Thread(() -> {
             Deque<List<Integer>> stat = getStat(colors4Tiles);
             List<ColorCell> colorCells = getAllPairs(stat);
@@ -40,6 +47,10 @@ class Combinator {
             if (result != null) best = result;
         });
         thread.start();
+    }
+
+    void stop() {
+        if (isRunning()) thread.interrupt();
     }
 
     boolean isRunning() {
@@ -93,12 +104,22 @@ class Combinator {
                     if (r != null) return r;
                 } else {
                     tries++;
-                    if (tries >= maxTries) return best;
+                    if (tries >= maxTries || thread.isInterrupted()) return best;
                 }
             }
-            if (uniqueColorsStack.size() < bestCount) {
+/*            if (uniqueColorsStack.size() < bestCount) {
                 bestCount = uniqueColorsStack.size();
                 best = this;
+                bestDiff = Integer.MAX_VALUE;
+            }*/
+            if (uniqueColorsStack.size() <= bestCount) {
+                double d1 = calcDeviation();
+                if (d1 < bestDiff) {
+                    System.out.println(Double.toString(d1) + " < " + Double.toString(bestDiff));
+                    bestCount = uniqueColorsStack.size();
+                    best = this;
+                    bestDiff = d1;
+                }
             }
             uniqueColorsStack.push(s);
             return null;
@@ -109,11 +130,33 @@ class Combinator {
             int[] paper =Arrays.copyOf(this.paper.stream().mapToInt(c -> Palette.combine(c.asArray())).toArray(),SIZE);
             palette.setPalette(ink, paper);
         }
+
+        double calcDeviation() {
+            double result = 0.0;
+            Palette palette = new NPalette();
+            fillPalette(palette);
+            result = colors4Tiles.summarize( (p, colors) -> {
+                int[] inkAndPaper = palette.findAttr(colors);
+                List<Integer> l = new ArrayList<>(4);
+                for (int t = 0; t < 2; t++) {
+                    for (int i = 0; i < palette.getCellSize(t); i++) {
+                        int cell = palette.getColorCell(t, inkAndPaper[t]);
+                        l.add(split(cell, i));
+                    }
+                }
+                return colors.stream().mapToDouble( colorIndex -> l.stream()
+                        .mapToDouble(i -> Palette.getColorDiff(colorIndex, i) * colors4Tiles.getCount(p.x, p.y, colorIndex))
+                        .min().orElse(0)
+                ).sum();
+            });
+            return result;
+        }
+
     }
 
     Deque<List<Integer>> getStat(ColorMatrix tilesColors) {
         Map<Set<Integer>, Integer> count = new HashMap<>();
-        tilesColors.forEach(l -> {
+        tilesColors.summarize(l -> {
             if (l != null) {
             Set<Integer> s = new HashSet<>(l);
             Optional<Set<Integer>> c = count.keySet().stream().filter(i -> i.containsAll(s)).findAny();

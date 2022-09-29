@@ -72,7 +72,11 @@ public class AScreen extends Screen {
     public Map<String, Dimension> getResolutions() {
         HashMap<String, Dimension> m = new HashMap<>();
         m.put("192x104", new Dimension(384, 208));
+<<<<<<< HEAD
         m.put("256x192", new Dimension(516, 384));
+=======
+        m.put("256x192", new Dimension(510, 384));
+>>>>>>> 868125baac9b866f1b5f248aa589369420b05f2d
         return m;
     }
 
@@ -86,8 +90,13 @@ public class AScreen extends Screen {
         byte rev[] = {0, 4, 2, 6, 1, 5, 3, 7};
         int[] bs = new int[6];
         //scr.setOffset(8,8);
+<<<<<<< HEAD
         for (int y = 0; y < sizeY / pixelFactor.height; y++) {
             for (int x = 0; x < sizeX / pixelFactor.width; x++) {
+=======
+        for (int y = 0; y < sizeY/pixelFactor.height; y++) {
+            for (int x = 0; x < sizeX/pixelFactor.width; x++) {
+>>>>>>> 868125baac9b866f1b5f248aa589369420b05f2d
                 for (int yy = 0; yy < 2; yy++)
                     for (int xx = 0; xx < 3; xx++) {
                         final SpectrumScreen.Pixel p = scr.getPixel(x * 3 + xx, y * 2 + yy);
