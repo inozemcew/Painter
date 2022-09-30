@@ -600,12 +600,7 @@ public class Palette {
             }
         };
 
-<<<<<<< HEAD
         private final String name;
-=======
-
-        private String name;
->>>>>>> 868125baac9b866f1b5f248aa589369420b05f2d
         ColorSpace(String name) {
             this.name = name;
         }
